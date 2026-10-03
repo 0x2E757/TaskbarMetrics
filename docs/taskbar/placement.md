@@ -15,7 +15,7 @@ buttons keep the `gap` of the configuration. Without that element, as in another
 whole container counts, with `gap`.
 `LeftPlacement` looks for the first sufficient free interval in the left half. `TileStrip` asks
 it for every tile first; when they do not fit, for as many tiles as fit in their order with a
-warning icon after them (24 px, at the tile spacing): a circle with "!" drawn in 1.5 px lines,
+warning icon after them (24 px, at the tile spacing): a circle with "!" drawn in 1.25 px lines,
 `#C42B1C` on a light taskbar and `#FF99A4` on a dark one. The icon's tooltip names the tiles left
 out, "Not enough room on the taskbar for GPU2, D:", in the window's language. Tiles left out are
 collapsed but keep recording their history, and a drag moves tiles only among those shown. The
