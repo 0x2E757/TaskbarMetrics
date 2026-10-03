@@ -1,0 +1,34 @@
+[package]
+name = "taskbar-metrics"
+version = "0.1.0"
+edition = "2021"
+default-run = "taskbar-metrics"
+build = "build/main.rs"
+rust-version = "1.87"
+license = "MIT"
+description = "Extensible Windows 11 taskbar system metrics, using only std and Windows APIs"
+
+[lib]
+name = "taskbar_metrics_host"
+crate-type = ["cdylib", "rlib"]
+
+[[bin]]
+name = "taskbar-metrics"
+path = "src/bin/taskbar-metrics.rs"
+
+# The portable executable embeds the package; see tools/release.ps1.
+[[bin]]
+name = "taskbar-metrics-portable"
+path = "src/bin/taskbar-metrics-portable.rs"
+required-features = ["portable"]
+
+[features]
+portable = []
+
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "unwind"
+
+[dependencies]

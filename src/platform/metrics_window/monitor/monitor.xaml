@@ -1,0 +1,187 @@
+<Grid xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" RequestedTheme="Default" Background="$bg$">
+ <Grid.Resources>
+  <!--PLAIN-BUTTON-->
+  <!-- Segoe UI Variable sets capitals about 0.05 em above the centre of the line box; 1 px puts them on the centre of icons and controls at 11–15 px. -->
+  <Style TargetType="TextBlock"><Setter Property="Foreground" Value="$text$"/><Setter Property="FontFamily" Value="Segoe UI Variable Text"/><Setter Property="FontSize" Value="13"/><Setter Property="RenderTransform"><Setter.Value><TranslateTransform Y="1"/></Setter.Value></Setter></Style>
+  <Style TargetType="Button"><Setter Property="Template" Value="{StaticResource PlainButton}"/><Setter Property="CornerRadius" Value="4"/><Setter Property="MinHeight" Value="32"/><Setter Property="Padding" Value="12,0"/><Setter Property="FontSize" Value="13"/><Setter Property="Background" Value="$ctrl$"/><Setter Property="Foreground" Value="$text$"/><Setter Property="BorderBrush" Value="$ctrlBorder$"/><Setter Property="BorderThickness" Value="1"/><Setter Property="VerticalAlignment" Value="Center"/></Style>
+  <Style x:Key="NavigationButton" TargetType="Button"><Setter Property="Template" Value="{StaticResource PlainButton}"/><Setter Property="HorizontalAlignment" Value="Stretch"/><Setter Property="Background" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/><Setter Property="HorizontalContentAlignment" Value="Stretch"/><Setter Property="VerticalContentAlignment" Value="Stretch"/><Setter Property="Padding" Value="0"/><Setter Property="Height" Value="36"/><Setter Property="MinHeight" Value="36"/><Setter Property="CornerRadius" Value="4"/></Style>
+  <Style x:Key="SubtleButton" TargetType="Button"><Setter Property="Template" Value="{StaticResource PlainButton}"/><Setter Property="Background" Value="Transparent"/><Setter Property="BorderBrush" Value="Transparent"/><Setter Property="Padding" Value="0"/><Setter Property="MinHeight" Value="0"/><Setter Property="CornerRadius" Value="4"/></Style>
+  <!-- Fluent check box in the tokens of the toggle switch: 18 px box, accent when checked. -->
+  <Style TargetType="CheckBox"><Setter Property="UseSystemFocusVisuals" Value="True"/><Setter Property="MinWidth" Value="0"/><Setter Property="Template"><Setter.Value><ControlTemplate TargetType="CheckBox">
+   <Grid Background="Transparent" ColumnSpacing="8"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+    <VisualStateManager.VisualStateGroups><VisualStateGroup x:Name="CombinedStates">
+     <VisualState x:Name="UncheckedNormal"/>
+     <VisualState x:Name="UncheckedPointerOver"><VisualState.Setters><Setter Target="Box.Background" Value="$ctrlHover$"/></VisualState.Setters></VisualState>
+     <VisualState x:Name="UncheckedPressed"><VisualState.Setters><Setter Target="Box.Background" Value="$ctrlPress$"/></VisualState.Setters></VisualState>
+     <VisualState x:Name="UncheckedDisabled"><VisualState.Setters><Setter Target="Box.BorderBrush" Value="$disabled$"/><Setter Target="Label.Opacity" Value="0.55"/></VisualState.Setters></VisualState>
+     <VisualState x:Name="CheckedNormal"><VisualState.Setters><Setter Target="Box.Background" Value="$accent$"/><Setter Target="Box.BorderBrush" Value="$accent$"/><Setter Target="Mark.Visibility" Value="Visible"/></VisualState.Setters></VisualState>
+     <VisualState x:Name="CheckedPointerOver"><VisualState.Setters><Setter Target="Box.Background" Value="$accentHover$"/><Setter Target="Box.BorderBrush" Value="$accentHover$"/><Setter Target="Mark.Visibility" Value="Visible"/></VisualState.Setters></VisualState>
+     <VisualState x:Name="CheckedPressed"><VisualState.Setters><Setter Target="Box.Background" Value="$accentPress$"/><Setter Target="Box.BorderBrush" Value="$accentPress$"/><Setter Target="Mark.Visibility" Value="Visible"/></VisualState.Setters></VisualState>
+     <VisualState x:Name="CheckedDisabled"><VisualState.Setters><Setter Target="Box.Background" Value="$disabled$"/><Setter Target="Box.BorderBrush" Value="$disabled$"/><Setter Target="Mark.Visibility" Value="Visible"/><Setter Target="Label.Opacity" Value="0.55"/></VisualState.Setters></VisualState>
+    </VisualStateGroup></VisualStateManager.VisualStateGroups>
+    <Border x:Name="Box" Width="18" Height="18" CornerRadius="4" BorderThickness="1" BorderBrush="$text2$" Background="Transparent" VerticalAlignment="Center" Control.IsTemplateFocusTarget="True">
+     <Path x:Name="Mark" Data="M 3.5,8.5 L 6.5,11.5 L 12.5,5" Stroke="$onAccent$" StrokeThickness="1.6" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Visibility="Collapsed"/>
+    </Border>
+    <ContentPresenter x:Name="Label" Grid.Column="1" Content="{TemplateBinding Content}" VerticalAlignment="Center"/>
+   </Grid></ControlTemplate></Setter.Value></Setter></Style>
+  <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="$ctrlHover$"/>
+  <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="$ctrlPress$"/>
+  <SolidColorBrush x:Key="ButtonBackgroundDisabled" Color="$subtle$"/>
+  <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="$text$"/>
+  <SolidColorBrush x:Key="ButtonForegroundPressed" Color="$text2$"/>
+  <SolidColorBrush x:Key="ButtonForegroundDisabled" Color="$disabled$"/>
+  <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="$ctrlBorder$"/>
+  <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="$ctrlBorder$"/>
+  <SolidColorBrush x:Key="TextControlBackground" Color="Transparent"/>
+  <SolidColorBrush x:Key="TextControlBackgroundPointerOver" Color="Transparent"/>
+  <SolidColorBrush x:Key="TextControlBackgroundFocused" Color="Transparent"/>
+  <SolidColorBrush x:Key="TextControlBackgroundDisabled" Color="Transparent"/>
+  <SolidColorBrush x:Key="TextControlBorderBrush" Color="Transparent"/>
+  <SolidColorBrush x:Key="TextControlBorderBrushPointerOver" Color="Transparent"/>
+  <SolidColorBrush x:Key="TextControlBorderBrushFocused" Color="Transparent"/>
+  <SolidColorBrush x:Key="TextControlBorderBrushDisabled" Color="Transparent"/>
+  <SolidColorBrush x:Key="TextControlForeground" Color="$text$"/>
+  <SolidColorBrush x:Key="TextControlForegroundPointerOver" Color="$text$"/>
+  <SolidColorBrush x:Key="TextControlForegroundFocused" Color="$text$"/>
+  <SolidColorBrush x:Key="TextControlPlaceholderForeground" Color="$text3$"/>
+  <SolidColorBrush x:Key="TextControlPlaceholderForegroundPointerOver" Color="$text3$"/>
+  <SolidColorBrush x:Key="TextControlPlaceholderForegroundFocused" Color="$text3$"/>
+  <SolidColorBrush x:Key="TextControlPlaceholderForegroundDisabled" Color="$disabled$"/>
+  <SolidColorBrush x:Key="TextControlButtonForeground" Color="$text2$"/>
+  <SolidColorBrush x:Key="TextControlButtonForegroundPointerOver" Color="$text$"/>
+  <SolidColorBrush x:Key="TextControlButtonBackgroundPointerOver" Color="$ctrlHover$"/>
+  <SolidColorBrush x:Key="TextControlButtonBackgroundPressed" Color="$ctrlPress$"/>
+  <SolidColorBrush x:Key="TextControlButtonForegroundPressed" Color="$text$"/>
+  <SolidColorBrush x:Key="ToolTipBackground" Color="$card$"/>
+  <SolidColorBrush x:Key="ToolTipForeground" Color="$text$"/>
+  <SolidColorBrush x:Key="ToolTipBorderBrush" Color="$border$"/>
+ </Grid.Resources>
+ <Grid.ColumnDefinitions><ColumnDefinition Width="%NavWidth%"/><ColumnDefinition Width="*"/></Grid.ColumnDefinitions>
+ <Grid x:Name="NavPanel" Width="%NavWidth%" Padding="%NavPadding%" Visibility="%NavVisible%" HorizontalAlignment="Left">
+  <!-- Hover and press darken the pane (lighten it in the dark theme), towards the selected item, so a click does not flash between lighter and darker tones. -->
+  <Grid.Resources><SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="$navHover$"/><SolidColorBrush x:Key="ButtonBackgroundPressed" Color="$navPress$"/></Grid.Resources>
+  <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+  <StackPanel>
+   <Button x:Name="Menu" Style="{StaticResource NavigationButton}" Visibility="%MenuVisible%" Margin="0,0,0,10" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" ToolTipService.ToolTip="@Menu@" AutomationProperties.Name="@Menu@">$icon:menu:16:1.3:text$</Button>
+   <StackPanel x:Name="NavItems" Spacing="%NavSpacing%"><!--NAV--></StackPanel>
+  </StackPanel>
+  <Button Grid.Row="2" x:Name="Settings" Style="{StaticResource NavigationButton}" %SettingsTip% AutomationProperties.Name="@Settings@"/>
+ </Grid>
+ <Border x:Name="ContentLayer" Grid.Column="1" Background="$layer$" BorderBrush="$border$" BorderThickness="1,1,0,0" CornerRadius="%ContentCorner%" Padding="%ContentPadding%">
+ <Grid>
+ <Grid x:Name="Performance">
+  <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+  <Grid x:Name="Header" MinHeight="36" Margin="0,0,0,14" ColumnSpacing="14">
+   <Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+   <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,1,0,-1">
+    <Button x:Name="MenuBar" Style="{StaticResource NavigationButton}" Visibility="%MenuBarVisible%" Width="40" Margin="0,0,12,0" HorizontalContentAlignment="Center" VerticalContentAlignment="Center" AutomationProperties.Name="@Menu@">$icon:menu:16:1.3:text$</Button>
+    <TextBlock x:Name="Title" Text="CPU" FontSize="%TitleSize%" FontWeight="SemiBold" LineHeight="31" LineStackingStrategy="BlockLineHeight" VerticalAlignment="Bottom"/>
+    <TextBlock x:Name="Subtitle" Visibility="%SubtitleVisible%" FontSize="12" Foreground="$text2$" VerticalAlignment="Center" Margin="12,-2,0,2"/>
+   </StackPanel>
+   <!-- The mode pill stands right: alone while live, under «Back to live» at a
+        selected moment. The negative margin keeps the header's height, so picking
+        a moment does not move the page; the pill overlaps the row below. -->
+   <!-- Spacing would also count the collapsed actions, hence their bottom margin. -->
+   <StackPanel Grid.Column="2" VerticalAlignment="Top" HorizontalAlignment="Right" Margin="0,4,0,-44">
+    <StackPanel x:Name="LiveActions" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right" Margin="0,0,0,8">
+     <Border x:Name="EscKey" Visibility="%EscVisible%" BorderBrush="$border$" BorderThickness="1" CornerRadius="3" Padding="5,1" VerticalAlignment="Center"><TextBlock Text="Esc" FontSize="11" Foreground="$text3$" Margin="0,-1,0,1"/></Border>
+     <Button x:Name="Live" Background="$accent$" Foreground="$onAccent$" BorderBrush="$accent$" FontWeight="SemiBold" AutomationProperties.Name="@Back to live@">
+      <Button.Resources>
+       <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="$accentHover$"/>
+       <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="$accentPress$"/>
+       <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="$accentHover$"/>
+       <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="$accentPress$"/>
+       <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="$onAccent$"/>
+       <SolidColorBrush x:Key="ButtonForegroundPressed" Color="$onAccent$"/>
+      </Button.Resources>
+     </Button>
+    </StackPanel>
+    <ContentControl x:Name="ModeHost" HorizontalAlignment="Right"/>
+   </StackPanel>
+  </Grid>
+  <!-- Device settings, apart from the moment controls in the header. -->
+  <StackPanel x:Name="DeviceOptions" Grid.Row="1" Canvas.ZIndex="2" Orientation="Horizontal" Spacing="20" Margin="0,-4,0,14">
+   <CheckBox x:Name="OnTaskbar" AutomationProperties.Name="@Show on taskbar@"><TextBlock Text="@Show on taskbar@"/></CheckBox>
+   <CheckBox x:Name="AlwaysMonitor" AutomationProperties.Name="@Always monitor@" ToolTipService.ToolTip="@Keep the history of this device while the window is closed@"><TextBlock Text="@Always monitor@"/></CheckBox>
+   <!-- Next to the device options: neither the statistics nor the legend lose width to it. -->
+   <Grid x:Name="InfoHost" VerticalAlignment="Center">
+    <Button x:Name="Info" Height="26" MinHeight="26" Padding="8,0" FontSize="12" Foreground="$text2$" UseSystemFocusVisuals="True" AutomationProperties.Name="@How it’s measured@">
+     <!-- No hover or pressed look: the button only carries the card and keyboard focus. -->
+     <Button.Template><ControlTemplate TargetType="Button"><ContentPresenter Background="Transparent" Padding="{TemplateBinding Padding}" VerticalContentAlignment="Center" Content="{TemplateBinding Content}"/></ControlTemplate></Button.Template>
+     <StackPanel Orientation="Horizontal" Spacing="6" Height="16">$icon:info:14:1.3:text2$<TextBlock Text="@How it’s measured@" FontSize="12" Foreground="$text2$" VerticalAlignment="Center" Margin="0,-2,0,0"/></StackPanel>
+    </Button>
+    <!-- Hover or keyboard focus shows the card below, its right edge under the button's. -->
+    <Canvas HorizontalAlignment="Right" VerticalAlignment="Bottom"><Border x:Name="InfoCard" Canvas.Left="-380" Canvas.Top="6" Width="380" Visibility="Collapsed" IsHitTestVisible="False" Background="$card$" BorderBrush="$border$" BorderThickness="1" CornerRadius="8" Padding="14,12"><StackPanel x:Name="InfoPanel" Spacing="6"/></Border></Canvas>
+   </Grid>
+  </StackPanel>
+  <StackPanel x:Name="Stats" Grid.Row="2" Canvas.ZIndex="1" Orientation="Horizontal" Spacing="36" Margin="0,0,0,16"/>
+  <Border x:Name="ChartCard" Grid.Row="3" Background="$card$" BorderBrush="$border$" BorderThickness="1" CornerRadius="8" Padding="16,10,16,8" Margin="0,0,0,14">
+   <StackPanel Spacing="4">
+    <Grid>
+     <ContentControl x:Name="LegendHost" HorizontalContentAlignment="Stretch" VerticalAlignment="Top"/>
+     <Slider x:Name="Timeline" Minimum="0" Maximum="1000" StepFrequency="1" Value="1000" Visibility="Collapsed" IsTabStop="False"/>
+    </Grid>
+    <Canvas x:Name="Chart" Height="230" HorizontalAlignment="Stretch" Background="Transparent" AutomationProperties.Name="@Timeline@"><Canvas x:Name="GraphHost" IsHitTestVisible="False"/><Canvas x:Name="OverlayHost" IsHitTestVisible="False"/><Canvas x:Name="HoverHost" IsHitTestVisible="False"/></Canvas>
+   </StackPanel>
+  </Border>
+  <Border x:Name="TableCard" Grid.Row="4" Background="$card$" BorderBrush="$border$" BorderThickness="1" CornerRadius="8" MinHeight="130">
+   <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+    <Grid Padding="16,0,12,0" Height="40" ColumnSpacing="12"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+     <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center"><TextBlock Text="@Processes@" FontSize="15" FontWeight="SemiBold"/><TextBlock x:Name="Moment" FontSize="12" VerticalAlignment="Center" Foreground="$text2$" Typography.NumeralAlignment="Tabular"/></StackPanel>
+     <Grid x:Name="SearchBox" Grid.Column="2" Width="%SearchWidth%" Height="32">
+      <Border Background="$ctrl$" BorderBrush="$ctrlBorder$" BorderThickness="1" CornerRadius="4"/>
+      <Border x:Name="SearchLine" Height="1" VerticalAlignment="Bottom" Margin="3,0" Background="$textBoxBottom$"/>
+      <Border x:Name="SearchFocus" Height="2" VerticalAlignment="Bottom" Margin="1,0" Background="$accent$" Visibility="Collapsed"/>
+      <Grid Padding="10,0,6,0" ColumnSpacing="8"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+       $icon:search:14:1.3:text3$
+       <TextBox x:Name="Search" Grid.Column="1" FontSize="13" Padding="0,5,0,0" Margin="0,1,0,-1" MinHeight="0" MinWidth="0" BorderThickness="0" Background="Transparent" VerticalAlignment="Center" PlaceholderText="@Search by name or PID@" AutomationProperties.Name="@Search by name or PID@"/>
+       <TextBlock x:Name="SearchCount" Grid.Column="2" FontSize="11" Foreground="$text3$" VerticalAlignment="Center" Typography.NumeralAlignment="Tabular"/>
+       <Button x:Name="SearchClear" Grid.Column="3" Style="{StaticResource SubtleButton}" Width="22" Height="22" MinHeight="22" Visibility="Collapsed" ToolTipService.ToolTip="@Clear@" AutomationProperties.Name="@Clear@">$icon:x:12:1.3:text2$</Button>
+      </Grid>
+     </Grid>
+     <Border Grid.Column="3" Background="$subtle$" BorderBrush="$divider$" BorderThickness="1" CornerRadius="6" Padding="2" VerticalAlignment="Center"><StackPanel Orientation="Horizontal" Spacing="2"><Button x:Name="Top" Style="{StaticResource SubtleButton}" BorderThickness="0" AutomationProperties.Name="@Top 10@"/><Button x:Name="All" Style="{StaticResource SubtleButton}" BorderThickness="0" AutomationProperties.Name="@All@"/></StackPanel></Border>
+    </Grid>
+    <StackPanel Grid.Row="1" x:Name="TableHeader" Padding="8,0"/>
+    <ScrollViewer Grid.Row="2" x:Name="RowsScroll" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"><ScrollViewer.Resources><!--SCROLL-INDICATOR--></ScrollViewer.Resources><StackPanel x:Name="Rows" Margin="8,4" XYFocusKeyboardNavigation="Enabled"/></ScrollViewer>
+    <Border Grid.Row="3" x:Name="RestBorder" BorderBrush="$divider$" BorderThickness="0,1,0,0" Padding="8,2,8,4"><StackPanel x:Name="Rest"/></Border>
+    <Border Grid.Row="1" Grid.RowSpan="3" x:Name="OffPanel" Visibility="Collapsed" BorderBrush="$divider$" BorderThickness="0,1,0,0" Padding="24">
+     <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
+      <Border Width="48" Height="48" CornerRadius="24" Background="$subtle$" HorizontalAlignment="Center">$icon:pause:22:1.3:text2$</Border>
+      <TextBlock Text="@Process monitoring is off@" FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Center" TextAlignment="Center"/>
+      <TextBlock Text="@Totals are still collected. Turn on background process history to see which processes used resources at any moment of the last 5 minutes.@" FontSize="13" Foreground="$text2$" MaxWidth="520" TextWrapping="Wrap" TextAlignment="Center" LineHeight="19" HorizontalAlignment="Center"/>
+      <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center" Margin="0,4,0,0">
+       <Button x:Name="EnableMonitoring" Background="$accent$" Foreground="$onAccent$" BorderBrush="$accent$" Content="@Turn on monitoring@">
+        <Button.Resources>
+         <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="$accentHover$"/>
+         <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="$accentPress$"/>
+         <SolidColorBrush x:Key="ButtonBorderBrushPointerOver" Color="$accentHover$"/>
+         <SolidColorBrush x:Key="ButtonBorderBrushPressed" Color="$accentPress$"/>
+         <SolidColorBrush x:Key="ButtonForegroundPointerOver" Color="$onAccent$"/>
+         <SolidColorBrush x:Key="ButtonForegroundPressed" Color="$onAccent$"/>
+        </Button.Resources>
+       </Button>
+       <Button x:Name="OpenSettings"><StackPanel Orientation="Horizontal" Spacing="8">$icon:gear:16:1.3:text$<TextBlock Text="@Open settings@" VerticalAlignment="Center"/></StackPanel></Button>
+      </StackPanel>
+      <StackPanel x:Name="OffPins" Spacing="8" Margin="0,12,0,0" HorizontalAlignment="Center">
+       <TextBlock Text="@Pins are kept and return when enabled@" FontSize="12" Foreground="$text3$" HorizontalAlignment="Center"/>
+       <StackPanel x:Name="OffChips" Orientation="Horizontal" Spacing="6" HorizontalAlignment="Center"/>
+      </StackPanel>
+     </StackPanel>
+    </Border>
+   </Grid>
+  </Border>
+ </Grid>
+ <Grid x:Name="SettingsPage" Visibility="Collapsed"><ContentControl x:Name="SettingsHost" HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"/></Grid>
+ </Grid></Border>
+ <Grid x:Name="NavOverlay" Grid.ColumnSpan="2" Visibility="Collapsed">
+  <Button x:Name="NavDismiss" Style="{StaticResource SubtleButton}" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" IsTabStop="False" Background="Transparent"/>
+  <Border Width="248" HorizontalAlignment="Left" Background="$bg$" BorderBrush="$border$" BorderThickness="0,0,1,0">
+   <Grid Padding="8,8,8,12"><Grid.Resources><SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="$navHover$"/><SolidColorBrush x:Key="ButtonBackgroundPressed" Color="$navPress$"/></Grid.Resources><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
+    <StackPanel Spacing="2">
+     <!--OVERLAY-->
+    </StackPanel>
+    <Button Grid.Row="2" x:Name="OverlaySettings" Style="{StaticResource NavigationButton}" AutomationProperties.Name="@Settings@"/>
+   </Grid>
+  </Border>
+ </Grid>
+</Grid>

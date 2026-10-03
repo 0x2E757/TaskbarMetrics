@@ -1,0 +1,27 @@
+//! Windows adapters. Unsafe ABI operations must stay in this module.
+pub(crate) mod abi;
+pub(crate) mod app_icon;
+pub(crate) mod autostart;
+mod com;
+pub mod composition;
+pub mod data_directory;
+pub mod devices;
+pub mod executables;
+pub(crate) mod gpu_temperature;
+pub(crate) mod hardware;
+pub mod launcher;
+mod logging;
+pub(crate) mod memory_modules;
+pub mod metrics_window;
+pub(crate) mod pdh;
+pub mod portable;
+pub mod process_history;
+mod providers;
+pub(crate) mod scheduled_task;
+pub(crate) mod system_activity;
+mod tap;
+pub mod temperature;
+pub(crate) mod unload;
+pub(crate) mod wifi;
+mod window_launcher;
+mod xaml;

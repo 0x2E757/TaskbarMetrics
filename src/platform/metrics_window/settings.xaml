@@ -1,0 +1,48 @@
+<Grid xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" RequestedTheme="Default"
+      Background="@BACKGROUND@">
+  <Grid.Resources><Style TargetType="TextBlock"><Setter Property="Foreground" Value="@FOREGROUND@"/></Style></Grid.Resources>
+  <Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/></Grid.RowDefinitions>
+  <StackPanel Margin="28,22,28,16" Spacing="4">
+    <TextBlock Text="TASKBAR METRICS / DESIGN LAB" FontSize="11" CharacterSpacing="140" Foreground="{ThemeResource SystemControlForegroundAccentBrush}"/>
+    <TextBlock Text="Live widget preview" FontSize="26" FontWeight="SemiBold"/>
+    <TextBlock Text="Adjust fields or sliders to preview both themes immediately." FontSize="13" TextWrapping="Wrap"/>
+  </StackPanel>
+  <Border Grid.Row="1" Margin="28,0,28,18" CornerRadius="10" BorderThickness="1" BorderBrush="#40808080">
+    <StackPanel>
+      <Border Background="#F3F3F3" Padding="16,12" CornerRadius="10,10,0,0">
+        <StackPanel Spacing="10"><TextBlock Text="LIGHT THEME · 100%" FontSize="10" CharacterSpacing="100" Foreground="#606060"/>
+          <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" HorizontalScrollMode="Enabled" VerticalScrollMode="Disabled">
+            <StackPanel x:Name="LightPreview" Orientation="Horizontal" MinHeight="36" HorizontalAlignment="Left"/>
+          </ScrollViewer>
+        </StackPanel>
+      </Border>
+      <Border Background="#202024" Padding="16,12" CornerRadius="0,0,10,10">
+        <StackPanel Spacing="10"><TextBlock Text="DARK THEME · 100%" FontSize="10" CharacterSpacing="100" Foreground="#ABABB5"/>
+          <ScrollViewer HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Disabled" HorizontalScrollMode="Enabled" VerticalScrollMode="Disabled">
+            <StackPanel x:Name="DarkPreview" Orientation="Horizontal" MinHeight="36" HorizontalAlignment="Left"/>
+          </ScrollViewer>
+        </StackPanel>
+      </Border>
+    </StackPanel>
+  </Border>
+  <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+    <StackPanel Margin="28,0,28,24" Spacing="10">
+      <TextBlock Text="Process monitoring" FontSize="18" FontWeight="SemiBold"/>
+      <ToggleSwitch x:Name="ProcessMonitoring" Header="Background process history" OnContent="On" OffContent="Off"/>
+      <TextBlock x:Name="MonitoringStatus" Text="This switch affects the application. Keep 5 minutes of history at 500 ms intervals. Per-process disk/network tracing requires elevation. Taskbar charts update twice a second; numbers once a second." TextWrapping="Wrap" FontSize="12"/>
+      <TextBlock Text="Layout, typography and charts" FontSize="18" FontWeight="SemiBold" Margin="0,0,0,6"/>
+      @CONTROLS@
+      <TextBlock Text="Alerts: temperature and RAM" FontSize="18" FontWeight="SemiBold" Margin="0,16,0,4"/>
+      <TextBlock Text="The background turns red between X and Y and pulses at Y. Y must be at least 1 above X. Test values affect the preview only." TextWrapping="Wrap" FontSize="12"/>
+      @ALERTS@
+      <TextBlock Text="Chart preview values" FontSize="18" FontWeight="SemiBold" Margin="0,16,0,4"/>
+      <TextBlock Text="Sliders change the displayed number and the last chart point. Earlier points are examples. Temperature and RAM also control preview alerts." TextWrapping="Wrap" FontSize="12"/>
+      @DEMO@
+      @COLORS@
+      <TextBlock Text="Fields use the slider limits. Invalid input does not change the preview. Sizes use Windows logical pixels." TextWrapping="Wrap" FontSize="12" Opacity="0.65" Margin="0,8,0,0"/>
+      <TextBlock Text="The chart inset is measured from the tile edge. Fade starts relative to the right text edge; negative values move it left. Zero length gives a hard edge; 100% visibility disables fading." TextWrapping="Wrap" FontSize="12" Opacity="0.65"/>
+      <TextBlock Text="Preview data is simulated. Appearance changes affect this preview; the process monitoring switch affects the application. Preview settings are saved beside the application. Tile height is 36 px." TextWrapping="Wrap" FontSize="12" Opacity="0.65"/>
+    </StackPanel>
+  </ScrollViewer>
+</Grid>
