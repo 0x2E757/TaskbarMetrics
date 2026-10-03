@@ -71,6 +71,12 @@ impl XamlVector {
             check(call(self.0.raw(), item.raw()))
         }
     }
+    pub(super) fn insert(&self, index: u32, item: &Com) -> Result<()> {
+        unsafe {
+            let call: unsafe extern "system" fn(Raw, u32, Raw) -> Hr = self.0.slot(11);
+            check(call(self.0.raw(), index, item.raw()))
+        }
+    }
     pub(super) fn remove(&self, item: &Com) -> Result<()> {
         let (mut index, mut found) = (0, 0u8);
         unsafe {

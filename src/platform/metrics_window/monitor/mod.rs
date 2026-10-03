@@ -46,7 +46,7 @@ use elements::Elements;
 use header::{HeaderMarkup, Mode};
 use layout::WindowLayout;
 use legend::{ChartLegend, LegendEntry, LegendFlow, LegendMark, LegendWidths};
-pub(super) use locale::Language;
+pub(crate) use locale::Language;
 use menu::DeviceMenu;
 use model::{Device, ProcessKey, Resource, Timeline};
 use nav::Navigation;

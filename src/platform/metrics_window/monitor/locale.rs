@@ -581,6 +581,10 @@ const CATALOG: &[(&str, &str)] = &[
     ("Cancel", "Отмена"),
     ("Startup and window", "Запуск и окно"),
     ("Monitors", "Мониторы"),
+    (
+        "Not enough room on the taskbar for",
+        "На панели задач не хватает места для",
+    ),
     ("Taskbar tiles", "Плитки на панели задач"),
     (
         "If none of the chosen monitors is connected, the tiles show on the main one",

@@ -20,6 +20,8 @@ pub(super) type SaveOrder = Rc<dyn Fn(&[String])>;
 struct Strip {
     widths: Vec<f64>,
     gap: f64,
+    /// Tiles on view, from the first; the rest are left out for lack of room.
+    shown: usize,
 }
 impl Strip {
     fn left(&self, index: usize) -> f64 {
@@ -33,11 +35,11 @@ impl Strip {
     }
     /// The tile under `x`; gaps belong to no tile.
     fn hit(&self, x: f64) -> Option<usize> {
-        (0..self.widths.len()).find(|&i| (self.left(i)..self.left(i) + self.widths[i]).contains(&x))
+        (0..self.shown).find(|&i| (self.left(i)..self.left(i) + self.widths[i]).contains(&x))
     }
     /// Keeps the dragged tile inside the strip.
     fn clamp(&self, from: usize, offset: f64) -> f64 {
-        let last = self.widths.len() - 1;
+        let last = self.shown - 1;
         let end = self.left(last) + self.widths[last];
         offset.clamp(-self.left(from), end - self.left(from) - self.widths[from])
     }
@@ -46,7 +48,7 @@ impl Strip {
     fn target(&self, from: usize, offset: f64) -> usize {
         let left = self.left(from) + offset;
         let right = left + self.widths[from];
-        let after = (from + 1..self.widths.len())
+        let after = (from + 1..self.shown)
             .filter(|&i| right > self.center(i))
             .count();
         let before = (0..from).filter(|&i| left < self.center(i)).count();
@@ -69,7 +71,7 @@ impl Strip {
         widths.insert(to, width);
         Self {
             widths,
-            gap: self.gap,
+            ..self.clone()
         }
     }
     /// The dragged tile's new slot relative to its old one.
@@ -284,7 +286,11 @@ impl TileReorder {
         save: SaveOrder,
     ) -> Result<Self> {
         let order = Rc::new(RefCell::new(Order {
-            strip: Strip { widths, gap },
+            strip: Strip {
+                shown: widths.len(),
+                widths,
+                gap,
+            },
             slides,
             ids,
             gesture: Gesture::Idle,
@@ -387,6 +393,14 @@ impl TileReorder {
         order.release()?;
         Ok(order.ids.clone())
     }
+    /// Only the first `shown` tiles are on view: a drag stays among them, and one
+    /// in progress is put back.
+    pub fn show(&self, shown: usize) -> Result<()> {
+        let mut order = self.order.borrow_mut();
+        order.cancel()?;
+        order.strip.shown = shown;
+        Ok(())
+    }
     /// Tile ids in their current order on the taskbar.
     pub fn ids(&self) -> Vec<String> {
         self.order.borrow().ids.clone()
@@ -401,6 +415,7 @@ mod tests {
         Strip {
             widths: vec![104.0, 84.0, 112.0],
             gap: 12.0,
+            shown: 3,
         }
     }
     #[test]
@@ -411,6 +426,17 @@ mod tests {
         assert_eq!(s.hit(120.0), Some(1));
         assert_eq!(s.hit(323.0), Some(2));
         assert_eq!(s.hit(324.0), None);
+    }
+    #[test]
+    fn tiles_left_out_take_no_part_in_a_drag() {
+        let s = Strip {
+            shown: 2,
+            ..strip()
+        };
+        assert_eq!(s.hit(323.0), None);
+        assert_eq!(s.clamp(0, 500.0), 96.0);
+        assert_eq!(s.target(0, 96.0), 1);
+        assert_eq!(s.moved(0, 1).shown, 2);
     }
     #[test]
     fn keeps_the_dragged_tile_inside_the_strip() {

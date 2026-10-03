@@ -22,7 +22,7 @@ gap=12
 | `monitors` | empty | Monitors whose taskbars show the tiles; empty means every monitor, `none` none |
 | `interval_ms` | `500` | Collection and chart interval, 250–60000 ms |
 | `process_monitoring` | `true` | Background process history; `false` stops process polling and ETW, the taskbar metrics keep working |
-| `width` | `260` | Minimum area width, 100–800 XAML logical pixels; the actual area is no smaller than the total width of the tiles |
+| `width` | `260` | Minimum area width, 100–800 XAML logical pixels; the actual area is no smaller than the total width of the tiles; when they do not all fit, it holds only those shown and the warning ([placement.md](taskbar/placement.md)) |
 | `gap` | `12` | Margin from the edge and neighboring buttons, 0–100 logical pixels |
 
 An element of `metrics` and `history` is a type (`cpu`, `gpu`, `ram`, `disk`, `net`) or a specific

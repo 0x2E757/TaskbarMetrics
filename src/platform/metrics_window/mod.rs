@@ -5,6 +5,7 @@ use std::ptr;
 mod color_picker;
 mod colors;
 mod monitor;
+pub(crate) use monitor::Language;
 mod monitoring;
 mod playground;
 mod window;

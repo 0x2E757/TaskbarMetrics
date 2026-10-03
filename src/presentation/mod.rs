@@ -74,6 +74,45 @@ impl LeftPlacement {
     }
 }
 
+/// Tiles side by side; the ones that do not fit give way to a marker after the rest.
+pub struct TileStrip {
+    /// Tile widths in their order.
+    pub widths: Vec<f64>,
+    /// Space between tiles, and between the last tile shown and the marker.
+    pub spacing: f64,
+    pub marker: f64,
+    /// Least width of the strip when every tile shows.
+    pub minimum: f64,
+}
+
+impl TileStrip {
+    /// Width of the first `shown` tiles, with the marker after them when some are left out.
+    pub fn width(&self, shown: usize) -> f64 {
+        let tiles = self.widths[..shown].iter().sum::<f64>()
+            + self.spacing * shown.saturating_sub(1) as f64;
+        match shown {
+            _ if shown == self.widths.len() => tiles.max(self.minimum),
+            0 => self.marker,
+            _ => tiles + self.spacing + self.marker,
+        }
+    }
+
+    /// Where the strip starts and how many tiles it shows: all when they fit, else as
+    /// many as fit before the marker; `None` when not even the marker fits.
+    pub fn place(
+        &self,
+        taskbar_width: f64,
+        occupied: &[OccupiedRange],
+        gap: f64,
+    ) -> Option<(f64, usize)> {
+        (0..=self.widths.len()).rev().find_map(|shown| {
+            LeftPlacement::new(self.width(shown), gap, self.spacing)
+                .position(taskbar_width, occupied)
+                .map(|left| (left, shown))
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -118,5 +157,38 @@ mod tests {
         assert_eq!(layout.position(f64::NAN, &[]), None);
         assert_eq!(layout.position(1920.0, &occupied(f64::NAN, 300.0)), None);
         assert_eq!(layout.position(1920.0, &occupied(0.0, 900.0)), None);
+    }
+
+    #[test]
+    fn tiles_that_do_not_fit_give_way_to_the_marker() {
+        let strip = TileStrip {
+            widths: vec![100.0, 100.0, 80.0],
+            spacing: 6.0,
+            marker: 24.0,
+            minimum: 260.0,
+        };
+        assert_eq!(strip.width(3), 292.0);
+        assert_eq!(strip.width(2), 206.0 + 6.0 + 24.0);
+        assert_eq!(strip.width(0), 24.0);
+        // Buttons from 300: 12 + width + 12 must stay within both 300 and half the bar.
+        let buttons = [OccupiedRange {
+            left: 300.0,
+            right: 900.0,
+            snug: false,
+        }];
+        assert_eq!(strip.place(1920.0, &buttons, 12.0), Some((12.0, 2)));
+        assert_eq!(strip.place(1920.0, &[], 12.0), Some((12.0, 3)));
+        let crowded = [OccupiedRange {
+            left: 40.0,
+            right: 940.0,
+            snug: false,
+        }];
+        assert_eq!(strip.place(1920.0, &crowded, 12.0), None);
+        let marker_only = [OccupiedRange {
+            left: 60.0,
+            right: 900.0,
+            snug: false,
+        }];
+        assert_eq!(strip.place(1920.0, &marker_only, 12.0), Some((12.0, 0)));
     }
 }

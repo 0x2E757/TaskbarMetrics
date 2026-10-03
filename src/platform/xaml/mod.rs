@@ -2,7 +2,7 @@
 use super::{abi::*, com::*, data_directory::DataDirectory, displays::Displays};
 use crate::{
     config::{Settings, NO_MONITORS},
-    presentation::{LeftPlacement, OccupiedRange},
+    presentation::{OccupiedRange, TileStrip},
 };
 use std::{
     cell::{Cell, RefCell},
@@ -24,6 +24,7 @@ mod dispatcher;
 pub(crate) mod events;
 mod geometry;
 mod interop;
+mod overflow;
 mod reorder;
 mod resources;
 mod rounded_clip;
@@ -63,7 +64,8 @@ struct UiTarget {
     button: Option<MetricsButton>,
     settings: Settings,
     last_error: Rc<Cell<Option<Hr>>>,
-    last_visible: Option<bool>,
+    /// Tiles shown at the last placement, `None` inside when the strip was hidden.
+    last_shown: Option<Option<usize>>,
     /// Reader of the taskbar's occupied ranges, created on the first update.
     geometry: Option<TaskbarGeometry>,
     /// The taskbar window, which tells the monitor; unknown shows the tiles.
@@ -94,7 +96,7 @@ impl Target {
                     button: None,
                     settings,
                     last_error: Rc::new(Cell::new(None)),
-                    last_visible: None,
+                    last_shown: None,
                     geometry: None,
                     window,
                     chosen,
@@ -199,7 +201,7 @@ impl UiTarget {
                 if let Some(settings) = settings {
                     self.settings = settings;
                 }
-                self.last_visible = None;
+                self.last_shown = None;
                 return match self.button.take() {
                     Some(old) => XamlVector(self.panel.object(6)?).remove(&old.element()?),
                     None => Ok(()),
@@ -235,7 +237,8 @@ impl UiTarget {
             return Ok(());
         };
         button.update(readings)?;
-        let placement: Result<Option<f64>> = (|| {
+        // Where the strip goes, how many tiles it shows and how wide it is then.
+        let placement: Result<Option<(f64, usize, f64)>> = (|| {
             let width = XamlElement(self.panel.query(&FRAMEWORK)?).number(13)?;
             if self.geometry.is_none() {
                 self.geometry = Some(TaskbarGeometry::new(&self.panel)?);
@@ -245,14 +248,26 @@ impl UiTarget {
                 .as_ref()
                 .ok_or(E_UNEXPECTED)?
                 .read(&self.panel)?;
-            let required = button.width().max(self.settings.width);
-            let left = LeftPlacement::new(required, self.settings.gap, self.style.gap)
-                .position(width, &occupied);
-            if self.last_visible != Some(left.is_some()) {
-                log(&format!("Metrics placement: visible={}, taskbar={width}, required={required}, occupied={:?}", left.is_some(), occupied.iter().map(|range| (range.left, range.right)).collect::<Vec<_>>()));
-                self.last_visible = Some(left.is_some());
+            let strip = TileStrip {
+                widths: button.widths(),
+                spacing: self.style.gap,
+                marker: overflow::OverflowMarker::WIDTH,
+                minimum: self.settings.width,
+            };
+            let fit = strip.place(width, &occupied, self.settings.gap);
+            let shown = fit.map(|(_, shown)| shown);
+            if self.last_shown != Some(shown) {
+                log(&format!(
+                    "Metrics placement: shown={shown:?} of {}, taskbar={width}, occupied={:?}",
+                    strip.widths.len(),
+                    occupied
+                        .iter()
+                        .map(|range| (range.left, range.right))
+                        .collect::<Vec<_>>()
+                ));
+                self.last_shown = Some(shown);
             }
-            Ok(left)
+            Ok(fit.map(|(left, shown)| (left, shown, strip.width(shown))))
         })();
         let error = placement.as_ref().err().copied();
         if self.last_error.replace(error) != error {
@@ -261,8 +276,12 @@ impl UiTarget {
             }
         }
         match placement {
-            Ok(Some(left)) => {
-                button.framework()?.margin(left, 0.0)?;
+            Ok(Some((left, shown, required))) => {
+                let framework = button.framework()?;
+                framework.margin(left, 0.0)?;
+                // No wider than what shows, so the strip covers no taskbar button.
+                framework.set_number(16, required)?;
+                button.show(shown)?;
                 button.visible(true)?;
                 unsafe {
                     if let Ok(event) = Handle::new(OpenEventW(

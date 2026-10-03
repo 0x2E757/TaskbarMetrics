@@ -13,9 +13,16 @@ its 1 px hover border lies inside its background, while a tile's lies outside th
 background's right edge counts 1 px to the left; the edge and the other
 buttons keep the `gap` of the configuration. Without that element, as in another Windows build, the
 whole container counts, with `gap`.
-`LeftPlacement` looks for the first sufficient free interval in the left half. If there is no
-room or the tree could not be recognized, the tile strip is hidden (opacity 0). When hidden,
-hit-testing is turned off as well, so that the invisible strip does not get in the taskbar's way.
+`LeftPlacement` looks for the first sufficient free interval in the left half. `TileStrip` asks
+it for every tile first; when they do not fit, for as many tiles as fit in their order with a
+warning icon after them (24 px, at the tile spacing). The icon's tooltip names the tiles left
+out, "Not enough room on the taskbar for GPU2, D:", in the window's language. Tiles left out are
+collapsed but keep recording their history, and a drag moves tiles only among those shown. The
+icon stands right after the last tile shown in the strip's children, since StackPanel spaces
+collapsed children too. The strip is as wide as what it shows, so it covers no taskbar button.
+If not even the icon fits or the tree could not be recognized, the tile strip is hidden
+(opacity 0). When hidden, hit-testing is turned off as well, so that the invisible strip does not
+get in the taskbar's way.
 
 The main scenario is the standard horizontal taskbar with centered buttons.
 With left-aligned buttons there may be no free space. The geometry is rechecked

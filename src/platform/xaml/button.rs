@@ -25,6 +25,10 @@ pub(super) struct MetricsButton {
     width: f64,
     /// Dragging tiles into a new order; taskbar only.
     reorder: Option<super::reorder::TileReorder>,
+    /// The warning after the tiles shown when the rest do not fit; taskbar only.
+    marker: Option<super::overflow::OverflowMarker>,
+    /// Tiles on view, from the first in their order.
+    shown: usize,
 }
 impl MetricsButton {
     pub(super) fn preview(style: &TileStyle, dark: bool) -> Result<Self> {
@@ -81,10 +85,12 @@ impl MetricsButton {
         let width = tiles.iter().map(|tile| tile.width).sum::<f64>() + 4.0 * style.gap;
         Ok(Self {
             root,
+            shown: tiles.len(),
             tiles,
             width,
             last_numbers: None,
             reorder: None,
+            marker: None,
         })
     }
     pub(super) fn preview_layout(&mut self) -> Result<()> {
@@ -147,6 +153,9 @@ impl MetricsButton {
                 }
             }
         }
+        let marker = super::overflow::OverflowMarker::new()?;
+        marker.show(&["GPU".into(), "RAM".into()])?;
+        marker.show(&[])?;
         Self::verify_number_cadence()?;
         Self::verify_reorder()
     }
@@ -226,13 +235,17 @@ impl MetricsButton {
             width += tile.width + if tiles.is_empty() { 0.0 } else { style.gap };
             tiles.push(tile);
         }
+        let marker = super::overflow::OverflowMarker::new()?;
+        children.append(&marker.element()?)?;
         let reorder = Self::reorder(&root, &tiles, style.gap, dragging, save)?;
         Ok(Self {
             root,
+            shown: tiles.len(),
             tiles,
             width,
             last_numbers: None,
             reorder: Some(reorder),
+            marker: Some(marker),
         })
     }
     fn reorder(
@@ -268,6 +281,50 @@ impl MetricsButton {
     }
     pub(super) fn width(&self) -> f64 {
         self.width
+    }
+    /// Tiles in their order on the taskbar, which a drag may have changed.
+    fn ordered(&self) -> Vec<&MetricTile> {
+        match self.ids() {
+            Some(ids) => ids
+                .iter()
+                .filter_map(|id| self.tiles.iter().find(|tile| tile.id == *id))
+                .collect(),
+            None => self.tiles.iter().collect(),
+        }
+    }
+    /// Tile widths in their order on the taskbar.
+    pub(super) fn widths(&self) -> Vec<f64> {
+        self.ordered().iter().map(|tile| tile.width).collect()
+    }
+    /// Shows the first `shown` tiles in their order; the warning after them names
+    /// the rest, which keep recording their history.
+    pub(super) fn show(&mut self, shown: usize) -> Result<()> {
+        if shown == self.shown {
+            return Ok(());
+        }
+        let ordered = self.ordered();
+        for (index, tile) in ordered.iter().enumerate() {
+            XamlElement(tile.root.query(&UI_ELEMENT)?).set_enum(22, i32::from(index >= shown))?;
+        }
+        let hidden: Vec<String> = ordered
+            .iter()
+            .skip(shown)
+            .map(|tile| Markup::label(&tile.id))
+            .collect();
+        if let Some(marker) = &self.marker {
+            // StackPanel spaces collapsed children too: the warning goes right after
+            // the tiles shown, and the spacing of those left out falls behind it.
+            let children = XamlVector(self.root.query(&PANEL)?.object(6)?);
+            let element = marker.element()?;
+            children.remove(&element)?;
+            children.insert(shown as u32, &element)?;
+            marker.show(&hidden)?;
+        }
+        if let Some(reorder) = &self.reorder {
+            reorder.show(shown)?;
+        }
+        self.shown = shown;
+        Ok(())
     }
     pub(super) fn restore_history(&mut self, previous: &Self) {
         for tile in &mut self.tiles {
@@ -310,7 +367,7 @@ impl MetricsButton {
     }
 }
 
-struct Markup;
+pub(super) struct Markup;
 impl Markup {
     /// `GPU2` (`gpu@1`: numbers count from 1), `DISK3`, `D:`, `WI‑FI` for a device,
     /// `DISK` for the main device of a kind.
@@ -449,7 +506,7 @@ impl Markup {
             ""
         }
     }
-    fn load(markup: &str) -> Result<Com> {
+    pub(super) fn load(markup: &str) -> Result<Com> {
         let reader = factory(
             "Windows.UI.Xaml.Markup.XamlReader",
             &Guid::from_u128(0x9891c6bd_534f_4955_b85a_8a8dc0dca602),
@@ -462,7 +519,7 @@ impl Markup {
             Com::owned(raw)
         }
     }
-    fn find(root: &Com, name: &str) -> Result<Com> {
+    pub(super) fn find(root: &Com, name: &str) -> Result<Com> {
         let frame = root.query(&FRAMEWORK)?;
         let name = HString::new(name)?;
         let mut raw = ptr::null_mut();
