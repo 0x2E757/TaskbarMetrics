@@ -19,7 +19,7 @@ gap=12
 |---|---|---|
 | `metrics` | `cpu,gpu,ram,net,disk` | Taskbar tiles in display order |
 | `history` | empty | Devices without a tile whose history is recorded in the background ("Always monitor") |
-| `monitors` | empty | Monitors whose taskbars show the tiles; empty means every monitor |
+| `monitors` | empty | Monitors whose taskbars show the tiles; empty means every monitor, `none` none |
 | `interval_ms` | `500` | Collection and chart interval, 250–60000 ms |
 | `process_monitoring` | `true` | Background process history; `false` stops process polling and ETW, the taskbar metrics keep working |
 | `width` | `260` | Minimum area width, 100–800 XAML logical pixels; the actual area is no smaller than the total width of the tiles |
@@ -40,7 +40,9 @@ An element of `monitors` is a monitor's hardware id and connection, `GSM7819/7&3
 from the monitor path Windows reports; it stays the same across restarts and display changes. When
 none of the chosen monitors is connected, the main monitor shows the tiles. The settings page
 writes the key; with every monitor checked it writes it empty, so a monitor connected later shows
-the tiles too, and chosen monitors that are disconnected at the time stay in the list.
+the tiles too, and chosen monitors that are disconnected at the time stay in the list. With no
+monitor checked it writes `none`, which stands alone: no taskbar shows the tiles, and the main
+monitor does not stand in for it.
 
 The config is written by tile dragging and by the window (the "Show on taskbar" and "Always
 monitor" checkboxes, the monitor checkboxes, the process monitoring switch). Writes are atomic, through a temporary

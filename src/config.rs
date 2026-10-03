@@ -5,13 +5,17 @@ use std::{
     time::Duration,
 };
 
+/// `monitors=none`: no taskbar shows the tiles.
+pub const NO_MONITORS: &str = "none";
+
 #[derive(Clone, Debug)]
 pub struct Settings {
     /// Taskbar tiles: device ids, `kind` or `kind@tag`.
     pub metrics: Vec<String>,
     /// Devices whose history is recorded in the background without a tile.
     pub history: Vec<String>,
-    /// Monitors whose taskbars show the tiles (`Display::id`); empty means all.
+    /// Monitors whose taskbars show the tiles (`Display::id`); empty means all,
+    /// [`NO_MONITORS`] none.
     pub monitors: Vec<String>,
     pub interval: Duration,
     pub process_monitoring: bool,
@@ -111,12 +115,16 @@ impl Settings {
             .then_some(ids)
     }
 
-    /// Comma-separated unique monitor ids; empty for every monitor.
+    /// Comma-separated unique monitor ids; empty for every monitor, [`NO_MONITORS`]
+    /// alone for none.
     fn monitors(value: &str) -> Option<Vec<String>> {
         if value.is_empty() {
             return Some(Vec::new());
         }
         let ids: Vec<String> = value.split(',').map(|v| v.trim().to_string()).collect();
+        if ids.len() > 1 && ids.iter().any(|id| id == NO_MONITORS) {
+            return None;
+        }
         let mut unique = HashSet::new();
         ids.iter()
             .all(|id| !id.is_empty() && unique.insert(id.clone()))
@@ -216,6 +224,7 @@ mod tests {
             "history=net@Wi-Fi,net@Wi-Fi",
             "monitors=A/1,A/1",
             "monitors=A/1,",
+            "monitors=none,A/1",
             "interval=1000",
             "width=200\nwidth=300",
             "malformed",
@@ -232,6 +241,10 @@ mod tests {
         assert!(Settings::parse("history=").unwrap().history.is_empty());
         assert!(Settings::default().monitors.is_empty());
         assert!(Settings::parse("monitors=").unwrap().monitors.is_empty());
+        assert_eq!(
+            Settings::parse("monitors=none").unwrap().monitors,
+            [NO_MONITORS]
+        );
         assert_eq!(
             Settings::parse("monitors=DEL41A8/5&2f2c&0&UID4353, GSM5B7F/4&1&0&UID256")
                 .unwrap()

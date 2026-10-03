@@ -29,9 +29,10 @@ monitoring switch itself takes effect immediately. More about the editor is in
   [startup-and-window.md](startup-and-window.md).
 - "Taskbar tiles → Monitors": a check box for each connected monitor, named by its model, size
   and "main" for the main one. A click is saved to `monitors` right away
-  ([configuration.md](../configuration.md)) and the taskbars follow within a second. The last
-  checked box stays checked. When none of the chosen monitors is connected, the main monitor
-  shows the tiles. The list is read when the page opens.
+  ([configuration.md](../configuration.md)) and the taskbars follow within a second. With every
+  box unchecked no taskbar shows the tiles, and the hint under the boxes says so. When none of
+  the chosen monitors is connected, the main monitor shows the tiles. The list is read when the
+  page opens.
 - English is the base language. Until a language is chosen, the window opens in Russian if
   Russian is the Windows display language or one of the keyboard layouts. The language is changed
   in "Settings → General → Language → Display language" without restarting the process. The choice is stored in

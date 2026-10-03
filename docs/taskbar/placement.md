@@ -30,7 +30,7 @@ with the island's root element as a child; the source gives its window
 `Shell_SecondaryTrayWnd`. `MonitorFromWindow` tells the monitor, which `Displays` matches to the
 ids of `monitors` ([configuration.md](../configuration.md)). A taskbar on a monitor that is
 not chosen gets no tiles; once a second it checks the choice again and builds them or removes
-them. A taskbar whose window is not found shows the tiles.
+them. A taskbar whose window is not found shows the tiles, unless `monitors` is `none`.
 
 Tiles are reordered by dragging, like tray icons: press a tile and
 drag it (from 4 px), the neighboring tiles make room. Once the drag starts, the strip takes the

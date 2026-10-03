@@ -1,5 +1,6 @@
 //! Connected monitors and the choice of those that show the taskbar tiles.
 use super::abi::Raw;
+use crate::config::NO_MONITORS;
 use std::ptr;
 
 /// A connected monitor.
@@ -84,11 +85,15 @@ impl Displays {
         self.0.iter().find(|display| display.monitor == monitor)
     }
     /// Whether `display` shows the tiles when `chosen` lists the monitors for them.
-    /// An empty choice means every monitor; when none of the chosen ones is
-    /// connected, the main monitor shows them, so the tiles never vanish.
+    /// An empty choice means every monitor, [`NO_MONITORS`] none; when none of the
+    /// chosen ones is connected, the main monitor shows them, so the tiles do not
+    /// vanish by unplugging a monitor.
     pub fn shows(&self, chosen: &[String], display: &Display) -> bool {
         if chosen.is_empty() {
             return true;
+        }
+        if chosen == [NO_MONITORS] {
+            return false;
         }
         if self.0.iter().any(|other| chosen.contains(&other.id)) {
             chosen.contains(&display.id)
@@ -316,5 +321,7 @@ mod tests {
         assert!(displays.shows(&gone, &main) && !displays.shows(&gone, &side));
         let both = ["C/3".to_string(), "A/1".to_string()];
         assert!(displays.shows(&both, &main) && !displays.shows(&both, &side));
+        let none = [NO_MONITORS.to_string()];
+        assert!(!displays.shows(&none, &main) && !displays.shows(&none, &side));
     }
 }

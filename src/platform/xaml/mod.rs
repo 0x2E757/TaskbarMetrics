@@ -1,7 +1,7 @@
 //! Native XAML view; all element references remain on their UI thread.
 use super::{abi::*, com::*, data_directory::DataDirectory, displays::Displays};
 use crate::{
-    config::Settings,
+    config::{Settings, NO_MONITORS},
     presentation::{LeftPlacement, OccupiedRange},
 };
 use std::{
@@ -285,7 +285,7 @@ impl UiTarget {
             return true;
         }
         let Some(window) = window else {
-            return true;
+            return settings.monitors != [NO_MONITORS];
         };
         let displays = Displays::current();
         displays
