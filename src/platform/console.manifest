@@ -1,9 +1,11 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<!-- A console program that, started outside a console (the Run value at sign-in, a
-     double click), gets no console window; in a terminal it prints as usual.
-     consoleAllocationPolicy needs Windows 11 24H2; older builds ignore it. -->
+<!-- The console programs (the launcher, the portable executable and the collectors):
+     started outside a console (the Run value at sign-in, a double click, Task Scheduler)
+     they get no console window; in a terminal they print as usual.
+     consoleAllocationPolicy needs Windows 11 24H2; older builds ignore it, and the
+     collectors then leave the console created for them (DetachedConsole). -->
 <assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0">
-  <assemblyIdentity version="1.0.0.0" processorArchitecture="amd64" name="TaskbarMetrics.Launcher" type="win32"/>
+  <assemblyIdentity version="1.0.0.0" processorArchitecture="amd64" name="TaskbarMetrics.Console" type="win32"/>
   <compatibility xmlns="urn:schemas-microsoft-com:compatibility.v1"><application>
     <supportedOS Id="{8e0f7a12-bfb3-4fe8-b9a5-48fd50a15a9a}"/>
     <maxversiontested Id="10.0.26100.0"/>

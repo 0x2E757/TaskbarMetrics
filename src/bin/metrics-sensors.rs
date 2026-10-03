@@ -1,4 +1,5 @@
 fn main() {
+    taskbar_metrics_host::platform::detached_console::DetachedConsole::release();
     if let Err(error) = taskbar_metrics_host::platform::temperature::SensorCollector::run() {
         eprintln!("{error}");
         if let Ok(path) = std::env::current_exe() {

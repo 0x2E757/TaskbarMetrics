@@ -43,21 +43,21 @@ const EXECUTABLES: [(&str, &str, &[u32]); 5] = [
 
 fn main() {
     let root = PathBuf::from(std::env::var_os("CARGO_MANIFEST_DIR").unwrap());
-    // The window's DPI awareness; the launcher's console only inside a terminal.
+    // The window's DPI awareness; a console only inside a terminal for the others.
+    let console = root.join("src/platform/console.manifest");
     let manifests = [
         (
             "metrics-window",
             root.join("src/platform/metrics_window/app.manifest"),
         ),
-        (
-            "taskbar-metrics",
-            root.join("src/platform/launcher.manifest"),
-        ),
-        (PORTABLE.0, root.join("src/platform/launcher.manifest")),
+        ("taskbar-metrics", console.clone()),
+        (PORTABLE.0, console.clone()),
+        ("metrics-history", console.clone()),
+        ("metrics-sensors", console.clone()),
     ];
     for path in [
         &manifests[0].1,
-        &manifests[1].1,
+        &console,
         &root.join("src/platform/app_icon.rs"),
         &root.join("src/platform/executables.rs"),
         &root.join("build/png_icons.rs"),
