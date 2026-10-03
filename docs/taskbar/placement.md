@@ -8,7 +8,9 @@ The geometry of the buttons, including widgets, is translated into the coordinat
 The weather (Widgets) is measured by its `BackgroundElement`, the part that shows: its container,
 `Taskbar.AugmentedEntryPointButton`, reserves about 60 px of empty space after it while the weather
 shows text, and the tiles stood that far from it. The tiles follow the weather at their own spacing
-(the tile editor's "Spacing", 6 px by default), as if it were one more tile; the edge and the other
+(the tile editor's "Spacing", 6 px by default), as if it were one more tile, measured to its fill:
+its 1 px hover border lies inside its background, while a tile's lies outside the tile, so the
+background's right edge counts 1 px to the left; the edge and the other
 buttons keep the `gap` of the configuration. Without that element, as in another Windows build, the
 whole container counts, with `gap`.
 `LeftPlacement` looks for the first sufficient free interval in the left half. If there is no

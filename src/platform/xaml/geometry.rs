@@ -43,6 +43,8 @@ fn contains(units: &[u16], text: &str) -> bool {
 
 /// Class of the container of the weather (Widgets) button.
 const WIDGETS: &str = "Taskbar.AugmentedEntryPointButton";
+/// Width of the hover border inside the weather's background, in pixels.
+const WEATHER_BORDER: f64 = 1.0;
 
 /// One depth-first walk over the tree, bounded to 2048 nodes.
 struct Walk<'a> {
@@ -133,9 +135,12 @@ impl Walk<'_> {
                 &mut bounds,
             ))?;
         }
+        let right = (bounds.x + bounds.width) as f64;
         self.ranges.push(OccupiedRange {
             left: bounds.x as f64,
-            right: (bounds.x + bounds.width) as f64,
+            // The weather's hover border lies inside its background, a tile's outside
+            // the tile: measured to its fill, the weather is as far as a tile.
+            right: if snug { right - WEATHER_BORDER } else { right },
             snug,
         });
         Ok(())
