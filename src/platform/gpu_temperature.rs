@@ -98,7 +98,7 @@ impl AdapterCatalog {
             let mut count = 0u32;
             if status >= 0
                 && adapter.query(15, &mut kind)
-                && kind & 4 == 0
+                && AdapterKind::gpu(kind)
                 && adapter.query(30, &mut count)
                 && (1..=64).contains(&count)
             {
@@ -107,6 +107,21 @@ impl AdapterCatalog {
             }
         }
         adapters
+    }
+}
+/// `D3DKMT_ADAPTERTYPE` (`KMTQAITYPE_ADAPTERTYPE`) bits.
+struct AdapterKind;
+impl AdapterKind {
+    const RENDER: u32 = 0x1;
+    const SOFTWARE: u32 = 0x4;
+    const INDIRECT_DISPLAY: u32 = 0x40;
+    const COMPUTE_ONLY: u32 = 0x800;
+    /// A GPU of its own: it renders, and is neither the software rasterizer, an
+    /// indirect display (virtual monitors, remote desktop, USB docks) nor an NPU.
+    /// The others have no `GPU Engine` instances, so their pages stayed empty.
+    fn gpu(kind: u32) -> bool {
+        kind & Self::RENDER != 0
+            && kind & (Self::SOFTWARE | Self::INDIRECT_DISPLAY | Self::COMPUTE_ONLY) == 0
     }
 }
 struct Temperature;
@@ -206,5 +221,12 @@ mod tests {
         for invalid in [0, 1501, u32::MAX] {
             assert_eq!(Temperature::decode(invalid), None);
         }
+        // Kinds of a Radeon iGPU, a Radeon RX 9070 and Microsoft Basic Render Driver.
+        assert!(AdapterKind::gpu(0x2303) && AdapterKind::gpu(0x230b));
+        assert!(!AdapterKind::gpu(0x0105));
+        // An indirect display, a display-only adapter and an NPU.
+        assert!(
+            !AdapterKind::gpu(0x0043) && !AdapterKind::gpu(0x0002) && !AdapterKind::gpu(0x0801)
+        );
     }
 }

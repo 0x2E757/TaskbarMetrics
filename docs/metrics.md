@@ -24,6 +24,12 @@ device's adapter. Processes of the same engine (LUID + physical GPU +
 engine) are added up, then the busiest engine is picked. Values of different graphics cards are not
 mixed.
 
+The graphics cards are the adapters of `D3DKMTEnumAdapters2` whose type
+(`KMTQAITYPE_ADAPTERTYPE`) renders and is none of: the software rasterizer (Microsoft Basic Render
+Driver), an indirect display (virtual monitors of Parsec, Sunshine or spacedesk, Remote Desktop,
+DisplayLink docks) or a compute-only NPU. Those have no `GPU Engine` instances, so they would be
+items without data. A GPU device is tagged by its index in this list (`gpu@1`).
+
 ### GPU temperature
 
 Read through Windows WDDM: `GpuTemperatureProvider` uses `D3DKMTEnumAdapters2` and
