@@ -375,6 +375,16 @@ impl Markup {
                 "CornerRadius=\"5\"",
                 &format!("CornerRadius=\"{}\"", style.radius),
             )
+            // One pixel outside the tile, the hover border keeps its corners parallel.
+            .replace(
+                "@HOVER_RADIUS@",
+                &(if style.radius > 0.0 {
+                    style.radius + 1.0
+                } else {
+                    0.0
+                })
+                .to_string(),
+            )
             .replace(
                 "StrokeThickness=\"1.25\"",
                 &format!("StrokeThickness=\"{}\"", style.stroke),

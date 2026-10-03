@@ -14,7 +14,9 @@ earlier defaults, which darkened a light tile (`#16000000`/`#22000000`, `#16FFFF
 read as the current ones; colors chosen by hand stay. In both states the tile also gets the
 elevation border Windows draws around the weather: 1 px, darker on its bottom row
 (`#0F000000`/`#1A000000` in the light theme, `#18FFFFFF`/`#12FFFFFF` in the dark one), with the
-background drawn under it. The Windows XAML Button handles the mouse states and the pointer
+background drawn under it. Like there, it lies just outside the tile (margin −1, corner radius one
+more than the tile's), so it frames the tile instead of covering its edge and the chart on it; the
+layout does not change, while UI Automation reports the button 1 px larger on each side. The Windows XAML Button handles the mouse states and the pointer
 capture of a click; a drag takes the capture on the tile strip
 ([placement.md](placement.md)). There are no tooltips.
 

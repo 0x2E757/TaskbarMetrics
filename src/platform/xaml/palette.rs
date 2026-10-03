@@ -103,7 +103,7 @@ impl Palette {
             ("#18FFFFFF", "#12FFFFFF")
         };
         resources.push_str(&format!(
-            r#"<LinearGradientBrush x:Key="MetricHoverBorder" MappingMode="Absolute" StartPoint="0,0" EndPoint="0,36"><GradientStop Color="{top}" Offset="0.972"/><GradientStop Color="{bottom}" Offset="0.973"/></LinearGradientBrush>"#
+            r#"<LinearGradientBrush x:Key="MetricHoverBorder" MappingMode="Absolute" StartPoint="0,0" EndPoint="0,38"><GradientStop Color="{top}" Offset="0.973"/><GradientStop Color="{bottom}" Offset="0.974"/></LinearGradientBrush>"#
         ));
         let mut result = markup.to_string();
         {

@@ -57,7 +57,8 @@
           </VisualStateGroup>
         </VisualStateManager.VisualStateGroups>
         <Border Background="{ThemeResource MetricTile}" CornerRadius="5"/>
-        <Border x:Name="Hover" Background="Transparent" BorderBrush="Transparent" BorderThickness="1" BackgroundSizing="OuterBorderEdge" CornerRadius="5"/>
+        <!-- The border lies just outside the tile, as around the taskbar's own buttons. -->
+        <Border x:Name="Hover" Margin="-1" Background="Transparent" BorderBrush="Transparent" BorderThickness="1" BackgroundSizing="OuterBorderEdge" CornerRadius="@HOVER_RADIUS@"/>
         <ContentPresenter Content="{TemplateBinding Content}"/>
       </Grid>
     </ControlTemplate>
