@@ -36,6 +36,7 @@
           <SolidColorBrush x:Key="MetricTemperatureText" Color="{ThemeResource SystemColorHighlightColor}"/><SolidColorBrush x:Key="MetricHot" Color="{ThemeResource SystemColorHighlightColor}"/>
           <SolidColorBrush x:Key="MetricUp" Color="{ThemeResource SystemColorWindowTextColor}"/>
           <SolidColorBrush x:Key="MetricDown" Color="{ThemeResource SystemColorHighlightColor}"/>
+          <SolidColorBrush x:Key="MetricHoverBorder" Color="{ThemeResource SystemColorHighlightColor}"/>
         </ResourceDictionary>
       </ResourceDictionary.ThemeDictionaries>
     </ResourceDictionary>
@@ -48,15 +49,15 @@
           <VisualStateGroup x:Name="CommonStates">
             <VisualState x:Name="Normal"/>
             <VisualState x:Name="PointerOver"><VisualState.Setters>
-              <Setter Target="Hover.Background" Value="{ThemeResource OmniButtonBackgroundPointerOver}"/>
+              <Setter Target="Hover.Background" Value="{ThemeResource OmniButtonBackgroundPointerOver}"/><Setter Target="Hover.BorderBrush" Value="{ThemeResource MetricHoverBorder}"/>
             </VisualState.Setters></VisualState>
             <VisualState x:Name="Pressed"><VisualState.Setters>
-              <Setter Target="Hover.Background" Value="{ThemeResource OmniButtonBackgroundPressed}"/>
+              <Setter Target="Hover.Background" Value="{ThemeResource OmniButtonBackgroundPressed}"/><Setter Target="Hover.BorderBrush" Value="{ThemeResource MetricHoverBorder}"/>
             </VisualState.Setters></VisualState>
           </VisualStateGroup>
         </VisualStateManager.VisualStateGroups>
         <Border Background="{ThemeResource MetricTile}" CornerRadius="5"/>
-        <Border x:Name="Hover" Background="Transparent" CornerRadius="5"/>
+        <Border x:Name="Hover" Background="Transparent" BorderBrush="Transparent" BorderThickness="1" BackgroundSizing="OuterBorderEdge" CornerRadius="5"/>
         <ContentPresenter Content="{TemplateBinding Content}"/>
       </Grid>
     </ControlTemplate>

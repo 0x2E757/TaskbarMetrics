@@ -150,6 +150,8 @@ impl Appearance {
                 palette.0[index] = Palette::parse(value)?;
             }
         }
+        style.light.retire_defaults(false);
+        style.dark.retire_defaults(true);
         let a = style.alerts;
         if !seen.contains("version")
             || [

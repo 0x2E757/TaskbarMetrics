@@ -127,6 +127,8 @@ impl ColorEditor {
                         }
                     }
                 }
+                editor.palettes[0].retire_defaults(false);
+                editor.palettes[1].retire_defaults(true);
             }
         }
         for (index, field) in editor.fields.iter().enumerate() {
