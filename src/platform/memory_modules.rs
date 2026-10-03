@@ -47,7 +47,17 @@ impl MemoryModules {
             .unwrap_or_default()
     }
     /// «2 × 16 GB DDR5-6000»: equal modules counted, different ones joined by « + ».
+    /// Devices with neither a type nor a speed are not modules: a virtual machine
+    /// lists its memory in power-of-two pieces (8 GB + 2 GB + … + 32 MB), so their
+    /// total is shown instead.
     pub fn summary(modules: &[MemoryModule]) -> String {
+        if !modules.is_empty()
+            && modules
+                .iter()
+                .all(|module| module.kind.is_none() && module.speed.is_none())
+        {
+            return Self::total(modules.iter().map(|module| module.megabytes).sum());
+        }
         let mut groups: Vec<(&MemoryModule, usize)> = Vec::new();
         for module in modules {
             match groups.iter_mut().find(|(known, _)| *known == module) {
@@ -63,6 +73,14 @@ impl MemoryModules {
             })
             .collect::<Vec<_>>()
             .join(" + ")
+    }
+    /// «12 GB», or «11.9 GB» for a size that is not whole gigabytes.
+    fn total(megabytes: u64) -> String {
+        if megabytes.is_multiple_of(1024) {
+            format!("{} GB", megabytes / 1024)
+        } else {
+            format!("{:.1} GB", megabytes as f64 / 1024.0)
+        }
     }
     /// Memory devices of a raw SMBIOS table: structures of a formatted area and
     /// strings ending with two NULs, up to the end-of-table structure (127).
@@ -175,6 +193,21 @@ mod tests {
             },
         ];
         assert_eq!(MemoryModules::summary(&mixed), "8 GB DDR4-3200 + 4 GB");
+        assert_eq!(MemoryModules::summary(&[]), "");
+    }
+    #[test]
+    fn virtual_memory_pieces_show_their_total() {
+        let piece = |megabytes| MemoryModule {
+            megabytes,
+            kind: None,
+            speed: None,
+        };
+        let hyper_v: Vec<_> = [8192, 2048, 1024, 512, 256, 128, 32]
+            .into_iter()
+            .map(piece)
+            .collect();
+        assert_eq!(MemoryModules::summary(&hyper_v), "11.9 GB");
+        assert_eq!(MemoryModules::summary(&[piece(8192), piece(4096)]), "12 GB");
     }
     #[test]
     fn large_modules_use_the_extended_size() {

@@ -21,7 +21,9 @@ Part of [History window](../window.md).
 - The RAM subtitle lists the installed modules: "2 × 16 GB DDR5-6000" (identical ones
   are counted, different ones are joined with " + "). It is read from SMBIOS (`GetSystemFirmwareTable`,
   Memory Device structures) without elevation; the manufacturer and part number are not shown —
-  firmware often writes `Unknown` or a generic name in their place.
+  firmware often writes `Unknown` or a generic name in their place. A virtual machine lists its
+  memory as power-of-two pieces without a type or speed (Hyper‑V: 8 GB + 2 GB + … + 32 MB);
+  when no device has either, the subtitle is their total, "11.9 GB".
 - Network adapters: only hardware Ethernet, Wi‑Fi and WWAN adapters that are up (Hyper‑V, VPN
   and other virtual adapters are left out). The item is named as in Windows Settings ("Wi‑Fi",
   "Ethernet 2"); the subtitle is the adapter description.
