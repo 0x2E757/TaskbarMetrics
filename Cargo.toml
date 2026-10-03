@@ -6,6 +6,7 @@ default-run = "taskbar-metrics"
 build = "build/main.rs"
 rust-version = "1.87"
 license = "MIT"
+repository = "https://github.com/0x2E757/TaskbarMetrics"
 description = "Extensible Windows 11 taskbar system metrics, using only std and Windows APIs"
 
 [lib]
