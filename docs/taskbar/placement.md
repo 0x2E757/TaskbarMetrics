@@ -5,10 +5,12 @@ Part of [Taskbar tiles](../taskbar.md).
 The adapter finds `RootGrid` inside `Taskbar.TaskbarFrame` and adds its own XAML strip with
 separate metric buttons. Existing elements and column definitions are not changed.
 The geometry of the buttons, including widgets, is translated into the coordinates of the root panel.
-The weather (Widgets) is measured by its `WidgetsButton`, the part that shows: its container,
+The weather (Widgets) is measured by its `BackgroundElement`, the part that shows: its container,
 `Taskbar.AugmentedEntryPointButton`, reserves about 60 px of empty space after it while the weather
-shows text, and the tiles stood that far from it. Without that button, as in another Windows build,
-the whole container counts.
+shows text, and the tiles stood that far from it. The tiles follow the weather at their own spacing
+(the tile editor's "Spacing", 6 px by default), as if it were one more tile; the edge and the other
+buttons keep the `gap` of the configuration. Without that element, as in another Windows build, the
+whole container counts, with `gap`.
 `LeftPlacement` looks for the first sufficient free interval in the left half. If there is no
 room or the tree could not be recognized, the tile strip is hidden (opacity 0). When hidden,
 hit-testing is turned off as well, so that the invisible strip does not get in the taskbar's way.

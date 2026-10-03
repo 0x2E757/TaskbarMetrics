@@ -21,6 +21,7 @@ impl TaskbarGeometry {
             geometry: self,
             ranges: Vec::new(),
             remaining: 2048,
+            weather: false,
         };
         walk.visit(root, 0)?;
         if walk.ranges.is_empty() {
@@ -48,6 +49,8 @@ struct Walk<'a> {
     geometry: &'a TaskbarGeometry,
     ranges: Vec<OccupiedRange>,
     remaining: usize,
+    /// Inside the weather's container, where only its button counts.
+    weather: bool,
 }
 impl Walk<'_> {
     fn visit(&mut self, object: &Com, depth: usize) -> Result<()> {
@@ -69,19 +72,25 @@ impl Walk<'_> {
             if visibility != 0 {
                 return Ok(());
             }
-            // The weather's button is the part that shows: its container reserves
+            // Of the weather, only its background shows: the container reserves
             // about 60 px of empty space after it.
-            if name.is("WidgetsButton") {
-                return self.push(framework, &element);
+            if self.weather {
+                if name.is("BackgroundElement") {
+                    return self.push(framework, &element, true);
+                }
+                return self.children(object, depth);
             }
             let class = framework.hstring(4)?;
             let class = class.units();
             if class.iter().copied().eq(WIDGETS.encode_utf16()) {
                 let before = self.ranges.len();
-                self.children(object, depth)?;
-                // Without its button, as in another Windows build, the whole container.
+                self.weather = true;
+                let found = self.children(object, depth);
+                self.weather = false;
+                found?;
+                // Without its background, as in another Windows build, the whole container.
                 if self.ranges.len() == before {
-                    self.push(framework, &element)?;
+                    self.push(framework, &element, false)?;
                 }
                 return Ok(());
             }
@@ -92,13 +101,14 @@ impl Walk<'_> {
                     .copied()
                     .eq("SystemTray.SystemTrayFrame".encode_utf16())
             {
-                return self.push(framework, &element);
+                return self.push(framework, &element, false);
             }
         }
         self.children(object, depth)
     }
-    /// The range `element` takes in the root's coordinates, when it has a size.
-    fn push(&mut self, framework: Com, element: &Com) -> Result<()> {
+    /// The range `element` takes in the root's coordinates, when it has a size;
+    /// `snug` for the weather, which the tiles follow at their own spacing.
+    fn push(&mut self, framework: Com, element: &Com, snug: bool) -> Result<()> {
         let framework = XamlElement(framework);
         let width = framework.number(13)?;
         let height = framework.number(14)?;
@@ -126,6 +136,7 @@ impl Walk<'_> {
         self.ranges.push(OccupiedRange {
             left: bounds.x as f64,
             right: (bounds.x + bounds.width) as f64,
+            snug,
         });
         Ok(())
     }

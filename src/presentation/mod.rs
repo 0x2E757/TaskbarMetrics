@@ -29,6 +29,8 @@ impl MetricFormatter for CompactFormatter {
 pub struct OccupiedRange {
     pub left: f64,
     pub right: f64,
+    /// The weather: the tiles may follow it at their own spacing, as one more tile.
+    pub snug: bool,
 }
 
 /// Chooses the first free interval within the left half of the taskbar.
@@ -36,11 +38,13 @@ pub struct OccupiedRange {
 pub struct LeftPlacement {
     width: f64,
     gap: f64,
+    /// Space after a snug range: the spacing between tiles.
+    snug: f64,
 }
 
 impl LeftPlacement {
-    pub fn new(width: f64, gap: f64) -> Self {
-        Self { width, gap }
+    pub fn new(width: f64, gap: f64, snug: f64) -> Self {
+        Self { width, gap, snug }
     }
 
     pub fn position(&self, taskbar_width: f64, occupied: &[OccupiedRange]) -> Option<f64> {
@@ -64,7 +68,7 @@ impl LeftPlacement {
             if left + self.width + self.gap <= range.left {
                 break;
             }
-            left = left.max(range.right + self.gap);
+            left = left.max(range.right + if range.snug { self.snug } else { self.gap });
         }
         (left + self.width + self.gap <= limit).then_some(left)
     }
@@ -76,25 +80,40 @@ mod tests {
 
     #[test]
     fn layout_preserves_widgets_and_centered_buttons() {
-        let layout = LeftPlacement::new(260.0, 12.0);
+        let layout = LeftPlacement::new(260.0, 12.0, 6.0);
         let ranges = [
             OccupiedRange {
                 left: 750.0,
                 right: 1200.0,
+                snug: false,
             },
             OccupiedRange {
                 left: 0.0,
                 right: 160.0,
+                snug: false,
             },
         ];
         assert_eq!(layout.position(1920.0, &ranges), Some(172.0));
+        // The weather is followed at the spacing between tiles.
+        let weather = [OccupiedRange {
+            left: 6.0,
+            right: 158.0,
+            snug: true,
+        }];
+        assert_eq!(layout.position(1920.0, &weather), Some(164.0));
         assert_eq!(layout.position(1920.0, &[]), Some(12.0));
     }
 
     #[test]
     fn layout_hides_when_no_safe_space_remains_on_left() {
-        let layout = LeftPlacement::new(260.0, 12.0);
-        let occupied = |left, right| [OccupiedRange { left, right }];
+        let layout = LeftPlacement::new(260.0, 12.0, 6.0);
+        let occupied = |left, right| {
+            [OccupiedRange {
+                left,
+                right,
+                snug: false,
+            }]
+        };
         assert_eq!(layout.position(800.0, &occupied(0.0, 300.0)), None);
         assert_eq!(layout.position(f64::NAN, &[]), None);
         assert_eq!(layout.position(1920.0, &occupied(f64::NAN, 300.0)), None);

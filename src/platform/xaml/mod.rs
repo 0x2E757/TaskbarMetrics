@@ -246,7 +246,8 @@ impl UiTarget {
                 .ok_or(E_UNEXPECTED)?
                 .read(&self.panel)?;
             let required = button.width().max(self.settings.width);
-            let left = LeftPlacement::new(required, self.settings.gap).position(width, &occupied);
+            let left = LeftPlacement::new(required, self.settings.gap, self.style.gap)
+                .position(width, &occupied);
             if self.last_visible != Some(left.is_some()) {
                 log(&format!("Metrics placement: visible={}, taskbar={width}, required={required}, occupied={:?}", left.is_some(), occupied.iter().map(|range| (range.left, range.right)).collect::<Vec<_>>()));
                 self.last_visible = Some(left.is_some());
