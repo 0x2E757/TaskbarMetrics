@@ -40,6 +40,9 @@ fn contains(units: &[u16], text: &str) -> bool {
     (0..units.len()).any(|start| starts_with(&units[start..], text))
 }
 
+/// Class of the container of the weather (Widgets) button.
+const WIDGETS: &str = "Taskbar.AugmentedEntryPointButton";
+
 /// One depth-first walk over the tree, bounded to 2048 nodes.
 struct Walk<'a> {
     geometry: &'a TaskbarGeometry,
@@ -66,8 +69,22 @@ impl Walk<'_> {
             if visibility != 0 {
                 return Ok(());
             }
+            // The weather's button is the part that shows: its container reserves
+            // about 60 px of empty space after it.
+            if name.is("WidgetsButton") {
+                return self.push(framework, &element);
+            }
             let class = framework.hstring(4)?;
             let class = class.units();
+            if class.iter().copied().eq(WIDGETS.encode_utf16()) {
+                let before = self.ranges.len();
+                self.children(object, depth)?;
+                // Without its button, as in another Windows build, the whole container.
+                if self.ranges.len() == before {
+                    self.push(framework, &element)?;
+                }
+                return Ok(());
+            }
             // Stop at interactive containers; nested child geometry is redundant.
             if (starts_with(class, "Taskbar.") && contains(class, "Button"))
                 || class
@@ -75,38 +92,44 @@ impl Walk<'_> {
                     .copied()
                     .eq("SystemTray.SystemTrayFrame".encode_utf16())
             {
-                let framework = XamlElement(framework);
-                let width = framework.number(13)?;
-                let height = framework.number(14)?;
-                if width > 0.0 && height > 0.0 {
-                    let mut transform = ptr::null_mut();
-                    let mut bounds = Rect::default();
-                    unsafe {
-                        let get: unsafe extern "system" fn(Raw, Raw, *mut Raw) -> Hr =
-                            element.slot(98);
-                        check(get(element.raw(), self.geometry.root.raw(), &mut transform))?;
-                        let transform = Com::owned(transform)?;
-                        let map: unsafe extern "system" fn(Raw, Rect, *mut Rect) -> Hr =
-                            transform.slot(9);
-                        check(map(
-                            transform.raw(),
-                            Rect {
-                                x: 0.0,
-                                y: 0.0,
-                                width: width as f32,
-                                height: height as f32,
-                            },
-                            &mut bounds,
-                        ))?;
-                    }
-                    self.ranges.push(OccupiedRange {
-                        left: bounds.x as f64,
-                        right: (bounds.x + bounds.width) as f64,
-                    });
-                }
-                return Ok(());
+                return self.push(framework, &element);
             }
         }
+        self.children(object, depth)
+    }
+    /// The range `element` takes in the root's coordinates, when it has a size.
+    fn push(&mut self, framework: Com, element: &Com) -> Result<()> {
+        let framework = XamlElement(framework);
+        let width = framework.number(13)?;
+        let height = framework.number(14)?;
+        if width <= 0.0 || height <= 0.0 {
+            return Ok(());
+        }
+        let mut transform = ptr::null_mut();
+        let mut bounds = Rect::default();
+        unsafe {
+            let get: unsafe extern "system" fn(Raw, Raw, *mut Raw) -> Hr = element.slot(98);
+            check(get(element.raw(), self.geometry.root.raw(), &mut transform))?;
+            let transform = Com::owned(transform)?;
+            let map: unsafe extern "system" fn(Raw, Rect, *mut Rect) -> Hr = transform.slot(9);
+            check(map(
+                transform.raw(),
+                Rect {
+                    x: 0.0,
+                    y: 0.0,
+                    width: width as f32,
+                    height: height as f32,
+                },
+                &mut bounds,
+            ))?;
+        }
+        self.ranges.push(OccupiedRange {
+            left: bounds.x as f64,
+            right: (bounds.x + bounds.width) as f64,
+        });
+        Ok(())
+    }
+    fn children(&mut self, object: &Com, depth: usize) -> Result<()> {
         let helper = &self.geometry.helper;
         let dependency = object.query(&DEPENDENCY_OBJECT)?;
         let mut count = 0;
