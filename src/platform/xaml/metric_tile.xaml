@@ -49,14 +49,14 @@
           <VisualStateGroup x:Name="CommonStates">
             <VisualState x:Name="Normal"/>
             <VisualState x:Name="PointerOver"><VisualState.Setters>
-              <Setter Target="Hover.Background" Value="{ThemeResource OmniButtonBackgroundPointerOver}"/><Setter Target="Hover.BorderBrush" Value="{ThemeResource MetricHoverBorder}"/>
+              <Setter Target="Hover.Background" Value="{ThemeResource OmniButtonBackgroundPointerOver}"/><Setter Target="Hover.BorderBrush" Value="{ThemeResource MetricHoverBorder}"/><Setter Target="Base.Opacity" Value="0"/>
             </VisualState.Setters></VisualState>
             <VisualState x:Name="Pressed"><VisualState.Setters>
-              <Setter Target="Hover.Background" Value="{ThemeResource OmniButtonBackgroundPressed}"/><Setter Target="Hover.BorderBrush" Value="{ThemeResource MetricHoverBorder}"/>
+              <Setter Target="Hover.Background" Value="{ThemeResource OmniButtonBackgroundPressed}"/><Setter Target="Hover.BorderBrush" Value="{ThemeResource MetricHoverBorder}"/><Setter Target="Base.Opacity" Value="0"/>
             </VisualState.Setters></VisualState>
           </VisualStateGroup>
         </VisualStateManager.VisualStateGroups>
-        <Border Background="{ThemeResource MetricTile}" CornerRadius="5"/>
+        <Border x:Name="Base" Background="{ThemeResource MetricTile}" CornerRadius="5"/>
         <!-- The border lies just outside the tile, as around the taskbar's own buttons. -->
         <Border x:Name="Hover" Margin="-1" Background="Transparent" BorderBrush="Transparent" BorderThickness="1" BackgroundSizing="OuterBorderEdge" CornerRadius="@HOVER_RADIUS@"/>
         <ContentPresenter Content="{TemplateBinding Content}"/>

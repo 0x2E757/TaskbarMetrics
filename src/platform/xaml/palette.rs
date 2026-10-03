@@ -98,7 +98,7 @@ impl Palette {
         // pixel row, as Windows draws it around the weather: measured on the light
         // taskbar, Fluent's values in the dark theme.
         let (top, bottom) = if theme == "Light" {
-            ("#0F000000", "#1A000000")
+            ("#0B000000", "#15000000")
         } else {
             ("#18FFFFFF", "#12FFFFFF")
         };
@@ -139,7 +139,7 @@ mod tests {
             "cpu",
             "Light",
         );
-        assert!(markup.contains(r#"x:Key="MetricHoverBorder""#) && markup.contains("#1A000000"));
+        assert!(markup.contains(r#"x:Key="MetricHoverBorder""#) && markup.contains("#15000000"));
     }
     #[test]
     fn hex_colors_require_complete_valid_input() {
