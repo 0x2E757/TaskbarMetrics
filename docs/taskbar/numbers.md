@@ -4,7 +4,7 @@ Part of [Taskbar tiles](../taskbar.md).
 
 Numbers update once a second and show the average of the last two samples. If
 only one sample is available, it is shown; missing data is not replaced with zero.
-No data is shown as `--` and a gap in the chart. CPU/GPU/RAM percentages smoothly turn red between two
+No data leaves the number empty, with a gap in the chart; the tile name stays. CPU/GPU/RAM percentages smoothly turn red between two
 thresholds (80 → 85 % by default); the thresholds are set in the settings, group "Number color";
 the top position turns the reddening off.
 

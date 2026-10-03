@@ -88,7 +88,7 @@ const GROUPS: [Group; 6] = [
     Group {
         icon: "chart",
         title: "Tile charts",
-        description: "Line width, area opacity, fade",
+        description: "Line width, area opacity, fade, temperature",
     },
     Group {
         icon: "palette",
@@ -161,7 +161,7 @@ impl SettingsPage {
             format!(
                 "<StackPanel>{}{}</StackPanel>",
                 Playground::rows(&[6, 7, 10, 11, 12, 13]),
-                Playground::dashed_row()
+                Playground::switch_rows()
             ),
             super::super::colors::ColorEditor::markup(true),
             format!(

@@ -9,6 +9,26 @@ struct Field {
     set: fn(&mut TileStyle, f64),
 }
 macro_rules! field {($min:expr,$max:expr,$($member:ident).+) => {Field{name:stringify!($($member).+),min:$min,max:$max,get:|s|s.$($member).+,set:|s,v|s.$($member).+ = v}};}
+/// An on/off setting, stored as 0 or 1.
+struct Switch {
+    name: &'static str,
+    get: fn(&TileStyle) -> bool,
+    set: fn(&mut TileStyle, bool),
+}
+macro_rules! switch {
+    ($member:ident) => {
+        Switch {
+            name: stringify!($member),
+            get: |s| s.$member,
+            set: |s, v| s.$member = v,
+        }
+    };
+}
+const SWITCHES: &[Switch] = &[
+    switch!(cpu_temperature),
+    switch!(gpu_temperature),
+    switch!(dashed_temperature),
+];
 const FIELDS: &[Field] = &[
     field!(80.0, 180.0, width),
     field!(0.0, 20.0, gap),
@@ -53,7 +73,7 @@ impl Appearance {
     /// Persisted settings that differ between two styles; preview values are not persisted.
     pub fn differences(a: &TileStyle, b: &TileStyle) -> usize {
         FIELDS.iter().filter(|f| (f.get)(a) != (f.get)(b)).count()
-            + usize::from(a.dashed_temperature != b.dashed_temperature)
+            + SWITCHES.iter().filter(|s| (s.get)(a) != (s.get)(b)).count()
             + (0..14).filter(|i| a.light.0[*i] != b.light.0[*i]).count()
             + (0..14).filter(|i| a.dark.0[*i] != b.dark.0[*i]).count()
     }
@@ -68,10 +88,13 @@ impl Appearance {
         for field in FIELDS {
             text.push_str(&format!("{}={}\n", field.name, (field.get)(style)));
         }
-        text.push_str(&format!(
-            "dashed_temperature={}\n",
-            u8::from(style.dashed_temperature)
-        ));
+        for switch in SWITCHES {
+            text.push_str(&format!(
+                "{}={}\n",
+                switch.name,
+                u8::from((switch.get)(style))
+            ));
+        }
         for (name, palette) in [("light", style.light), ("dark", style.dark)] {
             for index in 0..14 {
                 text.push_str(&format!("{name}.{index}={}\n", palette.hex(index)));
@@ -97,12 +120,14 @@ impl Appearance {
             if Self::RETIRED.contains(&key) {
                 continue;
             }
-            if key == "dashed_temperature" {
-                style.dashed_temperature = match value {
+            // Missing switches keep their defaults, so earlier files still load.
+            if let Some(switch) = SWITCHES.iter().find(|s| s.name == key) {
+                let on = match value {
                     "0" => false,
                     "1" => true,
                     _ => return None,
                 };
+                (switch.set)(&mut style, on);
                 continue;
             }
             if let Some(field) = FIELDS.iter().find(|f| f.name == key) {
@@ -165,6 +190,19 @@ mod tests {
         // A file saved with the disk thresholds still loads.
         let earlier = format!("{text}alerts.disk_hot_x=80\nalerts.disk_hot_y=85\n");
         assert_eq!(Appearance::decode(&earlier), Some(style));
+        // A file from before the temperature switches shows the temperatures.
+        let before = text.replace("cpu_temperature=1\n", "");
+        assert_eq!(Appearance::decode(&before), Some(style));
+        let hidden = TileStyle {
+            gpu_temperature: false,
+            ..style
+        };
+        let encoded = Appearance::encode(&hidden);
+        assert!(encoded.contains("gpu_temperature=0\n"));
+        assert_eq!(Appearance::decode(&encoded), Some(hidden));
+        assert_eq!(Appearance::differences(&style, &hidden), 1);
+        assert!(!hidden.temperature("gpu") && hidden.temperature("cpu"));
+        assert!(!hidden.temperature("ram"));
         let mut changed = style;
         changed.gap += 1.0;
         changed.dark.0[2] = 0;

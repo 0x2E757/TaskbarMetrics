@@ -616,7 +616,8 @@ impl MetricTile {
                 }
             }
             MetricValue::Available(n) => format!("{n:.0}%"),
-            _ => "--".into(),
+            // A reading that failed leaves its place empty.
+            _ => String::new(),
         }
     }
     fn display_value(&self, history: &MetricHistory, current: &MetricValue) -> MetricValue {
@@ -713,25 +714,31 @@ impl MetricTile {
         if rates {
             let up = secondary.unwrap_or(&MetricValue::Unavailable);
             if numbers {
-                self.secondary.query(&TEXT)?.set_string(
-                    27,
-                    &format!(
-                        "↑{}",
-                        Self::number(&self.display_value(&self.upload_history, up), true)
-                    ),
-                )?;
+                let up = Self::number(&self.display_value(&self.upload_history, up), true);
+                let text = if up.is_empty() {
+                    up
+                } else {
+                    format!("↑{up}")
+                };
+                self.secondary.query(&TEXT)?.set_string(27, &text)?;
             }
             self.secondary_points(
                 self.upload_history
                     .points_with_hidden_zero(self.upload_history.peak().max(minimum_maximum)),
             )?;
         }
-        if matches!(kind.as_str(), "cpu" | "gpu") {
+        if matches!(kind.as_str(), "cpu" | "gpu") && !self.style.temperature(&kind) {
+            if numbers {
+                self.secondary.query(&TEXT)?.set_string(27, "")?;
+            }
+            self.secondary_points(Vec::new())?;
+        } else if matches!(kind.as_str(), "cpu" | "gpu") {
             let temperature = secondary.unwrap_or(&MetricValue::Unavailable);
             if numbers {
+                // A sensor that is missing, as in a virtual machine, leaves the place empty.
                 let text = match self.display_value(&self.upload_history, temperature) {
                     MetricValue::Available(value) => format!("{value:.0}°"),
-                    _ => "--°".into(),
+                    _ => String::new(),
                 };
                 self.secondary.query(&TEXT)?.set_string(27, &text)?;
             }

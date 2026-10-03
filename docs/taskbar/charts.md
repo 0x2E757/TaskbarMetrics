@@ -20,6 +20,10 @@ axis in the window. The line snaps to whole pixel rows: 0–100 °C map to
 the last 3 s the temperature stays within two adjacent rows, the line does not jump: it keeps
 its row if that row is among them, or takes the row of the average.
 
+"Tile charts" → "CPU temperature on the tile" and "GPU temperature on the tile", both checked by
+default, hide the temperature number and line of that tile, for a computer without the sensor or
+when they are not wanted. The temperature alerts keep working on their own switches.
+
 The temperature line can be made dashed (3 px dash, 2 px gap): settings,
 "Tile charts" → "Dashed temperature line". The dashes are tied to the samples and
 move left together with the chart: when an old sample leaves past the edge, `StrokeDashOffset`

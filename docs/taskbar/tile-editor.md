@@ -30,12 +30,12 @@ or WebView2. The markup is embedded in the EXE: `src/platform/metrics_window/set
   the field and closes the picker, "Cancel" closes it without changes.
 
 The style draft is saved automatically to `taskbar-metrics.editor`, the palettes to
-`taskbar-metrics.colors`; on startup the valid saved values are restored, except
+`taskbar-metrics.colors`; on startup the valid saved values are restored, the temperature switches included, except
 "Dashed temperature line", which starts unchecked.
 The controller checks the parameters every 16 ms on its own (at most every 25 ms in the window, while the settings are open) and
 rebuilds only the preview on a change;
 the fields are not recreated, focus is kept. After layout the fade of the
 charts under the text is recalculated separately. "Apply to taskbar" exists only in the window's
-settings: it saves the geometry, typography, dashed line, palettes and thresholds to
+settings: it saves the geometry, typography, temperature switches, dashed line, palettes and thresholds to
 `taskbar-metrics.appearance`, and the taskbar picks them up within a second without restarting
 Explorer.

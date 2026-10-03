@@ -277,6 +277,12 @@ const INPUTS: [InputDefinition; 37] = [
 const PREVIEW_VALUES: std::ops::Range<usize> = 22..31;
 /// Thresholds of tile numbers, X and Y for CPU, GPU and RAM.
 const NUMBER_THRESHOLDS: std::ops::RangeFrom<usize> = 31..;
+/// On/off tile settings: check box name and label, in the order of `TileStyle`.
+const SWITCHES: [(&str, &str); 3] = [
+    ("CpuTemperature", "CPU temperature on the tile"),
+    ("GpuTemperature", "GPU temperature on the tile"),
+    ("DashedTemperature", "Dashed temperature line"),
+];
 /// Test values of the settings artboards: GPU between its thresholds, RAM above them.
 const ARTBOARD_VALUES: [f64; 9] = [56.0, 76.0, 93.0, 34.0, 89.0, 23.4, 4.12, 217.91, 53.94];
 
@@ -286,7 +292,8 @@ pub(super) struct Playground {
     colors: super::colors::ColorEditor,
     controls: Vec<Com>,
     /// "Dashed temperature line".
-    dashed: Com,
+    /// Check boxes of `SWITCHES`.
+    switches: Vec<Com>,
     /// Text fields of the eight preview values, locked while live values are shown.
     preview_fields: Vec<Com>,
     hosts: [Com; 2],
@@ -325,7 +332,14 @@ impl Playground {
             .replace(
                 "@CONTROLS@",
                 &(controls[..14].join("")
-                    + r#"<CheckBox x:Name="DashedTemperature" Margin="0,8" Content="@Dashed temperature line@"/>"#),
+                    + &SWITCHES
+                        .iter()
+                        .map(|(name, label)| {
+                            format!(
+                                r#"<CheckBox x:Name="{name}" Margin="0,8" Content="@{label}@"/>"#
+                            )
+                        })
+                        .collect::<String>()),
             )
             .replace(
                 "@ALERTS@",
@@ -404,9 +418,12 @@ impl Playground {
         }).collect();
         format!("<StackPanel>{rows}</StackPanel>")
     }
-    /// Settings-card row of the dashed temperature switch, below slider rows.
-    pub(super) fn dashed_row() -> String {
-        r#"<Grid MinHeight="48" Padding="48,0,16,0" BorderBrush="$divider$" BorderThickness="0,1,0,0"><CheckBox x:Name="DashedTemperature" VerticalAlignment="Center" AutomationProperties.Name="@Dashed temperature line@"><TextBlock Text="@Dashed temperature line@"/></CheckBox></Grid>"#.to_owned()
+    /// Settings-card rows of the temperature switches, below slider rows.
+    pub(super) fn switch_rows() -> String {
+        SWITCHES
+            .iter()
+            .map(|(name, label)| format!(r#"<Grid MinHeight="48" Padding="48,0,16,0" BorderBrush="$divider$" BorderThickness="0,1,0,0"><CheckBox x:Name="{name}" VerticalAlignment="Center" AutomationProperties.Name="@{label}@"><TextBlock Text="@{label}@"/></CheckBox></Grid>"#))
+            .collect()
     }
     /// Preview values: a column per tile in the tiles' order, its name on top and
     /// below it the load and temperature, or the two directions of a rate.
@@ -517,7 +534,13 @@ impl Playground {
         ]) {
             Self::set(control, value)?;
         }
-        super::monitor::ui::Ui::checked(&self.dashed, style.dashed_temperature)?;
+        for (check, on) in self.switches.iter().zip([
+            style.cpu_temperature,
+            style.gpu_temperature,
+            style.dashed_temperature,
+        ]) {
+            super::monitor::ui::Ui::checked(check, on)?;
+        }
         self.colors.load([style.light, style.dark])
     }
     pub fn new(root: &Com) -> Result<Self> {
@@ -537,7 +560,10 @@ impl Playground {
             monitoring: super::monitoring::MonitoringSetting::new(root)?,
             colors: super::colors::ColorEditor::new(root)?,
             controls,
-            dashed: Self::find(root, "DashedTemperature")?,
+            switches: SWITCHES
+                .iter()
+                .map(|(name, _)| Self::find(root, name))
+                .collect::<Result<_>>()?,
             preview_fields,
             hosts,
             previews: Vec::new(),
@@ -585,6 +611,13 @@ impl Playground {
             defaults.alerts.ram_hot_y,
         ]) {
             Self::set(control, value)?;
+        }
+        for (check, on) in result
+            .switches
+            .iter()
+            .zip([defaults.cpu_temperature, defaults.gpu_temperature])
+        {
+            super::monitor::ui::Ui::checked(check, on)?;
         }
         result.preview(&ARTBOARD_VALUES.map(Some))?;
         result.restore_draft()?;
@@ -650,6 +683,16 @@ impl Playground {
             let Some((key, raw)) = line.trim().split_once(':') else {
                 continue;
             };
+            // The temperature switches come back; the dashed line starts unchecked.
+            let switch = ["cpu_temperature", "gpu_temperature"]
+                .iter()
+                .position(|candidate| *candidate == key);
+            if let Some(switch) = switch {
+                if let Ok(on) = raw.trim().trim_end_matches(',').parse::<bool>() {
+                    super::monitor::ui::Ui::checked(&self.switches[switch], on)?;
+                }
+                continue;
+            }
             let Some(index) = keys.iter().position(|candidate| *candidate == key) else {
                 continue;
             };
@@ -739,7 +782,9 @@ impl Playground {
             fade_offset,
             fade_width,
             fade_opacity,
-            dashed_temperature: super::monitor::ui::Ui::is_checked(&self.dashed)?,
+            cpu_temperature: super::monitor::ui::Ui::is_checked(&self.switches[0])?,
+            gpu_temperature: super::monitor::ui::Ui::is_checked(&self.switches[1])?,
+            dashed_temperature: super::monitor::ui::Ui::is_checked(&self.switches[2])?,
             light: crate::platform::xaml::Palette::light(),
             dark: crate::platform::xaml::Palette::dark(),
         })

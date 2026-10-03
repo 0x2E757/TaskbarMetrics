@@ -30,7 +30,8 @@ Read through Windows WDDM: `GpuTemperatureProvider` uses `D3DKMTEnumAdapters2` a
 `D3DKMTQueryAdapterInfo(KMTQAITYPE_ADAPTERPERFDATA)` from the system GDI32. Neither PawnIO nor
 elevation is required. This is the main sensor, not hotspot/VRAM. The reading is the maximum of the
 physical sensors of the same graphics card the load belongs to. On an error or
-when there is no sensor, `--°` is shown; a stale reading is not kept. The adapter handle is
+when there is no sensor, as in a virtual machine, the tile shows no temperature; a stale
+reading is not kept. The adapter handle is
 enumerated again every 30 seconds and closed with `D3DKMTCloseAdapter`.
 Verified without elevation on a system with an RX 9070 and an integrated Radeon: about 57 °C.
 [Microsoft's description of the sensor](https://learn.microsoft.com/en-us/windows-hardware/drivers/ddi/d3dkmthk/ns-d3dkmthk-_d3dkmt_adapter_perfdata).

@@ -3,8 +3,8 @@
 There are no Cargo dependencies. The optional system dependency is the official PawnIO 2.2.0.
 `TaskbarMetrics.Sensors.exe` is a separate elevated Rust process; the DLL in Explorer
 only reads the shared snapshot, with no access to the driver. The collector polls the sensor every
-500 ms. Snapshots older than five seconds, errors and unsupported CPUs give `--°`, and
-the temperature chart breaks. The collector exits on `--stop` or when the
+500 ms. Snapshots older than five seconds, errors and unsupported CPUs leave the temperature
+place of the tile empty, and the temperature chart breaks. The collector exits on `--stop` or when the
 Explorer instance it was started for closes.
 
 ## Installation and running

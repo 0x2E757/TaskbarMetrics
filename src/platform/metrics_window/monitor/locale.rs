@@ -466,8 +466,8 @@ const CATALOG: &[(&str, &str)] = &[
     ),
     ("Tile charts", "Графики в плитках"),
     (
-        "Line width, area opacity, fade",
-        "Толщина линии, прозрачность заливки, затухание",
+        "Line width, area opacity, fade, temperature",
+        "Толщина линии, прозрачность заливки, затухание, температура",
     ),
     ("Colors", "Цвета"),
     (
@@ -523,6 +523,8 @@ const CATALOG: &[(&str, &str)] = &[
     ("RAM: number starts turning red at X", "RAM: число краснеет от X"),
     ("RAM: number is fully red at Y", "RAM: число красное от Y"),
     ("Dashed temperature line", "Пунктирная линия температуры"),
+    ("CPU temperature on the tile", "Температура CPU в плитке"),
+    ("GPU temperature on the tile", "Температура GPU в плитке"),
     ("CPU temperature", "CPU, температура"),
     ("GPU temperature", "GPU, температура"),
     ("CPU load", "CPU, загрузка"),

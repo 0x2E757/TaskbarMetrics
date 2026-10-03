@@ -21,7 +21,7 @@ The formulas are checked against the Linux drivers `k10temp`, `k8temp`, `coretem
   as in Linux.
 - Family 10h sensors are disabled because of erratum 319 (unreliable readings) on socket F
   and on AM2+ models below 4 or model 4 up to stepping 2, as in Linux.
-- Readings outside 0–125 °C are treated as a sensor fault and give `--°`.
+- Readings outside 0–125 °C are treated as a sensor fault and are not shown.
 - Hygon and ARM are not supported: `SensorCatalog` rejects the `HygonGenuine` vendor (the AMD
   modules accept only `AuthenticAMD`), and the collector is built for x64 only.
 

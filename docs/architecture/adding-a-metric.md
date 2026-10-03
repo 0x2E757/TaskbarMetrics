@@ -17,7 +17,7 @@ return `Unavailable`.
 
 A taskbar tile shows the reading whose ID equals the kind (`kind@tag` for a specific
 device). The tile ignores the unit and the formatter: it rounds the value to an integer,
-adds `%` and shows `--` when there is no data. Only `disk` and `net` tiles show two
+adds `%` and leaves the number empty when there is no data. Only `disk` and `net` tiles show two
 rates. The `MetricFormatter` text (the standard formatter keeps the unit and rounds to
 an integer) is used only by `TaskbarMetrics.exe --sample`. The history window lists
 only its own five resources.

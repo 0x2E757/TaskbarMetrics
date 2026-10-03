@@ -28,6 +28,9 @@ pub(crate) struct TileStyle {
     pub fade_offset: f64,
     pub fade_width: f64,
     pub fade_opacity: f64,
+    /// Temperature number and line on the CPU and on the GPU tile.
+    pub cpu_temperature: bool,
+    pub gpu_temperature: bool,
     /// CPU/GPU temperature drawn dashed, like the window charts.
     pub dashed_temperature: bool,
     pub light: Palette,
@@ -60,9 +63,21 @@ impl Default for TileStyle {
             fade_offset: -10.0,
             fade_width: 50.0,
             fade_opacity: 15.0,
+            cpu_temperature: true,
+            gpu_temperature: true,
             dashed_temperature: false,
             light: Palette::light(),
             dark: Palette::dark(),
+        }
+    }
+}
+impl TileStyle {
+    /// Whether a tile of `kind` shows its temperature; only CPU and GPU tiles have one.
+    pub fn temperature(&self, kind: &str) -> bool {
+        match kind {
+            "cpu" => self.cpu_temperature,
+            "gpu" => self.gpu_temperature,
+            _ => false,
         }
     }
 }
