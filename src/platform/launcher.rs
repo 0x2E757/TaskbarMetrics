@@ -2,7 +2,12 @@ use super::{
     abi::*, composition::Composition, executables::Executables, scheduled_task::CollectorTask,
 };
 use crate::config::Settings;
-use std::{ffi::OsStr, os::windows::ffi::OsStrExt, path::Path, ptr};
+use std::{
+    ffi::{OsStr, OsString},
+    os::windows::ffi::{OsStrExt, OsStringExt},
+    path::{Path, PathBuf},
+    ptr,
+};
 
 type Initialize =
     unsafe extern "system" fn(*const u16, u32, *const u16, *const u16, Guid, *const u16) -> Hr;
@@ -130,12 +135,38 @@ impl Launcher {
             }
             return Ok(0);
         }
-        self.attach_tiles(&executable, &settings)
+        self.attach_tiles(&executable, &settings, 1, false)
     }
 
-    /// Attaches the tiles and starts the history recorder; 1 when attaching failed.
-    fn attach_tiles(&self, executable: &Path, settings: &Settings) -> Result<i32> {
-        let code = self.attach(&executable.with_file_name(Executables::HOST))?;
+    /// Attaches the tiles, trying `attempts` times 5 s apart, and starts the history
+    /// recorder, and the CPU temperature collector with `sensor`. Another copy loaded
+    /// in Explorer gives way first, and its collector carries over.
+    fn attach_tiles(
+        &self,
+        executable: &Path,
+        settings: &Settings,
+        attempts: usize,
+        sensor: bool,
+    ) -> Result<i32> {
+        const PAUSE: std::time::Duration = std::time::Duration::from_secs(5);
+        let dll = executable.with_file_name(Executables::HOST);
+        let handover = super::handover::Handover::take(&dll);
+        // The taskbar of the restarted Explorer takes a while to start.
+        let attempts = if handover.is_some() {
+            attempts.max(Self::SIGN_IN_ATTEMPTS)
+        } else {
+            attempts
+        };
+        let sensor = sensor || handover.is_some_and(|handover| handover.sensor);
+        let mut attached = self.attach(&dll);
+        for _ in 1..attempts {
+            if attached.is_ok() {
+                break;
+            }
+            std::thread::sleep(PAUSE);
+            attached = self.attach(&dll);
+        }
+        let code = attached?;
         // History of the taskbar devices is always recorded; only process monitoring
         // needs the elevated recorder.
         if matches!(code, 0 | 2) {
@@ -150,34 +181,31 @@ impl Launcher {
                 );
             }
         }
-        // The tray icon keeps the program running from here on.
-        if code != 1 {
-            super::watch::Watcher::spawn(executable);
+        let sensors = executable.with_file_name(Executables::SENSORS);
+        if sensor && sensors.is_file() {
+            if let Err(hr) =
+                super::temperature::SensorCollector::launch(&sensors, Explorer::find()?.pid)
+            {
+                eprintln!(
+                    "CPU temperature unavailable: 0x{hr:08X}; taskbar metrics remain active."
+                );
+            }
         }
+        // The tray icon keeps the program running from here on.
+        super::watch::Watcher::spawn(executable);
         Ok(code)
     }
+
+    /// Attempts to attach at sign-in, 5 s apart: a minute.
+    const SIGN_IN_ATTEMPTS: usize = 12;
 
     /// The Run value at sign-in (`--autostart`): the taskbar may still be starting, so
     /// a failed attach is retried every 5 s for a minute; then the CPU temperature
     /// collector, when it is installed. Nothing opens on screen.
     fn sign_in(&self, executable: &Path, settings: &Settings) -> Result<i32> {
-        const ATTEMPTS: usize = 12;
-        const PAUSE: std::time::Duration = std::time::Duration::from_secs(5);
-        let mut code = 1;
-        for attempt in 1..=ATTEMPTS {
-            code = self.attach_tiles(executable, settings).unwrap_or(1);
-            if code != 1 {
-                break;
-            }
-            if attempt < ATTEMPTS {
-                std::thread::sleep(PAUSE);
-            }
-        }
-        let sensors = executable.with_file_name(Executables::SENSORS);
-        if code != 1 && sensors.is_file() {
-            super::temperature::SensorCollector::launch(&sensors, Explorer::find()?.pid)?;
-        }
-        Ok(code)
+        Ok(self
+            .attach_tiles(executable, settings, Self::SIGN_IN_ATTEMPTS, true)
+            .unwrap_or(1))
     }
 
     /// Closes the program, as the tray icon's menu does.
@@ -321,6 +349,46 @@ impl Explorer {
             })
         }
     }
+    /// The path of the module `name` this Explorer has loaded.
+    pub fn module(&self, name: &str) -> Option<PathBuf> {
+        unsafe {
+            // PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_VM_READ
+            let process = Handle::new(OpenProcess(0x1010, 0, self.pid)).ok()?;
+            let mut modules: Vec<Raw> = vec![ptr::null_mut(); 1024];
+            loop {
+                let mut needed = 0;
+                let size = (modules.len() * std::mem::size_of::<Raw>()) as u32;
+                if K32EnumProcessModules(process.0, modules.as_mut_ptr(), size, &mut needed) == 0 {
+                    return None;
+                }
+                let count = needed as usize / std::mem::size_of::<Raw>();
+                if count <= modules.len() {
+                    modules.truncate(count);
+                    break;
+                }
+                modules.resize(count, ptr::null_mut());
+            }
+            let mut path = vec![0u16; 32768];
+            modules.into_iter().find_map(|module| {
+                let length = K32GetModuleFileNameExW(
+                    process.0,
+                    module,
+                    path.as_mut_ptr(),
+                    path.len() as u32,
+                ) as usize;
+                let file = PathBuf::from(OsString::from_wide(&path[..length]));
+                file.file_name()
+                    .is_some_and(|file| file.eq_ignore_ascii_case(name))
+                    .then_some(file)
+            })
+        }
+    }
+}
+
+#[link(name = "kernel32")]
+extern "system" {
+    fn K32EnumProcessModules(process: Raw, modules: *mut Raw, size: u32, needed: *mut u32) -> i32;
+    fn K32GetModuleFileNameExW(process: Raw, module: Raw, name: *mut u16, size: u32) -> u32;
 }
 
 #[repr(C)]

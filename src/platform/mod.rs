@@ -10,6 +10,7 @@ pub mod devices;
 pub mod displays;
 pub mod executables;
 pub(crate) mod gpu_temperature;
+pub(crate) mod handover;
 pub(crate) mod hardware;
 pub mod launcher;
 mod logging;

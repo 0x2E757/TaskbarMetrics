@@ -37,7 +37,9 @@ Asks for administrator rights once and, in English or Russian:
 - "Install the PawnIO driver", offered while PawnIO is missing, downloads the official
   PawnIO 2.2.0 installer from GitHub, checks its SHA-256 and runs it silently. Its terms do
   not cover bundling, so it is not carried inside;
-- starts the program with `--autostart`.
+- starts the program with `--autostart`. When a portable or development copy runs, the
+  installed one takes over from it and Explorer restarts
+  ([command-line.md](command-line.md)).
 
 An update first runs the installed `TaskbarMetrics.exe --unload`: the tray icon and the window close and
 Explorer restarts, which frees the DLL. Uninstalling unloads the same way, removes the tasks

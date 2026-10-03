@@ -24,7 +24,8 @@ impl Unload {
         }
         Self::wait_free(directory)
     }
-    fn restart_explorer(pid: u32) -> Result<()> {
+    /// Ends the Explorer `pid` and waits for the one Windows starts in its place.
+    pub fn restart_explorer(pid: u32) -> Result<()> {
         unsafe {
             // PROCESS_TERMINATE | SYNCHRONIZE, for this one process.
             let process = Handle::new(OpenProcess(0x100001, 0, pid))?;

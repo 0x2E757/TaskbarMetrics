@@ -9,6 +9,15 @@ default) it starts it elevated: through the installed task, otherwise with a UAC
 Unless the attach failed, it then starts the watcher, `TaskbarMetrics.exe --watch`, unless
 one runs.
 
+Copies in different folders (the installed one, the portable one in the data folder, a
+build) share the named objects of their Explorer, so one runs at a time, and the copy
+started last takes over. When Explorer holds the DLL of another copy, running or stopped,
+the launcher closes that copy as `--stop` does and restarts Explorer, which cannot unload
+the DLL, then attaches its own, retrying for a minute while the new taskbar starts. The
+CPU temperature collector of the other copy carries over. Without this, the launcher
+would wake the other copy's DLL, whose tiles open that copy's window, with its own
+"Start when signing in to Windows" switch.
+
 The watcher stays in the background with a tray icon (on Windows 11 a new icon starts among
 the hidden ones) whose menu has two items:
 
