@@ -1,5 +1,5 @@
 //! The watcher's notification icon: a hidden window that owns it, a timer, and a
-//! menu with one item.
+//! menu with two items.
 use crate::platform::abi::*;
 use std::{cell::RefCell, ptr};
 
@@ -7,8 +7,16 @@ use std::{cell::RefCell, ptr};
 pub trait TrayEvents {
     /// The timer fired or the taskbar came back.
     fn tick(&mut self);
+    /// "Restart all services" was chosen.
+    fn restart(&mut self);
     /// "Close Taskbar Metrics" was chosen; the icon goes away after it.
     fn close_all(&mut self);
+}
+
+/// The texts of the menu's items, in the window's language.
+pub struct MenuLabels {
+    pub restart: String,
+    pub close: String,
 }
 
 /// Window class of the icon's window: `--stop` and updates close it by this name.
@@ -16,11 +24,13 @@ pub const CLASS: &str = "TaskbarMetrics.Watch";
 const CALLBACK: u32 = 0x8001; // WM_APP + 1
 const TIMER: usize = 1;
 const CLOSE: usize = 1;
+const RESTART: usize = 2;
 
 struct State {
     events: Box<dyn TrayEvents>,
     icon: NotifyIcon,
-    menu: Vec<u16>,
+    /// Item ids and texts, top to bottom.
+    menu: Vec<(usize, Vec<u16>)>,
     /// "TaskbarCreated": a new Explorer drew the taskbar.
     taskbar_created: u32,
 }
@@ -33,7 +43,7 @@ impl TrayIcon {
     pub fn run(
         events: Box<dyn TrayEvents>,
         tooltip: &str,
-        menu: &str,
+        menu: MenuLabels,
         period_ms: u32,
     ) -> Result<()> {
         unsafe {
@@ -80,7 +90,7 @@ impl TrayIcon {
                 *state.borrow_mut() = Some(State {
                     events,
                     icon,
-                    menu: wide(menu),
+                    menu: vec![(RESTART, wide(&menu.restart)), (CLOSE, wide(&menu.close))],
                     taskbar_created: RegisterWindowMessageW(wide("TaskbarCreated").as_ptr()),
                 })
             });
@@ -103,14 +113,16 @@ impl TrayIcon {
             PostQuitMessage(0);
         }
     }
-    /// The menu at the pointer; true when its item was chosen.
-    fn menu(window: Raw, text: &[u16]) -> bool {
+    /// The menu at the pointer; the id of the item chosen, 0 for none.
+    fn menu(window: Raw, items: &[(usize, Vec<u16>)]) -> usize {
         unsafe {
             let menu = CreatePopupMenu();
             if menu.is_null() {
-                return false;
+                return 0;
             }
-            AppendMenuW(menu, 0, CLOSE, text.as_ptr());
+            for (id, text) in items {
+                AppendMenuW(menu, 0, *id, text.as_ptr());
+            }
             let mut point = Point::default();
             GetCursorPos(&mut point);
             // Without it the menu would not close on a click elsewhere.
@@ -127,7 +139,7 @@ impl TrayIcon {
             );
             PostMessageW(window, 0, 0, 0);
             DestroyMenu(menu);
-            chosen as usize == CLOSE
+            chosen as usize
         }
     }
 }
@@ -155,9 +167,13 @@ unsafe extern "system" fn procedure(
             0
         }
         CALLBACK if matches!(lparam, WM_LBUTTONUP | WM_RBUTTONUP) => {
-            if TrayIcon::menu(window, &state.menu) {
-                state.events.close_all();
-                TrayIcon::quit(window, &state.icon);
+            match TrayIcon::menu(window, &state.menu) {
+                RESTART => state.events.restart(),
+                CLOSE => {
+                    state.events.close_all();
+                    TrayIcon::quit(window, &state.icon);
+                }
+                _ => {}
             }
             0
         }

@@ -152,14 +152,9 @@ impl ProcessHistory {
             {
                 break;
             }
-            if !probe {
-                if let Ok(stop) = Handle::new(unsafe {
-                    OpenEventW(0x100000, 0, event_name("stop", pid).as_ptr())
-                }) {
-                    if unsafe { WaitForSingleObject(stop.0, 0) } == 0 {
-                        break;
-                    }
-                }
+            // Stopped tiles, or "Restart all services", which starts a new recorder.
+            if !probe && (signaled("stop", pid) || signaled("restart", pid)) {
+                break;
             }
             match crate::config::Settings::load(&config) {
                 Ok(updated) => settings = updated,

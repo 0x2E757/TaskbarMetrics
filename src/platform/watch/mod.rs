@@ -1,6 +1,7 @@
 //! `TaskbarMetrics.exe --watch`: stays in the tray and keeps the program running.
 //! A new Explorer gets the tiles again, a collector that ended is started again,
 //! and the icon's menu closes everything.
+mod restart;
 mod supervision;
 mod tray;
 use super::{
@@ -27,6 +28,8 @@ pub(crate) struct Watcher {
     supervision: Supervision,
     /// The launcher started for an Explorer, while it runs.
     attaching: Option<(u32, Child)>,
+    /// "Restart all services", while it runs.
+    restarting: Option<std::thread::JoinHandle<()>>,
 }
 impl Watcher {
     /// Starts the watcher of the copy at `executable`, unless one already runs.
@@ -87,12 +90,16 @@ impl Watcher {
             executable: executable.to_owned(),
             supervision: Supervision::new(Explorer::find().ok().map(|explorer| explorer.pid)),
             attaching: None,
+            restarting: None,
         };
         let language = super::metrics_window::Language::load();
         tray::TrayIcon::run(
             Box::new(watcher),
             "Taskbar Metrics",
-            language.text("Close Taskbar Metrics"),
+            tray::MenuLabels {
+                restart: language.text("Restart all services").into(),
+                close: language.text("Close Taskbar Metrics").into(),
+            },
             2000,
         )?;
         Ok(0)
@@ -106,21 +113,24 @@ impl Watcher {
                 self.attaching = None;
             }
         }
+        if self
+            .restarting
+            .as_ref()
+            .is_some_and(|thread| thread.is_finished())
+        {
+            self.restarting = None;
+        }
         let explorer = Explorer::find().ok().map(|explorer| explorer.pid);
         let Some(pid) = explorer else {
             return Observation::default();
         };
         Observation {
             explorer,
-            stopped: Self::stopped(pid),
+            stopped: signaled("stop", pid),
             recorder: ProcessHistory::running(pid),
             sensor: SensorCollector::running(pid),
-            attaching: self.attaching.is_some(),
+            busy: self.attaching.is_some() || self.restarting.is_some(),
         }
-    }
-    fn stopped(pid: u32) -> bool {
-        Handle::new(unsafe { OpenEventW(0x100000, 0, event_name("stop", pid).as_ptr()) })
-            .is_ok_and(|event| unsafe { WaitForSingleObject(event.0, 0) } == 0)
     }
     fn act(&mut self, action: Action) {
         let started = match action {
@@ -137,15 +147,7 @@ impl Watcher {
             }
             Action::Recorder(pid) => {
                 log("Watcher: starting the history recorder again");
-                let settings = super::data_directory::DataDirectory::file("taskbar-metrics.conf")
-                    .ok()
-                    .and_then(|path| crate::config::Settings::load(&path).ok())
-                    .unwrap_or_default();
-                ProcessHistory::launch(
-                    &self.executable.with_file_name(Executables::HISTORY),
-                    pid,
-                    settings.process_monitoring,
-                )
+                start_recorder(&self.executable, pid)
             }
             Action::Sensor(pid) => {
                 log("Watcher: starting the CPU temperature collector again");
@@ -165,10 +167,39 @@ impl tray::TrayEvents for Watcher {
             self.act(action);
         }
     }
+    /// Runs on a thread of its own: waiting for the collectors to exit takes
+    /// seconds, and the icon keeps answering meanwhile.
+    fn restart(&mut self) {
+        if self.restarting.is_some() {
+            return;
+        }
+        let Ok(explorer) = Explorer::find() else {
+            return;
+        };
+        let restart = restart::ServicesRestart {
+            executable: self.executable.clone(),
+            pid: explorer.pid,
+        };
+        self.restarting = Some(std::thread::spawn(move || restart.run()));
+    }
     fn close_all(&mut self) {
         Shutdown::stop_tiles();
         Shutdown::close(Shutdown::WINDOW);
     }
+}
+
+/// Starts the history recorder of the copy at `executable` for the Explorer `pid`,
+/// elevated when the configuration monitors processes.
+fn start_recorder(executable: &Path, pid: u32) -> Result<()> {
+    let settings = super::data_directory::DataDirectory::file("taskbar-metrics.conf")
+        .ok()
+        .and_then(|path| crate::config::Settings::load(&path).ok())
+        .unwrap_or_default();
+    ProcessHistory::launch(
+        &executable.with_file_name(Executables::HISTORY),
+        pid,
+        settings.process_monitoring,
+    )
 }
 
 /// STARTUPINFOW with nothing but its size set.

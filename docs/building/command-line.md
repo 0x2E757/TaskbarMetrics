@@ -10,8 +10,19 @@ Unless the attach failed, it then starts the watcher, `TaskbarMetrics.exe --watc
 one runs.
 
 The watcher stays in the background with a tray icon (on Windows 11 a new icon starts among
-the hidden ones) whose menu has one item, "Close Taskbar Metrics": it closes everything, as
-`--stop` does. Every 2 s it checks the Explorer that shows the taskbar:
+the hidden ones) whose menu has two items:
+
+- "Restart all services" starts the history recorder and the CPU temperature collector again.
+  It sets the `restart` event of the current Explorer, which both check like `stop`, waits for
+  the recorder to exit (up to 5 s) and, when the collector ran, for Explorer to let go of its
+  shared memory (up to 10 s), then starts them again; the collector only if it ran. The DLL
+  in Explorer stays as it is: when it is loaded and its tiles run, the recorder starts
+  directly; when it is missing or stopped, the launcher attaches or wakes it and starts the
+  recorder. So `interval_ms`, `width` and `gap` still wait for the next start. It runs on a
+  thread of its own, and the checks below pause meanwhile.
+- "Close Taskbar Metrics" closes everything, as `--stop` does.
+
+Every 2 s it checks the Explorer that shows the taskbar:
 
 - a new Explorer (a crash, an update, a restart from the Task Manager) gets the tiles again:
   the watcher runs the launcher, every 5 s for a minute, then once a minute, until it attaches;

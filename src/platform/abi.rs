@@ -36,6 +36,13 @@ pub fn wide(value: &str) -> Vec<u16> {
 pub fn event_name(kind: &str, pid: u32) -> Vec<u16> {
     wide(&format!("Local\\TaskbarMetrics.{pid}.{kind}"))
 }
+/// The event `kind` of the Explorer `pid` exists and is set: `stop` while the tiles
+/// are stopped, `restart` while the collectors are asked to start again.
+pub fn signaled(kind: &str, pid: u32) -> bool {
+    // SYNCHRONIZE only: the event is read, never set, here.
+    Handle::new(unsafe { OpenEventW(0x100000, 0, event_name(kind, pid).as_ptr()) })
+        .is_ok_and(|event| unsafe { WaitForSingleObject(event.0, 0) } == 0)
+}
 pub fn check(hr: Hr) -> Result<()> {
     if hr < 0 {
         Err(hr)

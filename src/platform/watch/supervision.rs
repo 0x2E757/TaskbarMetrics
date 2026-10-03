@@ -11,8 +11,8 @@ pub struct Observation {
     pub stopped: bool,
     pub recorder: bool,
     pub sensor: bool,
-    /// A start of the launcher is still running.
-    pub attaching: bool,
+    /// A start of the launcher or "Restart all services" is still running.
+    pub busy: bool,
 }
 
 /// What to start, for the Explorer with this id.
@@ -79,7 +79,7 @@ impl Supervision {
         let Some(pid) = seen.explorer else {
             return Vec::new();
         };
-        if seen.attaching {
+        if seen.busy {
             return Vec::new();
         }
         if self.attached != Some(pid) {
@@ -145,7 +145,7 @@ mod tests {
         assert!(watch.next(seen(1), start).is_empty());
         assert_eq!(watch.next(seen(2), start), [Action::Attach(2)]);
         let attaching = Observation {
-            attaching: true,
+            busy: true,
             ..seen(2)
         };
         assert!(watch

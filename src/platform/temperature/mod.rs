@@ -15,6 +15,10 @@ impl SensorCollector {
     pub(crate) fn running(pid: u32) -> bool {
         channel::TemperatureChannel::open(pid).is_ok_and(|channel| channel.fresh())
     }
+    /// The collector's shared memory is gone, so a new collector can create it.
+    pub(crate) fn released(pid: u32) -> bool {
+        channel::TemperatureChannel::open(pid).is_err()
+    }
     pub(crate) fn launch(executable: &std::path::Path, pid: u32) -> Result<()> {
         if Self::running(pid) {
             return Ok(());
@@ -87,14 +91,10 @@ impl SensorCollector {
             format!("Collector channel: 0x{hr:08X}; another collector may already be running")
         })?;
         loop {
-            // Respect the application's existing stop signal without exposing any
-            // privileged command interface. The event may appear after startup.
-            if let Ok(stop) =
-                Handle::new(unsafe { OpenEventW(0x100000, 0, event_name("stop", pid).as_ptr()) })
-            {
-                if unsafe { WaitForSingleObject(stop.0, 0) } == 0 {
-                    return Ok(());
-                }
+            // Respect the application's stop and restart signals without exposing any
+            // privileged command interface. The events may appear after startup.
+            if signaled("stop", pid) || signaled("restart", pid) {
+                return Ok(());
             }
             channel.publish(sensor.sample().ok());
             match unsafe { WaitForSingleObject(parent.0, 500) } {
