@@ -225,6 +225,11 @@ impl StatsSource<'_> {
             _ => {}
         }
         stats.extend(self.live());
+        // The title names the link, as Task Manager does; the name Windows gives the
+        // adapter («Ethernet0 2») is its tag.
+        if let (Resource::Net, Some(name)) = (self.device.resource, &self.device.id.tag) {
+            stats.push(self.stat("Adapter name", name.clone(), None));
+        }
         stats
     }
     /// A value that may be missing, without a caption.
@@ -608,7 +613,8 @@ mod tests {
             (signal.value.as_str(), signal.caption.as_deref()),
             ("−54 dBm", Some("good"))
         );
-        assert_eq!(net.len(), 4);
+        assert_eq!(net.len(), 5);
+        assert_eq!(net[4].value, "Wi‑Fi");
         // A past moment has no live values.
         assert_eq!(StatsSource { ..source(&now) }.stats()[3].value, "—");
     }

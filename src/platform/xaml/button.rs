@@ -1,7 +1,7 @@
 use super::{visual_tree::VisualTree, *};
 use crate::{
     metrics::{MetricReading, MetricValue},
-    platform::devices::DeviceId,
+    platform::devices::{DeviceId, NetworkAdapter},
     presentation::{
         dash_phase::DashPhase,
         history::{self, ChartPoint, MetricHistory},
@@ -320,6 +320,11 @@ impl Markup {
         };
         match (device.ordinal(), &device.tag) {
             (Some(ordinal), _) => format!("{}{ordinal}", device.kind.to_uppercase()),
+            // An adapter is named by its link, as in the window's menu.
+            (None, Some(tag)) if device.kind == "net" => {
+                NetworkAdapter::label(&NetworkAdapter::list(), tag)
+                    .unwrap_or_else(|| tag.to_uppercase())
+            }
             (None, Some(tag)) => tag.to_uppercase(),
             (None, None) => id.to_uppercase(),
         }
@@ -914,7 +919,8 @@ mod tests {
     fn tiles_title_devices_by_tag_and_main_devices_by_kind() {
         assert_eq!(Markup::label("disk"), "DISK");
         assert_eq!(Markup::label("disk@D:"), "D:");
-        assert_eq!(Markup::label("net@Wi-Fi"), "WI-FI");
+        // An adapter that is not up keeps its name; one that is gets its link.
+        assert_eq!(Markup::label("net@Absent adapter 7"), "ABSENT ADAPTER 7");
         assert_eq!(Markup::label("gpu@1"), "GPU2");
         assert_eq!(Markup::label("disk@2"), "DISK3");
     }

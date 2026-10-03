@@ -121,13 +121,14 @@ impl Device {
             ordinal: None,
         }
     }
-    /// Devices numbered together: GPUs, and disks of one media. A demo disk tagged
-    /// by its letter is named by it instead.
+    /// Devices numbered together: GPUs, disks of one media and adapters of one link.
+    /// A demo disk tagged by its letter is named by it instead.
     pub fn group(&self) -> Option<&'static str> {
         match (self.resource, &self.disk) {
             (Resource::Gpu, _) => Some("GPU"),
             (Resource::Disk, Some(name)) => Some(name.media.unwrap_or("Disk")),
             (Resource::Disk, None) if !self.lettered() => Some("Disk"),
+            (Resource::Net, _) => self.link,
             _ => None,
         }
     }
@@ -138,8 +139,9 @@ impl Device {
     fn lettered(&self) -> bool {
         self.id.tag.as_deref().is_some_and(|tag| tag.ends_with(':'))
     }
-    /// Menu and page title: "GPU 2", "SSD", "HDD 1", "Wi‑Fi"; CPU and memory keep
-    /// theirs. A disk of unknown media is "Disk"; a demo disk, "Disk D:/".
+    /// Menu and page title: "GPU 2", "SSD", "HDD 1", "Wi‑Fi", "Ethernet 2" (by link, as
+    /// Task Manager names adapters; the Windows name is in the subtitle); CPU and
+    /// memory keep theirs. An adapter of unknown link keeps its Windows name. A disk of unknown media is "Disk"; a demo disk, "Disk D:/".
     pub fn title(&self, language: Language) -> String {
         let disk = language.text("Disk");
         let numbered = |name: &str| match self.ordinal {
@@ -153,6 +155,7 @@ impl Device {
             }
             (Resource::Disk, None, Some(tag)) if self.lettered() => format!("{disk} {tag}/"),
             (Resource::Disk, None, _) => numbered(disk),
+            (Resource::Net, _, _) if self.link.is_some() => numbered(self.link.unwrap_or_default()),
             (Resource::Net, _, Some(tag)) => tag.to_owned(),
             (resource, _, _) => language.text(resource.title()).to_owned(),
         }
@@ -455,6 +458,23 @@ mod tests {
         assert_eq!(title("gpu@1", Some(2)), "GPU 2");
         // The only one of its group has no number.
         assert_eq!(title("gpu@0", None), "GPU");
+        // Adapters are named by link, like in Task Manager; without one, by name.
+        let adapter = |link, ordinal| {
+            let mut device = Device::new(DeviceId::parse("net@Ethernet0 2").unwrap())
+                .unwrap()
+                .with_link(link);
+            device.ordinal = ordinal;
+            (device.group(), device.title(Language::English))
+        };
+        assert_eq!(
+            adapter(Some("Ethernet"), None),
+            (Some("Ethernet"), "Ethernet".into())
+        );
+        assert_eq!(
+            adapter(Some("Ethernet"), Some(2)),
+            (Some("Ethernet"), "Ethernet 2".into())
+        );
+        assert_eq!(adapter(None, None), (None, "Ethernet0 2".into()));
         // A disk the machine lists is named like a GPU: media and number.
         let named = |media, ordinal| {
             let mut device = Device::new(DeviceId::parse("disk@D:").unwrap())

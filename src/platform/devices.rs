@@ -245,6 +245,19 @@ impl NetworkAdapter {
             .find(|a| a.gateway)
             .or_else(|| adapters.first())
     }
+    /// Tile header of the adapter tagged `tag`: its link, numbered among the adapters
+    /// of that link as the menu numbers them («WI‑FI», «ETHERNET2»); None when the
+    /// adapter is not up.
+    pub fn label(adapters: &[Self], tag: &str) -> Option<String> {
+        let adapter = adapters.iter().find(|a| a.tag() == tag)?;
+        let links: Vec<_> = adapters.iter().map(|a| a.kind).collect();
+        let index = adapters.iter().position(|a| a.tag() == tag)?;
+        let link = adapter.kind.to_uppercase();
+        Some(match Ordinals::of(&links)[index] {
+            Some(ordinal) => format!("{link}{ordinal}"),
+            None => link,
+        })
+    }
     pub fn find<'a>(adapters: &'a [Self], id: &DeviceId) -> Option<&'a Self> {
         match &id.tag {
             Some(tag) => adapters.iter().find(|a| &a.tag() == tag),
@@ -695,6 +708,23 @@ mod tests {
             adapter("Wi‑Fi", "Intel(R) Wi-Fi 6 AX201 160MHz", true),
         ];
         assert_eq!(adapters[0].instance(), "Intel[R] Ethernet _2");
+        // Tiles name adapters by link, numbered only among adapters of one link.
+        let mut wifi = adapter("Wi‑Fi", "MediaTek Wi-Fi 7", true);
+        wifi.kind = "Wi‑Fi";
+        let mixed = [adapter("Ethernet0 2", "vmxnet3", false), wifi];
+        assert_eq!(
+            NetworkAdapter::label(&mixed, "Ethernet0 2").as_deref(),
+            Some("ETHERNET")
+        );
+        assert_eq!(
+            NetworkAdapter::label(&mixed, "Wi‑Fi").as_deref(),
+            Some("WI‑FI")
+        );
+        assert_eq!(
+            NetworkAdapter::label(&adapters, "Wi‑Fi").as_deref(),
+            Some("ETHERNET2")
+        );
+        assert_eq!(NetworkAdapter::label(&mixed, "VPN"), None);
         assert_eq!(NetworkAdapter::main(&adapters).unwrap().name, "Wi‑Fi");
         let id = DeviceId::parse("net@Ethernet 2").unwrap();
         assert_eq!(

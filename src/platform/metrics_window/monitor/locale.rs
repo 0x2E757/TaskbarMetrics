@@ -296,6 +296,7 @@ const CATALOG: &[(&str, &str)] = &[
     ("Up time", "Время работы"),
     ("Page file", "Файл подкачки"),
     ("Signal", "Сигнал"),
+    ("Adapter name", "Имя адаптера"),
     (
         "Load of the busiest GPU engine: 3D, compute, copy or video",
         "Загрузка самого занятого движка GPU: 3D, вычисления, копирование или видео",

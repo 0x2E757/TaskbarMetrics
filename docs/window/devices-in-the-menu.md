@@ -25,8 +25,11 @@ Part of [History window](../window.md).
   memory as power-of-two pieces without a type or speed (Hyper‑V: 8 GB + 2 GB + … + 32 MB);
   when no device has either, the subtitle is their total, "11.9 GB".
 - Network adapters: only hardware Ethernet, Wi‑Fi and WWAN adapters that are up (Hyper‑V, VPN
-  and other virtual adapters are left out). The item is named as in Windows Settings ("Wi‑Fi",
-  "Ethernet 2"); the subtitle is the adapter description.
+  and other virtual adapters are left out). Like Task Manager, the item is named by the link —
+  "Ethernet", "Wi‑Fi", "WWAN" — numbered like the disks when there are several of one link; the
+  subtitle is the adapter description, and the name Windows gives the adapter ("Ethernet0 2") is
+  the page's "Adapter name" value. Its tile is headed the same way: "ETHERNET", "WI‑FI",
+  "ETHERNET2"; an adapter that is not up keeps its name there.
 - Each device's page has two check boxes:
   - "Show on taskbar" adds or removes the device's tile (`metrics=`). The last tile cannot be
     removed.
