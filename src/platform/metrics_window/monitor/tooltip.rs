@@ -6,6 +6,7 @@ use super::{
     pins::PinnedLayer,
     ui::Ui,
 };
+
 use crate::platform::process_history::{memory::MemoryRows, store::Frame};
 use std::sync::Arc;
 
@@ -15,6 +16,7 @@ pub struct ChartTooltip {
     pub design: Design,
     pub language: Language,
 }
+
 impl ChartTooltip {
     fn width(resource: Resource) -> f64 {
         match resource {
@@ -23,6 +25,7 @@ impl ChartTooltip {
             _ => 220.0,
         }
     }
+
     fn value(&self, resource: Resource, values: [Option<f64>; 2]) -> Option<String> {
         let number = |v: Option<f64>| {
             v.map(|v| self.language.number(v, 2))
@@ -36,6 +39,7 @@ impl ChartTooltip {
                 .then(|| format!("↓ {}  ↑ {}", number(values[0]), number(values[1]))),
         }
     }
+
     fn row(&self, mark: String, label: &str, value: Option<String>) -> String {
         let d = self.design;
         let value = match value {
@@ -55,6 +59,7 @@ impl ChartTooltip {
             Ui::xml(label)
         )
     }
+
     /// Rows of the three busiest processes at `frame`, shown while nothing is pinned.
     /// Idle processes are left out and their places hold a dash, so the card keeps
     /// its height as the pointer moves. The grey rows of memory outside processes
@@ -85,6 +90,7 @@ impl ChartTooltip {
         rows.resize(COUNT, self.placeholder());
         rows
     }
+
     /// An empty place among the busiest processes: a hollow mark and a dash.
     fn placeholder(&self) -> String {
         let color = self.design.color("text3");
@@ -92,6 +98,7 @@ impl ChartTooltip {
             r#"<Grid ColumnSpacing="6"><Grid.ColumnDefinitions><ColumnDefinition Width="12"/><ColumnDefinition/></Grid.ColumnDefinitions><Grid Height="16"><Ellipse Width="6" Height="6" Stroke="{color}" StrokeThickness="1" HorizontalAlignment="Center" VerticalAlignment="Center"/></Grid><TextBlock Grid.Column="1" Text="—" FontSize="12" Foreground="{color}"/></Grid>"#
         )
     }
+
     pub fn markup(
         &self,
         (x, y): (f64, f64),
@@ -201,6 +208,7 @@ impl ChartTooltip {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn tooltip_flips_near_the_right_edge_and_reports_missing_samples() {
         let frame = Arc::new(Frame {
@@ -269,6 +277,7 @@ mod tests {
         );
         assert!(split.contains("↓ 1.50  ↑ 0.25") && !split.contains("Temperature"));
     }
+
     #[test]
     fn without_pins_the_three_busiest_processes_are_shown() {
         use crate::platform::process_history::store::{Identity, Sample};
@@ -333,6 +342,7 @@ mod tests {
         let markup = tooltip.markup((layout.x1(), 60.0), layout, &[frame], &device, &pinned);
         assert!(markup.contains("p5.exe") && !markup.contains("p2.exe"));
     }
+
     #[test]
     fn memory_outside_processes_is_not_among_the_busiest() {
         use crate::platform::process_history::{

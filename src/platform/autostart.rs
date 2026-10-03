@@ -2,17 +2,20 @@
 //! the value starts `TaskbarMetrics.exe --autostart`, which attaches
 //! to the taskbar the same way as a manual start; its manifest keeps a console
 //! from opening.
+
 use super::abi::Raw;
 use std::path::Path;
 
 pub struct Autostart {
     command: String,
 }
+
 impl Autostart {
     const KEY: &'static str = r"Software\Microsoft\Windows\CurrentVersion\Run";
     const VALUE: &'static str = "Taskbar Metrics";
     /// Argument of `TaskbarMetrics.exe` that runs the sign-in start.
     pub const ARGUMENT: &'static str = "--autostart";
+
     /// Starts the copy in `directory`, the folder of the running executables.
     pub fn new(directory: &Path) -> Self {
         Self {
@@ -25,11 +28,13 @@ impl Autostart {
             ),
         }
     }
+
     /// On only while the Run value starts this copy; one left by a copy elsewhere
     /// shows as off and is replaced when switched on.
     pub fn enabled(&self) -> bool {
         Self::read().as_deref() == Some(self.command.as_str())
     }
+
     pub fn set(&self, enabled: bool) -> std::io::Result<()> {
         let (key, value) = (wide(Self::KEY), wide(Self::VALUE));
         let status = if enabled {
@@ -58,6 +63,7 @@ impl Autostart {
             status => Err(std::io::Error::from_raw_os_error(status)),
         }
     }
+
     fn read() -> Option<String> {
         let (key, value) = (wide(Self::KEY), wide(Self::VALUE));
         let mut data = vec![0u16; 1024];
@@ -80,6 +86,7 @@ impl Autostart {
         })
     }
 }
+
 fn wide(text: &str) -> Vec<u16> {
     text.encode_utf16().chain(Some(0)).collect()
 }
@@ -88,6 +95,7 @@ const HKEY_CURRENT_USER: Raw = 0x8000_0001_u32 as i32 as isize as Raw;
 const REG_SZ: u32 = 1;
 const RRF_RT_REG_SZ: u32 = 2;
 const ERROR_FILE_NOT_FOUND: i32 = 2;
+
 #[link(name = "advapi32")]
 extern "system" {
     fn RegSetKeyValueW(
@@ -113,6 +121,7 @@ extern "system" {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn the_command_starts_the_quoted_copy_beside_the_window() {
         let autostart = Autostart::new(Path::new(r"C:\Program Files\Taskbar Metrics"));

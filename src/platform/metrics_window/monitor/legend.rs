@@ -3,6 +3,7 @@ use crate::platform::abi::Result;
 
 /// Hatched fill for «no samples» and «awaiting ETW» areas: 1.5 px strokes, 45° apart by `step`.
 pub struct Hatch;
+
 impl Hatch {
     pub fn path(x: f64, y: f64, width: f64, height: f64, color: &str, step: f64) -> String {
         let pitch = step * std::f64::consts::SQRT_2;
@@ -38,6 +39,7 @@ pub enum LegendMark {
     /// Missing samples or awaiting ETW attribution.
     Hatch,
 }
+
 pub struct LegendEntry {
     pub mark: LegendMark,
     pub label: String,
@@ -47,6 +49,7 @@ pub struct LegendEntry {
 pub struct ChartLegend {
     pub design: Design,
 }
+
 impl ChartLegend {
     fn mark(&self, mark: &LegendMark) -> String {
         let d = self.design;
@@ -74,11 +77,13 @@ impl ChartLegend {
             ),
         }
     }
+
     fn area(fill: &str, edge: &str) -> String {
         format!(
             r#"<Grid Width="14" Height="10" VerticalAlignment="Center"><Border CornerRadius="2" Background="{fill}"/><Border Height="2" VerticalAlignment="Top" CornerRadius="2,2,0,0" Background="{edge}"/></Grid>"#
         )
     }
+
     /// One self-contained legend item; loadable alone so its width can be measured.
     pub fn item(&self, entry: &LegendEntry) -> String {
         format!(
@@ -88,6 +93,7 @@ impl ChartLegend {
             self.design.color("text2")
         )
     }
+
     /// Rows of `items` as laid out by `flow`.
     pub fn markup(items: &[String], flow: &LegendFlow) -> String {
         let mut markup = format!(
@@ -113,9 +119,11 @@ impl ChartLegend {
 /// Measured widths of legend items by their markup: the same item lays out the same.
 #[derive(Default)]
 pub struct LegendWidths(std::cell::RefCell<std::collections::HashMap<String, f64>>);
+
 impl LegendWidths {
     /// Hovered process names add items; the oldest measurements are dropped together.
     const LIMIT: usize = 256;
+
     pub fn width(&self, item: &str, measure: impl FnOnce() -> Result<f64>) -> Result<f64> {
         if let Some(width) = self.0.borrow().get(item) {
             return Ok(*width);
@@ -128,6 +136,7 @@ impl LegendWidths {
         widths.insert(item.to_owned(), width);
         Ok(width)
     }
+
     pub fn clear(&self) {
         self.0.borrow_mut().clear();
     }
@@ -139,11 +148,13 @@ impl LegendWidths {
 pub struct LegendFlow {
     pub rows: Vec<Vec<usize>>,
 }
+
 impl LegendFlow {
     pub const GAP: f64 = 16.0;
     pub const ROW_GAP: f64 = 6.0;
     /// Row height of 12 px text.
     pub const LINE: f64 = 16.0;
+
     pub fn new(widths: &[f64], available: f64) -> Self {
         let mut rows: Vec<Vec<usize>> = Vec::new();
         let mut used = 0.0;
@@ -166,6 +177,7 @@ impl LegendFlow {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn hatch_is_clipped_and_legend_marks_differ_by_shape() {
         let hatch = Hatch::path(10.0, 20.0, 30.0, 40.0, "#000000", 6.0);
@@ -192,6 +204,7 @@ mod tests {
         assert!(markup.contains("StrokeDashArray") && markup.contains("A &amp; B"));
         assert_eq!(markup.matches(r#"Height="16""#).count(), 1);
     }
+
     #[test]
     fn items_wrap_only_when_the_row_is_full() {
         let flow = LegendFlow::new(&[300.0, 300.0, 300.0], 950.0);

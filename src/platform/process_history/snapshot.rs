@@ -10,6 +10,7 @@ pub(super) struct Process {
     pub working_set: u64,
     pub private_bytes: u64,
 }
+
 #[derive(Default)]
 pub(super) struct SnapshotReader {
     buffer: Vec<u64>,
@@ -17,6 +18,7 @@ pub(super) struct SnapshotReader {
     /// instead of growing a map of thousands of threads step by step.
     sizes: (usize, usize),
 }
+
 impl SnapshotReader {
     // SystemProcessInformation's x64 fixed header is 256 bytes, followed by
     // 80-byte SYSTEM_THREAD_INFORMATION entries. SDK offsets: ImageName 56,
@@ -102,13 +104,16 @@ impl SnapshotReader {
         Ok((processes, threads))
     }
 }
+
 #[link(name = "ntdll")]
 extern "system" {
     fn NtQuerySystemInformation(class: u32, buffer: Raw, size: u32, used: *mut u32) -> i32;
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn native_snapshot_contains_this_process_and_its_threads() {
         let mut reader = SnapshotReader::default();

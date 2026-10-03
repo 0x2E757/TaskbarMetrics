@@ -1,6 +1,7 @@
 //! `TaskbarMetrics.exe --watch`: stays in the tray and keeps the program running.
 //! A new Explorer gets the tiles again, a collector that ended is started again,
 //! and the icon's menu closes everything.
+
 mod restart;
 mod supervision;
 mod tray;
@@ -8,12 +9,14 @@ use super::{
     abi::*, executables::Executables, launcher::Explorer, process_history::ProcessHistory,
     shutdown::Shutdown, temperature::SensorCollector,
 };
+
 use std::{
     os::windows::process::CommandExt,
     path::{Path, PathBuf},
     process::{Child, Command, Stdio},
     time::Instant,
 };
+
 use supervision::{Action, Observation, Supervision};
 pub(crate) use tray::CLASS;
 
@@ -31,6 +34,7 @@ pub(crate) struct Watcher {
     /// "Restart all services", while it runs.
     restarting: Option<std::thread::JoinHandle<()>>,
 }
+
 impl Watcher {
     /// Starts the watcher of the copy at `executable`, unless one already runs.
     pub fn spawn(executable: &Path) {
@@ -70,12 +74,15 @@ impl Watcher {
         }
         drop((Handle::new(started.process), Handle::new(started.thread)));
     }
+
     fn running() -> bool {
         Handle::new(unsafe { OpenMutexW(0x100000, 0, Self::mutex().as_ptr()) }).is_ok()
     }
+
     fn mutex() -> Vec<u16> {
         wide("Local\\TaskbarMetrics.Watch")
     }
+
     /// Runs until the icon's menu or `--stop` closes it; the launcher started it
     /// right after attaching to the current Explorer.
     pub fn run(executable: &Path) -> Result<i32> {
@@ -104,6 +111,7 @@ impl Watcher {
         )?;
         Ok(0)
     }
+
     fn observe(&mut self) -> Observation {
         if let Some((pid, child)) = &mut self.attaching {
             if let Ok(Some(status)) = child.try_wait() {
@@ -132,6 +140,7 @@ impl Watcher {
             busy: self.attaching.is_some() || self.restarting.is_some(),
         }
     }
+
     fn act(&mut self, action: Action) {
         let started = match action {
             Action::Attach(pid) => {
@@ -160,6 +169,7 @@ impl Watcher {
         }
     }
 }
+
 impl tray::TrayEvents for Watcher {
     fn tick(&mut self) {
         let seen = self.observe();
@@ -167,6 +177,7 @@ impl tray::TrayEvents for Watcher {
             self.act(action);
         }
     }
+
     /// Runs on a thread of its own: waiting for the collectors to exit takes
     /// seconds, and the icon keeps answering meanwhile.
     fn restart(&mut self) {
@@ -182,6 +193,7 @@ impl tray::TrayEvents for Watcher {
         };
         self.restarting = Some(std::thread::spawn(move || restart.run()));
     }
+
     fn close_all(&mut self) {
         Shutdown::stop_tiles();
         Shutdown::close(Shutdown::WINDOW);
@@ -210,6 +222,7 @@ struct StartupInfo {
     reserved: u32,
     rest: [u64; 12],
 }
+
 /// PROCESS_INFORMATION.
 #[repr(C)]
 struct ProcessInformation {
@@ -218,6 +231,7 @@ struct ProcessInformation {
     pid: u32,
     tid: u32,
 }
+
 impl Default for ProcessInformation {
     fn default() -> Self {
         Self {
@@ -246,6 +260,7 @@ extern "system" {
         information: *mut ProcessInformation,
     ) -> i32;
 }
+
 #[link(name = "user32")]
 extern "system" {
     fn SetProcessDpiAwarenessContext(context: Raw) -> i32;
@@ -254,6 +269,7 @@ extern "system" {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn layouts_match_the_windows_sdk() {
         assert_eq!(std::mem::size_of::<StartupInfo>(), 104);

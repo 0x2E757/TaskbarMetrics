@@ -3,6 +3,7 @@
 /// States use the same lightweight-styling brushes (`ButtonBackgroundPointerOver`, …),
 /// so resources overridden on a button (the accent «Back to live») still apply.
 pub struct PlainButton;
+
 impl PlainButton {
     pub const PLACEHOLDER: &'static str = "<!--PLAIN-BUTTON-->";
     const TEMPLATE: &'static str = r#"<ControlTemplate x:Key="PlainButton" TargetType="Button"><ContentPresenter x:Name="ContentPresenter" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{TemplateBinding CornerRadius}" Padding="{TemplateBinding Padding}" Foreground="{TemplateBinding Foreground}" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}" ContentTransitions="{TemplateBinding ContentTransitions}" HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}" VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" AutomationProperties.AccessibilityView="Raw">

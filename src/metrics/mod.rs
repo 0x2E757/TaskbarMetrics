@@ -108,12 +108,14 @@ pub struct GpuEngineUsage {
 pub struct GpuEngineLoad<'a> {
     engines: std::collections::HashMap<&'a str, f64>,
 }
+
 impl<'a> GpuEngineLoad<'a> {
     pub fn add(&mut self, instance: &'a str, value: f64) {
         if let Some((key, _)) = GpuEngineAggregator::engine(instance, value) {
             *self.engines.entry(key).or_default() += value;
         }
     }
+
     pub fn value(&self) -> MetricValue {
         self.engines
             .values()
@@ -137,6 +139,7 @@ impl GpuEngineAggregator {
         (key.contains("_phys_") && key.contains("_eng_"))
             .then(|| (key, &tail[end + "_engtype_".len()..]))
     }
+
     pub fn add(&mut self, instance: &str, value: f64) {
         if let Some((key, engine_type)) = Self::engine(instance, value) {
             // Hundreds of instances share a few engines: the key is copied only
@@ -165,6 +168,7 @@ impl GpuEngineAggregator {
             }
         }
     }
+
     pub fn busiest(&self) -> Option<GpuEngineUsage> {
         let (name, raw_total) = self
             .engines
@@ -210,6 +214,7 @@ pub(crate) mod tests {
         value: MetricValue,
         panic: bool,
     }
+
     impl FakeProvider {
         pub(crate) fn new(id: &str, value: MetricValue) -> Box<Self> {
             Box::new(Self {
@@ -219,10 +224,12 @@ pub(crate) mod tests {
             })
         }
     }
+
     impl MetricProvider for FakeProvider {
         fn descriptor(&self) -> &MetricDescriptor {
             &self.descriptor
         }
+
         fn sample(&mut self) -> MetricValue {
             assert!(!self.panic, "test extension failure");
             self.value.clone()

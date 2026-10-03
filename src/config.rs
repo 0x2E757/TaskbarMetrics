@@ -154,17 +154,21 @@ impl Settings {
 pub struct ConfigFile {
     path: PathBuf,
 }
+
 impl ConfigFile {
     pub fn new(path: PathBuf) -> Self {
         Self { path }
     }
+
     /// The configuration in the data `directory`.
     pub fn locate(directory: &Path) -> Self {
         Self::new(directory.join("taskbar-metrics.conf"))
     }
+
     pub fn path(&self) -> &Path {
         &self.path
     }
+
     /// Rewrites `values`, appending missing keys and creating a missing file; the
     /// file is replaced atomically, so readers never see a partial configuration.
     pub fn write(&self, values: &[(&str, String)]) -> std::io::Result<()> {

@@ -1,12 +1,14 @@
 //! Signal strength of a connected Wi‑Fi adapter, from the WLAN service. Windows 11
 //! keeps the connection details (SSID, quality) behind location access; the RSSI
 //! is open to every app.
+
 use std::ptr;
 
 /// A client of the WLAN service, open while the window lives.
 pub struct Wlan {
     handle: isize,
 }
+
 impl Wlan {
     /// None on machines without the WLAN service.
     pub fn open() -> Option<Self> {
@@ -15,6 +17,7 @@ impl Wlan {
         let status = unsafe { WlanOpenHandle(2, ptr::null_mut(), &mut version, &mut handle) };
         (status == 0).then_some(Self { handle })
     }
+
     /// Received signal strength, dBm, of the interface whose description is
     /// `description`, as `GetAdaptersAddresses` names the adapter.
     pub fn rssi(&self, description: &str) -> Option<i32> {
@@ -42,6 +45,7 @@ impl Wlan {
         unsafe { WlanFreeMemory(data) };
         rssi
     }
+
     /// GUID of the interface with `description`. WLAN_INTERFACE_INFO_LIST: count
     /// +0, items from +8, each a GUID, a 256-character description and a state.
     fn interface(&self, description: &str) -> Option<[u8; 16]> {
@@ -66,6 +70,7 @@ impl Wlan {
         found
     }
 }
+
 impl Drop for Wlan {
     fn drop(&mut self) {
         // SAFETY: the handle came from WlanOpenHandle.

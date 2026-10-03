@@ -11,12 +11,14 @@ use super::{
     theme::ThemeChoice,
     ui::Ui,
 };
+
 use crate::platform::{
     devices::{DeviceCatalog, DeviceId},
     displays::Displays,
     process_history::store::Frame,
     xaml::{appearance::Appearance, events::Subscription, TileStyle},
 };
+
 use std::{cell::RefCell, rc::Rc};
 
 /// What the settings page asks of the window after a refresh.
@@ -38,8 +40,10 @@ pub enum SettingsTab {
     General,
     Taskbar,
 }
+
 impl SettingsTab {
     const ALL: [Self; 2] = [Self::General, Self::Taskbar];
+
     /// Middle of the names `Tab{name}`, `Tab{name}On`, `Tab{name}Off`, `Tab{name}Line`.
     fn name(self) -> &'static str {
         match self {
@@ -47,6 +51,7 @@ impl SettingsTab {
             Self::General => "General",
         }
     }
+
     /// Elements shown only while this tab is open.
     fn elements(self) -> &'static [&'static str] {
         match self {
@@ -74,6 +79,7 @@ struct Group {
     title: &'static str,
     description: &'static str,
 }
+
 const GROUPS: [Group; 6] = [
     Group {
         icon: "layout",
@@ -135,6 +141,7 @@ pub struct SettingsPage {
     /// Reading ids of the tiles' devices in the recorder's frames.
     live_keys: [String; 9],
 }
+
 impl SettingsPage {
     fn expander(d: Design, index: usize, body: &str) -> String {
         let group = &GROUPS[index];
@@ -147,6 +154,7 @@ impl SettingsPage {
             up = d.icon_sized("chevu", d.color("text2"), 14.0, 1.3),
         )
     }
+
     /// Rows of `RULES[range]`, divided from each other but not from their group.
     fn rules(range: std::ops::Range<usize>) -> String {
         let first = range.start;
@@ -154,6 +162,7 @@ impl SettingsPage {
             .map(|index| AlertRange::row(index, &RULES[index], index > first))
             .collect()
     }
+
     fn markup(design: Design, language: Language, displays: &Displays) -> String {
         let bodies = [
             Playground::rows(&[0, 1, 2]),
@@ -191,6 +200,7 @@ impl SettingsPage {
         let markup = PlainButton::markup(&ScrollIndicator::markup(&markup));
         design.markup(&language.markup(&markup))
     }
+
     pub fn new(
         design: Design,
         language: Language,
@@ -235,17 +245,21 @@ impl SettingsPage {
         page.render_values_mode()?;
         Ok(page)
     }
+
     pub fn root(&self) -> &Com {
         &self.root
     }
+
     /// The open tab, for a page built again after a language or theme change.
     pub fn tab(&self) -> SettingsTab {
         self.tab
     }
+
     pub fn open(&mut self, tab: SettingsTab) -> Result<()> {
         self.tab = tab;
         self.render_tab()
     }
+
     fn render_tab(&self) -> Result<()> {
         for tab in SettingsTab::ALL {
             let open = tab == self.tab;
@@ -259,6 +273,7 @@ impl SettingsPage {
         }
         Ok(())
     }
+
     fn click(&mut self, name: &str, event: impl Fn() -> SettingsEvent + 'static) -> Result<()> {
         let queue = self.events.clone();
         self._subscriptions.push(Subscription::click(
@@ -270,6 +285,7 @@ impl SettingsPage {
         )?);
         Ok(())
     }
+
     fn bind(&mut self) -> Result<()> {
         for tab in SettingsTab::ALL {
             self.click(&format!("Tab{}", tab.name()), move || {
@@ -297,6 +313,7 @@ impl SettingsPage {
         }
         self.hint("ApplyHintTarget", "ApplyHintCard")
     }
+
     /// Shows `card` while the pointer is over `target`: a tooltip would wait for
     /// the pointer to rest.
     fn hint(&mut self, target: &str, card: &str) -> Result<()> {
@@ -312,6 +329,7 @@ impl SettingsPage {
         }
         Ok(())
     }
+
     fn render_expanders(&self) -> Result<()> {
         for (index, open) in self.expanded.iter().enumerate() {
             Ui::visible(&self.root, &format!("ExpanderBody{index}"), *open)?;
@@ -320,6 +338,7 @@ impl SettingsPage {
         }
         Ok(())
     }
+
     /// One option of a segmented control: the active one is raised on a card.
     fn segment(&self, label: &str, active: bool) -> String {
         let d = self.design;
@@ -339,6 +358,7 @@ impl SettingsPage {
             d.color(if active { "text" } else { "text2" })
         )
     }
+
     /// Dropdown with the current language and its two menu items.
     fn render_language(&self) -> Result<()> {
         for (name, language) in [
@@ -358,6 +378,7 @@ impl SettingsPage {
         }
         Ok(())
     }
+
     /// Dropdown with the current window theme and its three menu items.
     fn render_theme(&self) -> Result<()> {
         for choice in ThemeChoice::ALL {
@@ -373,6 +394,7 @@ impl SettingsPage {
         }
         Ok(())
     }
+
     fn render_values_mode(&self) -> Result<()> {
         for (name, live, label) in [
             ("PreviewTest", false, self.language.text("Test")),
@@ -383,6 +405,7 @@ impl SettingsPage {
         }
         self.playground.lock_preview(self.live)
     }
+
     /// Live preview values from the newest recorded sample.
     /// Readings the tile previews show: those of the main devices, like the tiles.
     fn live_keys() -> [String; 9] {
@@ -400,6 +423,7 @@ impl SettingsPage {
             net.reading("net_up"),
         ]
     }
+
     fn live_values(&self, frame: &Frame) -> [Option<f64>; 9] {
         self.live_keys.clone().map(|id| {
             frame
@@ -409,6 +433,7 @@ impl SettingsPage {
                 .and_then(|(_, v)| *v)
         })
     }
+
     /// "GPU — between thresholds: the tile turns red" for each alerting preview tile.
     fn notes(&self, style: &TileStyle) -> Vec<String> {
         let a = style.alerts;
@@ -430,6 +455,7 @@ impl SettingsPage {
         })
         .collect()
     }
+
     /// Keeps each rule switch and its painted track in step with the thresholds.
     /// Switching a rule off parks both thresholds at the top of the scale.
     fn render_alerts(&mut self) -> Result<()> {
@@ -481,6 +507,7 @@ impl SettingsPage {
         }
         Ok(())
     }
+
     fn summaries(&self, style: &TileStyle) -> [String; 6] {
         let n = |v: f64| {
             self.language
@@ -524,6 +551,7 @@ impl SettingsPage {
             rules(RULES.len() - ALERTS),
         ]
     }
+
     /// `live` is the newest recorded sample, shown in the preview in "Live values" mode.
     pub fn refresh(&mut self, live: Option<&Frame>) -> Result<Option<SettingsOutcome>> {
         let mut outcome = None;
@@ -618,6 +646,7 @@ impl SettingsPage {
         }
         Ok(outcome)
     }
+
     pub fn verify(&mut self) -> Result<()> {
         for tab in [SettingsTab::Taskbar, self.tab] {
             self.events.borrow_mut().push(SettingsEvent::Tab(tab));
@@ -637,6 +666,7 @@ impl SettingsPage {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn every_text_of_the_page_is_in_the_catalog() {
         for language in [Language::English, Language::Russian] {

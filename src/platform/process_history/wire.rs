@@ -1,4 +1,5 @@
 //! Versioned, bounded binary history packets shared by recorder and viewer.
+
 use super::store::{Frame, Identities, IoBytes, Sample};
 use std::{
     io::{self, Read, Write},
@@ -12,10 +13,12 @@ pub(crate) struct Packet {
     /// I/O of each process since the recorder started, by PID and creation time.
     pub io_totals: Vec<((u32, u64), IoBytes)>,
 }
+
 impl Packet {
     /// Version 5: GPU engines and totals per device, shared memory of processes,
     /// I/O totals since the recorder started.
     const MAGIC: &'static [u8; 4] = b"TMH5";
+
     pub fn write(&self, output: &mut impl Write) -> io::Result<()> {
         output.write_all(Self::MAGIC)?;
         output.write_all(&[self.enabled as u8])?;
@@ -73,6 +76,7 @@ impl Packet {
         }
         output.flush()
     }
+
     fn write_io(
         output: &mut impl Write,
         total: [u64; 4],
@@ -90,6 +94,7 @@ impl Packet {
         }
         Ok(())
     }
+
     fn read_io(input: &mut impl Read) -> io::Result<IoBytes> {
         let mut total = [0; 4];
         for v in &mut total {
@@ -105,10 +110,12 @@ impl Packet {
         }
         Ok(IoBytes { total, devices })
     }
+
     #[cfg(test)]
     pub fn read(input: &mut impl Read) -> io::Result<Self> {
         Self::read_shared(input, &mut Identities::default())
     }
+
     /// Reads a packet whose processes reuse the identities a viewer already holds.
     pub fn read_shared(input: &mut impl Read, identities: &mut Identities) -> io::Result<Self> {
         let mut magic = [0; 5];
@@ -209,18 +216,22 @@ impl Packet {
             io_totals,
         })
     }
+
     fn optional(input: &mut impl Read) -> io::Result<Option<f64>> {
         let value = f64::from_bits(Self::read_number(input)?);
         Ok((value.is_finite() && value >= 0.0).then_some(value))
     }
+
     fn number(output: &mut impl Write, value: u64) -> io::Result<()> {
         output.write_all(&value.to_le_bytes())
     }
+
     fn read_number(input: &mut impl Read) -> io::Result<u64> {
         let mut value = [0; 8];
         input.read_exact(&mut value)?;
         Ok(u64::from_le_bytes(value))
     }
+
     fn count(input: &mut impl Read, maximum: usize) -> io::Result<usize> {
         let value = Self::read_number(input)?;
         if value > maximum as u64 {
@@ -229,15 +240,18 @@ impl Packet {
             Ok(value as usize)
         }
     }
+
     fn text(output: &mut impl Write, text: &str) -> io::Result<()> {
         Self::number(output, text.len() as u64)?;
         output.write_all(text.as_bytes())
     }
+
     fn read_text(input: &mut impl Read) -> io::Result<String> {
         let mut bytes = vec![0; Self::count(input, 32768)?];
         input.read_exact(&mut bytes)?;
         String::from_utf8(bytes).map_err(|_| Self::invalid())
     }
+
     fn invalid() -> io::Error {
         io::Error::new(io::ErrorKind::InvalidData, "Invalid history packet")
     }
@@ -247,6 +261,7 @@ impl Packet {
 mod tests {
     use super::*;
     use crate::platform::process_history::store::Identity;
+
     #[test]
     fn packet_round_trip_preserves_identity_missing_values_and_io() {
         let mut sample = Sample::new(

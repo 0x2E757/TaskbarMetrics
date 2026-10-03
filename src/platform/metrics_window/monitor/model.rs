@@ -10,9 +10,12 @@ use crate::{
         providers::PhysicalMemory,
     },
 };
+
 pub type ProcessKey = (u32, u64);
+
 /// Memory is counted in binary megabytes, as Windows shows it.
 pub const MIB: f64 = 1_048_576.0;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Resource {
     Cpu,
@@ -21,6 +24,7 @@ pub enum Resource {
     Disk,
     Net,
 }
+
 impl Resource {
     pub fn title(self) -> &'static str {
         match self {
@@ -31,7 +35,9 @@ impl Resource {
             Self::Net => "Network",
         }
     }
+
     pub const ALL: [Self; 5] = [Self::Cpu, Self::Gpu, Self::Ram, Self::Disk, Self::Net];
+
     pub fn id(self) -> &'static str {
         match self {
             Self::Cpu => "cpu",
@@ -41,23 +47,28 @@ impl Resource {
             Self::Net => "net",
         }
     }
+
     /// Two directions drawn above and below the axis, with I/O attributed by ETW.
     pub fn dual(self) -> bool {
         matches!(self, Self::Disk | Self::Net)
     }
+
     /// Two values per process, shown with their sum: read and write, receive and
     /// send, private and shared memory.
     pub fn paired(self) -> bool {
         matches!(self, Self::Disk | Self::Net | Self::Ram)
     }
+
     /// Fixed 0–100 % value axis.
     pub fn percent(self) -> bool {
         matches!(self, Self::Cpu | Self::Gpu)
     }
+
     /// A second, 0–100 °C axis for the temperature line.
     pub fn temperature_axis(self) -> bool {
         matches!(self, Self::Cpu | Self::Gpu)
     }
+
     pub fn unit(self) -> &'static str {
         match self {
             Self::Ram => "MB",
@@ -65,6 +76,7 @@ impl Resource {
             _ => "%",
         }
     }
+
     pub fn floor(self) -> f64 {
         match self {
             Self::Cpu | Self::Gpu => 100.0,
@@ -73,6 +85,7 @@ impl Resource {
             Self::Net => 1.0,
         }
     }
+
     /// Kind of a device id.
     pub fn of(kind: &str) -> Option<Self> {
         Self::ALL.into_iter().find(|r| r.id() == kind)
@@ -92,6 +105,7 @@ pub struct Device {
     /// Number within its group (`group`), from 1; none for the only one.
     pub ordinal: Option<u32>,
 }
+
 impl Device {
     pub fn new(id: DeviceId) -> Option<Self> {
         Some(Self {
@@ -102,14 +116,17 @@ impl Device {
             ordinal: None,
         })
     }
+
     pub fn with_link(mut self, link: Option<&'static str>) -> Self {
         self.link = link;
         self
     }
+
     pub fn with_disk(mut self, disk: Option<DiskName>) -> Self {
         self.disk = disk;
         self
     }
+
     /// The main device of a kind, with untagged reading ids.
     #[cfg(test)]
     pub fn of(resource: Resource) -> Self {
@@ -121,6 +138,7 @@ impl Device {
             ordinal: None,
         }
     }
+
     /// Devices numbered together: GPUs, disks of one media and adapters of one link.
     /// A demo disk tagged by its letter is named by it instead.
     pub fn group(&self) -> Option<&'static str> {
@@ -132,13 +150,16 @@ impl Device {
             _ => None,
         }
     }
+
     /// A drive letter mapped to a network share.
     pub fn network_drive(&self) -> bool {
         self.disk.as_ref().is_some_and(|disk| disk.remote.is_some())
     }
+
     fn lettered(&self) -> bool {
         self.id.tag.as_deref().is_some_and(|tag| tag.ends_with(':'))
     }
+
     /// Menu and page title: "GPU 2", "SSD", "HDD 1", "Wi‑Fi", "Ethernet 2" (by link, as
     /// Task Manager names adapters; the Windows name is in the subtitle); CPU and
     /// memory keep theirs. An adapter of unknown link keeps its Windows name. A disk of unknown media is "Disk"; a demo disk, "Disk D:/".
@@ -160,6 +181,7 @@ impl Device {
             (resource, _, _) => language.text(resource.title()).to_owned(),
         }
     }
+
     fn total_of(&self, frame: &Frame, base: &str) -> Option<f64> {
         frame
             .totals
@@ -167,6 +189,7 @@ impl Device {
             .find(|(id, _)| self.id.is_reading(id, base))
             .and_then(|(_, value)| *value)
     }
+
     pub fn temperature(&self, frame: &Frame) -> Option<f64> {
         match self.resource {
             Resource::Cpu => self.total_of(frame, "cpu_temperature"),
@@ -174,6 +197,7 @@ impl Device {
             _ => None,
         }
     }
+
     /// Whether the recorder kept this device's values in `frame`: a device without
     /// a tile or «Always monitor» is recorded only while the window is open.
     pub fn recorded(&self, frame: &Frame) -> bool {
@@ -189,6 +213,7 @@ impl Device {
             .iter()
             .any(|(id, _)| self.id.is_reading(id, base))
     }
+
     /// Busiest engine of this GPU.
     pub fn engine<'a>(&self, frame: &'a Frame) -> Option<&'a GpuEngineUsage> {
         frame
@@ -197,6 +222,7 @@ impl Device {
             .find(|(device, _)| self.id.is(device))
             .map(|(_, engine)| engine)
     }
+
     /// All of the device in its chart unit, which its chart spans: the physical
     /// memory in MiB. Other devices are drawn against their peak.
     pub fn capacity(&self) -> Option<f64> {
@@ -205,6 +231,7 @@ impl Device {
             .flatten()
             .map(|bytes| bytes as f64 / MIB)
     }
+
     pub fn total(&self, frame: &Frame) -> [Option<f64>; 2] {
         match self.resource {
             Resource::Cpu => [self.total_of(frame, "cpu"), None],
@@ -232,6 +259,7 @@ impl Device {
             ],
         }
     }
+
     /// A process's values; disk and network I/O through this device only, or through
     /// all of them for an untagged device.
     pub fn process(&self, frame: &Frame, process: &Sample) -> [Option<f64>; 2] {
@@ -259,6 +287,7 @@ impl Device {
             Resource::Disk | Resource::Net => io(),
         }
     }
+
     /// Read and write (receive and send) bytes of this disk (adapter) in `io`, or of
     /// all of them for an untagged device.
     pub fn bytes(&self, io: &IoBytes) -> [u64; 2] {
@@ -272,6 +301,7 @@ impl Device {
                 .map_or([0; 2], |(_, bytes)| *bytes),
         }
     }
+
     /// A process's values as the chart draws them: private and shared memory as one.
     pub fn plotted(&self, frame: &Frame, process: &Sample) -> [Option<f64>; 2] {
         match (self.resource, self.process(frame, process)) {
@@ -286,10 +316,12 @@ impl Device {
             (_, values) => values,
         }
     }
+
     /// Memory rows stand for no process and are listed on the RAM page only.
     pub fn lists(&self, process: &Sample) -> bool {
         self.resource == Resource::Ram || process.identity.pid != MemoryRows::PID
     }
+
     /// Processes matching `search`, busiest first by value `column`: either value of a
     /// pair (read, write; private, shared) or their sum, the only value elsewhere.
     /// Column 3 is the bytes since the recorder started, from `totals`; without them
@@ -330,6 +362,7 @@ impl Device {
         });
         rows
     }
+
     /// Value of `sample` in the sort `column`: either value of a pair, their sum
     /// or the total since the window opened.
     pub fn weight(
@@ -355,6 +388,7 @@ impl Device {
 }
 
 pub struct Timeline;
+
 impl Timeline {
     pub fn nearest(frames: &[std::sync::Arc<Frame>], fraction: f64) -> Option<usize> {
         let first = frames.first()?.bucket;
@@ -370,6 +404,7 @@ impl Timeline {
             })
             .map(|(i, _)| i)
     }
+
     pub fn key(sample: &Sample) -> ProcessKey {
         (sample.identity.pid, sample.identity.created)
     }
@@ -380,6 +415,7 @@ mod tests {
     use super::*;
     use crate::platform::process_history::store::Identity;
     use std::sync::Arc;
+
     fn frame(bucket: u64) -> Arc<Frame> {
         Arc::new(Frame {
             gpu_engines: Vec::new(),
@@ -406,6 +442,7 @@ mod tests {
             sample_ms: 1.0,
         })
     }
+
     #[test]
     fn selection_uses_time_and_io_uses_fixed_etw_bucket() {
         let frames = vec![frame(100), frame(101), frame(110)];
@@ -446,6 +483,7 @@ mod tests {
             [None, None]
         );
     }
+
     #[test]
     fn devices_are_named_by_group_and_number() {
         let title = |id: &str, ordinal| {
@@ -491,6 +529,7 @@ mod tests {
         assert_eq!(named(Some("SSD"), None), (Some("SSD"), "SSD".into()));
         assert_eq!(named(None, None), (Some("Disk"), "Disk".into()));
     }
+
     #[test]
     fn rows_rank_by_the_chosen_column() {
         let sample = |pid, io| {

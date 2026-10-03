@@ -16,11 +16,13 @@ pub struct DashPhase {
     points: Vec<ChartPoint>,
     offset: f64,
 }
+
 impl DashPhase {
     /// Counts a sample recorded into the line's history, gaps included.
     pub fn push(&mut self) {
         self.pushed += 1;
     }
+
     /// The dash offset, in px, for the staircase through `points`: the newest
     /// samples, ending with the last one pushed. Grows by the length of the line
     /// that left the chart since the last call, modulo the pattern's `period`.
@@ -40,10 +42,12 @@ impl DashPhase {
         self.points = points.to_vec();
         self.offset
     }
+
     /// Length of the staircase between two samples.
     fn step(from: ChartPoint, to: ChartPoint) -> f64 {
         f64::from((to.x - from.x).abs() + (to.y - from.y).abs())
     }
+
     /// The line through `points` as horizontal and vertical runs: half the way
     /// across, the change of row, the rest of the way.
     pub fn staircase(points: &[ChartPoint]) -> Vec<ChartPoint> {
@@ -72,6 +76,7 @@ impl DashPhase {
 mod tests {
     use super::*;
     use crate::{metrics::MetricValue, presentation::history::MetricHistory};
+
     /// Pattern position of each sample: its distance along the staircase plus the
     /// offset.
     fn phases(history: &MetricHistory, dash: &mut DashPhase) -> Vec<f64> {
@@ -85,6 +90,7 @@ mod tests {
         }
         result
     }
+
     #[test]
     fn dashes_stay_on_their_samples_as_the_chart_scrolls() {
         // The chart holds six samples: from the seventh on, each pushes the oldest out.
@@ -105,6 +111,7 @@ mod tests {
             previous = current;
         }
     }
+
     #[test]
     fn steps_change_rows_halfway_with_whole_pixel_runs() {
         let points = [
@@ -125,6 +132,7 @@ mod tests {
             ]
         );
     }
+
     #[test]
     fn a_gap_starts_a_new_pattern() {
         let mut history = MetricHistory::spanning(10.0);

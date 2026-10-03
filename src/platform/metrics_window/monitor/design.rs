@@ -5,6 +5,7 @@ use super::{tokens, ui::Ui};
 pub struct Design {
     pub dark: bool,
 }
+
 impl Design {
     pub fn color(self, name: &str) -> &'static str {
         tokens::COLORS
@@ -13,13 +14,16 @@ impl Design {
             .map(|(_, light, dark)| if self.dark { *dark } else { *light })
             .unwrap_or("Transparent")
     }
+
     pub fn pin(self, index: usize) -> &'static str {
         tokens::PINS[usize::from(self.dark)][index % 6]
     }
+
     /// Total, pinned and hovered series fill alphas for the current theme.
     pub fn fill(self, series: usize) -> f64 {
         tokens::FILLS[usize::from(self.dark)][series]
     }
+
     /// `#RRGGBB` → `#AARRGGBB` with the given opacity.
     pub fn alpha(color: &str, opacity: f64) -> String {
         let rgb = color.trim_start_matches('#');
@@ -29,9 +33,11 @@ impl Design {
             (opacity.clamp(0.0, 1.0) * 255.0).round() as u8
         )
     }
+
     pub fn icon(self, name: &str, color: &str) -> String {
         self.icon_sized(name, color, 16.0, 1.3)
     }
+
     /// A 16×16 token icon scaled to `size`; `stroke` is in 16-unit space like the SVG source.
     pub fn icon_sized(self, name: &str, color: &str, size: f64, stroke: f64) -> String {
         let mut result = format!(
@@ -45,6 +51,7 @@ impl Design {
         result.push_str("</Canvas></Viewbox>");
         result
     }
+
     /// Expands `$icon:name:size:stroke:colorToken$` placeholders of a XAML template.
     fn icons(self, markup: &str) -> String {
         let mut result = String::with_capacity(markup.len());
@@ -71,6 +78,7 @@ impl Design {
         result.push_str(rest);
         result
     }
+
     pub fn markup(self, markup: &str) -> String {
         let mut result = self.icons(markup).replace(
             "RequestedTheme=\"Default\"",
@@ -102,6 +110,7 @@ impl Design {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn alpha_prefixes_rgb_and_icons_scale_without_resizing_layout() {
         assert_eq!(Design::alpha("#005FB8", 0.35), "#59005FB8");
@@ -109,6 +118,7 @@ mod tests {
         assert!(icon.starts_with(r#"<Viewbox Width="11" Height="11""#));
         assert!(icon.contains(r#"StrokeThickness="1.6""#));
     }
+
     #[test]
     fn template_icons_and_colors_are_expanded() {
         let markup = Design { dark: false }.markup(r#"<A B="$text$">$icon:menu:16:1.3:text3$</A>"#);

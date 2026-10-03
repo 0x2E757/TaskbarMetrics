@@ -1,9 +1,11 @@
 //! Narrow kernel ETW subscription: disk completions, TCP/UDP bytes, thread IDs.
 //! No stacks, filenames, packet contents, context switches or trace files.
+
 use super::{
     super::{abi::*, devices::IoDevices},
     store::IoBytes,
 };
+
 use std::{
     collections::{BTreeMap, HashMap},
     net::IpAddr,
@@ -21,6 +23,7 @@ pub(super) struct Events {
     /// Disks and adapters the events are attributed to.
     pub devices: IoDevices,
 }
+
 #[repr(C)]
 struct Record {
     header: [u8; 80],
@@ -31,9 +34,11 @@ struct Record {
     data: Raw,
     user: Raw,
 }
+
 struct Properties {
     words: [u64; 80],
 }
+
 impl Properties {
     fn new(name: &[u16]) -> Self {
         let mut value = Self { words: [0; 80] };
@@ -56,6 +61,7 @@ impl Properties {
         }
         value
     }
+
     fn set(&mut self, offset: usize, value: u32) {
         unsafe {
             self.words
@@ -66,6 +72,7 @@ impl Properties {
                 .write(value);
         }
     }
+
     fn get(&self, offset: usize) -> u32 {
         unsafe {
             self.words
@@ -76,10 +83,12 @@ impl Properties {
                 .read()
         }
     }
+
     fn raw(&mut self) -> Raw {
         self.words.as_mut_ptr().cast()
     }
 }
+
 pub(super) struct IoTrace {
     handle: u64,
     consumer: u64,
@@ -87,12 +96,14 @@ pub(super) struct IoTrace {
     events: Box<Mutex<Events>>,
     worker: Option<JoinHandle<u32>>,
 }
+
 impl IoTrace {
     pub fn is_running(&self) -> bool {
         self.worker
             .as_ref()
             .is_some_and(|worker| !worker.is_finished())
     }
+
     pub fn start(threads: HashMap<u32, u32>) -> Result<Self> {
         let name = wide(&format!("TaskbarMetrics.ProcessHistory.{}", unsafe {
             GetCurrentProcessId()
@@ -132,6 +143,7 @@ impl IoTrace {
             worker: Some(worker),
         })
     }
+
     /// Replaces the disks and adapters new events are attributed to.
     pub fn set_devices(&self, devices: IoDevices) {
         self.events
@@ -139,6 +151,7 @@ impl IoTrace {
             .unwrap_or_else(|e| e.into_inner())
             .devices = devices;
     }
+
     pub fn drain(&self, threads: HashMap<u32, u32>) -> (IoBuckets, u32, u64) {
         let mut properties = Properties::new(&self.name);
         unsafe {
@@ -155,6 +168,7 @@ impl IoTrace {
             events.undecoded,
         )
     }
+
     unsafe extern "system" fn callback(record: *mut Record) {
         let _ = std::panic::catch_unwind(|| {
             if record.is_null() {
@@ -253,6 +267,7 @@ impl IoTrace {
         });
     }
 }
+
 impl Drop for IoTrace {
     fn drop(&mut self) {
         let mut properties = Properties::new(&self.name);
@@ -265,6 +280,7 @@ impl Drop for IoTrace {
         }
     }
 }
+
 #[link(name = "advapi32")]
 extern "system" {
     fn StartTraceW(handle: *mut u64, name: *const u16, properties: Raw) -> u32;

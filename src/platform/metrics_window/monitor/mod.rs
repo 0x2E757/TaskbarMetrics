@@ -36,6 +36,7 @@ use crate::platform::{
     system_activity::SystemActivity,
     xaml::{appearance::Appearance, events::Subscription, AlertSettings},
 };
+
 use chart::{ChartLayout, ChartRenderer, WINDOW};
 use chart_line::ChartLine;
 use client::HistoryClient;
@@ -64,14 +65,17 @@ use std::{
     },
     time::{Duration, Instant},
 };
+
 use table::{RowContent, RowKind, TableLayout};
 use theme::ThemeChoice;
 use tooltip::ChartTooltip;
 use totals::IoTotals;
 use ui::{Shown, Ui};
+
 /// Device id another launch asked to show (`WM_COPYDATA`).
 pub(super) static REQUEST: std::sync::Mutex<Option<String>> = std::sync::Mutex::new(None);
 pub(super) static KEY: AtomicU32 = AtomicU32::new(0);
+
 /// The language of the settings: the window's, or English in the standalone editor.
 pub(super) fn settings_language() -> Language {
     if super::opens_editor() {
@@ -80,9 +84,11 @@ pub(super) fn settings_language() -> Language {
         Language::load()
     }
 }
+
 fn verifying() -> bool {
     std::env::args().any(|a| a == "--verify-monitor")
 }
+
 /// `--demo <scenario>` replaces the recorder with a synthetic artboard state.
 fn scenario() -> Option<demo::Scenario> {
     let args: Vec<_> = std::env::args().collect();
@@ -90,6 +96,7 @@ fn scenario() -> Option<demo::Scenario> {
         .find(|pair| pair[0] == "--demo")
         .and_then(|pair| demo::Scenario::parse(&pair[1]))
 }
+
 /// The theme chosen in the settings; demo screenshots may force one with
 /// `--theme dark|light`.
 fn dark_theme() -> Result<bool> {
@@ -104,6 +111,7 @@ fn dark_theme() -> Result<bool> {
         _ => ThemeChoice::load().dark(),
     }
 }
+
 /// Pins and the language are written only by the interactive, recorder-backed window.
 fn persistent() -> bool {
     !verifying() && scenario().is_none()
@@ -134,6 +142,7 @@ enum Action {
     /// A value column header of the table: sort by that column.
     Sort(usize),
 }
+
 struct Dashboard {
     design: Design,
     /// Width of the total line in the chart, from the settings page.
@@ -218,6 +227,7 @@ struct Dashboard {
     enabled: bool,
     demo: bool,
 }
+
 impl Dashboard {
     fn new(
         island: &XamlIsland,
@@ -323,6 +333,7 @@ impl Dashboard {
         result.bind()?;
         Ok(result)
     }
+
     fn template(
         design: Design,
         language: Language,
@@ -343,6 +354,7 @@ impl Dashboard {
         let markup = PlainButton::markup(&ScrollIndicator::markup(&markup));
         SystemTheme { dark: design.dark }.markup(&design.markup(&language.markup(&markup)))
     }
+
     fn apply_chrome(&self) {
         self.chrome.apply(
             self.design.dark,
@@ -350,6 +362,7 @@ impl Dashboard {
             self.design.color("text"),
         );
     }
+
     fn load_alerts(&mut self) {
         if let Some(style) = self
             .monitoring
@@ -359,9 +372,11 @@ impl Dashboard {
             self.alerts = style.alerts;
         }
     }
+
     fn find(&self, name: &str) -> Result<Com> {
         Ui::find(&self.root, name)
     }
+
     fn click(&mut self, name: &str, action: impl Fn() -> Action + 'static) -> Result<()> {
         let queue = self.events.clone();
         self.subscriptions
@@ -371,6 +386,7 @@ impl Dashboard {
             })?);
         Ok(())
     }
+
     fn bind(&mut self) -> Result<()> {
         for index in 0..self.menu.devices.len() {
             self.click(&format!("Tab{index}"), move || Action::Tab(index))?;
@@ -480,6 +496,7 @@ impl Dashboard {
         self.render_options()?;
         self.render_navigation()
     }
+
     /// The configuration of the interactive window; demo and verification keep the
     /// default tiles in memory.
     fn load_device_settings(&mut self) {
@@ -492,12 +509,14 @@ impl Dashboard {
             crate::config::Settings::parse("metrics=cpu,gpu,ram,net,disk").unwrap_or_default()
         });
     }
+
     fn device_options(&self) -> DeviceOptions<'_, impl Fn(&DeviceId) -> DeviceId + '_> {
         DeviceOptions {
             settings: &self.device_settings,
             canonical: |id: &DeviceId| self.menu.canonical(id),
         }
     }
+
     /// Check boxes of the shown device; a tile implies «Always monitor».
     fn render_options(&self) -> Result<()> {
         let (taskbar, always) = self.device_options().state(&self.device.id);
@@ -505,6 +524,7 @@ impl Dashboard {
         Ui::checked(&self.find("AlwaysMonitor")?, always)?;
         Ui::enable(&self.find("AlwaysMonitor")?, !taskbar)
     }
+
     /// Stores changed tiles or history; the taskbar and the recorder follow.
     fn save_devices(&mut self, metrics: Vec<String>, history: Vec<String>) {
         if persistent() {
@@ -519,6 +539,7 @@ impl Dashboard {
         self.device_settings.metrics = metrics;
         self.device_settings.history = history;
     }
+
     fn navigation(&self, compact: bool) -> Navigation {
         Navigation {
             design: self.design,
@@ -526,6 +547,7 @@ impl Dashboard {
             compact,
         }
     }
+
     fn render_navigation(&self) -> Result<()> {
         let frame = self.selected_frame();
         let mut hosts = vec![("", self.compact)];
@@ -556,6 +578,7 @@ impl Dashboard {
         }
         Ok(())
     }
+
     fn rebuild(&mut self, island: &XamlIsland) -> Result<()> {
         self.drop_settings();
         self.subscriptions.clear();
@@ -584,12 +607,14 @@ impl Dashboard {
         self.table_dirty = true;
         Ok(())
     }
+
     /// Drops the settings page; the next one opens on the same tab.
     fn drop_settings(&mut self) {
         if let Some(page) = self.settings.take() {
             self.settings_tab = page.tab();
         }
     }
+
     fn show_settings(&mut self) -> Result<()> {
         if self.settings.is_none() {
             let page = settings_page::SettingsPage::new(
@@ -606,6 +631,7 @@ impl Dashboard {
         Ui::visible(&self.root, "Performance", false)?;
         Ui::visible(&self.root, "SettingsPage", true)
     }
+
     fn action(&mut self, action: Action) -> Result<()> {
         match action {
             Action::ChartHover(point) => {
@@ -779,6 +805,7 @@ impl Dashboard {
         self.dirty = true;
         Ok(())
     }
+
     /// Redraws in the chosen theme, or in the system's once it changed; checked
     /// every second and right after a choice in the settings.
     fn follow_theme(&mut self, island: &XamlIsland) -> Result<()> {
@@ -795,6 +822,7 @@ impl Dashboard {
         }
         Ok(())
     }
+
     fn set_language(&mut self, language: Language, island: &XamlIsland) -> Result<()> {
         self.language = language;
         if persistent() {
@@ -802,6 +830,7 @@ impl Dashboard {
         }
         self.rebuild(island)
     }
+
     fn set_navigation(&mut self, open: bool) -> Result<()> {
         self.navigation_open = open;
         Ui::visible(&self.root, "NavOverlay", open)?;
@@ -810,16 +839,20 @@ impl Dashboard {
         }
         Ok(())
     }
+
     fn timeline(&self) -> &[Arc<Frame>] {
         self.frozen.as_deref().unwrap_or(&self.frames)
     }
+
     fn live_end(&self) -> u64 {
         self.frames.last().map_or(0, |f| f.bucket)
     }
+
     /// Per-process history exists, or the recorder is not reachable at all.
     fn processes(&self) -> bool {
         self.enabled || !self.connected
     }
+
     fn selected_frame(&self) -> Option<Arc<Frame>> {
         if let Some(bucket) = self.selected {
             self.timeline().iter().find(|f| f.bucket == bucket).cloned()
@@ -840,6 +873,7 @@ impl Dashboard {
                 .cloned()
         }
     }
+
     fn refresh(&mut self, island: &XamlIsland) -> Result<()> {
         match KEY.swap(0, Ordering::Relaxed) {
             27 if self.navigation_open => self.set_navigation(false)?,
@@ -979,6 +1013,7 @@ impl Dashboard {
         self.hover_dirty = false;
         Ok(())
     }
+
     /// Takes the recorder's newest history; runs even while nothing is on screen,
     /// so frames the window no longer shows are released.
     fn sync_history(&mut self) -> Result<()> {
@@ -1031,6 +1066,7 @@ impl Dashboard {
         }
         Ok(())
     }
+
     /// A device was added or removed: keep showing the current one if it is left.
     fn refresh_menu(&mut self, island: &XamlIsland) -> Result<()> {
         if self.menu.refresh() {
@@ -1043,6 +1079,7 @@ impl Dashboard {
         }
         Ok(())
     }
+
     fn refresh_devices(&mut self) {
         let engine = self
             .frames
@@ -1051,9 +1088,11 @@ impl Dashboard {
             .map(|e| e.name.clone());
         self.hardware.refresh(&self.device, engine.as_deref());
     }
+
     fn subtitle(&self) -> String {
         self.hardware.subtitle(&self.device, self.language)
     }
+
     /// History shorter than the 5-minute window, in seconds.
     fn collected(&self) -> Option<u64> {
         let first = self.frames.first()?.bucket;
@@ -1061,6 +1100,7 @@ impl Dashboard {
         // Up to two seconds may still be in flight from the recorder.
         (last - first + 1 + chart::ETW_DELAY < WINDOW).then_some((last - first).div_ceil(2))
     }
+
     fn render_header(&self) -> Result<()> {
         let header = HeaderMarkup {
             design: self.design,
@@ -1095,6 +1135,7 @@ impl Dashboard {
         Ui::text(&self.root, "Title", &self.device.title(self.language))?;
         Ui::text(&self.root, "Subtitle", &self.subtitle())
     }
+
     fn render_legend(&self, frame: Option<&Frame>) -> Result<()> {
         let d = self.design;
         let short = self.compact;
@@ -1188,6 +1229,7 @@ impl Dashboard {
             &ChartLegend::markup(&items, &flow),
         )
     }
+
     fn render_info(&self, frame: Option<&Frame>) -> Result<()> {
         let mut points: Vec<String> = match self.resource {
             Resource::Cpu => vec![
@@ -1259,6 +1301,7 @@ impl Dashboard {
         markup.push_str("</StackPanel>");
         self.shown.children(&self.root, "InfoPanel", &markup)
     }
+
     fn render_pointer(&self) -> Result<()> {
         let markup = match self.pointer {
             Some(point) => ChartTooltip {
@@ -1279,6 +1322,7 @@ impl Dashboard {
         };
         Ui::children(&self.elements.hover_host, &Ui::load(&markup)?)
     }
+
     fn layers(&self) -> Vec<PinnedLayer> {
         if self.processes() {
             self.pins.layers(self.design, self.language)
@@ -1286,6 +1330,7 @@ impl Dashboard {
             Vec::new()
         }
     }
+
     fn render_chart(&mut self) -> Result<()> {
         let chart = Ui::load(
             &ChartRenderer {
@@ -1305,6 +1350,7 @@ impl Dashboard {
         self.chart_series = Ui::find(&chart, "Series").ok();
         self.render_overlay()
     }
+
     /// Parts of the chart card that follow the moment and the highlighted process.
     fn render_overlay(&self) -> Result<()> {
         self.render_header()?;
@@ -1315,6 +1361,7 @@ impl Dashboard {
         }
         Ok(())
     }
+
     /// Parts of the chart card that follow the highlighted process, including the
     /// notes of the frame it selects; the legend does not.
     fn render_hover(&self) -> Result<()> {
@@ -1341,6 +1388,7 @@ impl Dashboard {
         }
         Ok(())
     }
+
     fn render_stats(&mut self) -> Result<()> {
         // Widths the previous row was laid out with keep the columns in place.
         let same = self.stat_widths.track((self.resource, self.compact));
@@ -1401,6 +1449,7 @@ impl Dashboard {
             }
         }
     }
+
     fn render_toolbar(&self, frame: Option<&Frame>, found: Option<usize>) -> Result<()> {
         let moment = match (frame, self.selected) {
             _ if !self.processes() => self.language.text("no data").to_owned(),
@@ -1472,6 +1521,7 @@ impl Dashboard {
         }
         Ok(())
     }
+
     fn render_off(&self) -> Result<bool> {
         // A network drive's traffic belongs to System, so it has no process rows.
         let share = self.device.network_drive();
@@ -1524,6 +1574,7 @@ impl Dashboard {
         }
         Ok(off)
     }
+
     fn table(&self) -> TableLayout {
         TableLayout {
             sort: self.sort,
@@ -1535,6 +1586,7 @@ impl Dashboard {
         }
         .sorted_by(self.sort)
     }
+
     fn render_rows(&mut self) -> Result<()> {
         self.render_stats()?;
         self.render_navigation()?;
@@ -1769,6 +1821,7 @@ impl Dashboard {
         }
         Ok(())
     }
+
     fn verify(&mut self, island: &XamlIsland) -> Result<()> {
         use crate::platform::process_history::store::{Identity, IoBytes, Sample};
         self.frames = (0..30)
@@ -1991,6 +2044,7 @@ pub(super) fn run() -> Result<()> {
     NativeWindow::drain();
     result
 }
+
 /// Shows `device` in the running window (`WM_COPYDATA` with the device id).
 fn activate_existing(device: &str) -> bool {
     #[repr(C)]
@@ -1999,6 +2053,7 @@ fn activate_existing(device: &str) -> bool {
         size: u32,
         data: *const u8,
     }
+
     #[link(name = "user32")]
     extern "system" {
         fn FindWindowW(class: *const u16, title: *const u16) -> Raw;

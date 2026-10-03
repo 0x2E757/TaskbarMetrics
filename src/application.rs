@@ -27,6 +27,7 @@ impl MonitoringService {
     pub fn sample_text(&mut self) -> String {
         self.formatter.format(&self.metrics.sample())
     }
+
     pub fn sample_readings(&mut self) -> Vec<crate::metrics::MetricReading> {
         self.metrics.sample()
     }
@@ -41,6 +42,7 @@ mod tests {
 
     #[derive(Default)]
     struct Capture(RefCell<String>);
+
     impl MetricSink for Capture {
         fn publish(&self, text: &str) {
             self.0.replace(text.into());

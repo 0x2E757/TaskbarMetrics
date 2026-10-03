@@ -14,7 +14,9 @@ pub(super) struct PawnModule {
     execute: Execute,
     close: Close,
 }
+
 struct Library(Raw);
+
 impl Library {
     fn open() -> Result<Self> {
         // The official installer has a fixed location. Never search PATH/current directory.
@@ -29,6 +31,7 @@ impl Library {
             Ok(Self(raw))
         }
     }
+
     fn symbol(&self, name: &CStr) -> Result<Raw> {
         let raw = unsafe { GetProcAddress(self.0, name.as_ptr().cast()) };
         if raw.is_null() {
@@ -38,6 +41,7 @@ impl Library {
         }
     }
 }
+
 impl Drop for Library {
     fn drop(&mut self) {
         unsafe {
@@ -45,6 +49,7 @@ impl Drop for Library {
         }
     }
 }
+
 impl PawnModule {
     pub fn load(path: &Path) -> Result<Self> {
         let blob = std::fs::read(path).map_err(|_| E_FAIL)?;
@@ -66,6 +71,7 @@ impl PawnModule {
             Ok(module)
         }
     }
+
     pub fn read(&self, command: &CStr, input: &[u64]) -> Result<u64> {
         let mut output = 0;
         let mut count = 0;
@@ -87,6 +93,7 @@ impl PawnModule {
         }
     }
 }
+
 impl Drop for PawnModule {
     fn drop(&mut self) {
         // Executor must close before the DLL is released by Library::drop.

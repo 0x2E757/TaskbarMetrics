@@ -1,5 +1,6 @@
 //! Shared pages in the working sets of processes, split into writable data sections
 //! and read-only images and files.
+
 use super::snapshot::Process;
 use crate::platform::abi::*;
 use std::{
@@ -29,6 +30,7 @@ pub(super) struct SharedPages {
     scans: HashMap<(u32, u64), Scan>,
     updated: Option<Instant>,
 }
+
 /// The last scan of a process.
 struct Scan {
     /// None for a process that cannot be opened: protected, or closed to the recorder.
@@ -37,10 +39,12 @@ struct Scan {
     /// Working set minus private working set when scanned.
     shared_set: u64,
 }
+
 impl SharedPages {
     /// Ticks are 500 ms apart: an update every second is every other tick.
     const PERIOD: Duration = Duration::from_millis(900);
     const PAGE: u64 = 4096;
+
     /// A scan takes time in proportion to the working set. Each second only
     /// processes whose shared set changed are scanned again; the others after 10 to
     /// 19 s, by PID so that rescans spread over the seconds, and later for large sets.
@@ -71,8 +75,10 @@ impl SharedPages {
             self.entries = Vec::new();
         }
     }
+
     /// Entries kept between updates: 8 MB, a 4 GB working set.
     const KEPT: usize = 1 << 20;
+
     fn stale(scan: &Scan, pid: u32, shared_set: u64, now: Instant) -> bool {
         // Large sets, such as a virtual machine's guest memory, take long to scan and
         // are scanned again on change anyway: 30 s more per gigabyte.
@@ -81,11 +87,13 @@ impl SharedPages {
         now.duration_since(scan.at) >= refresh
             || shared_set.abs_diff(scan.shared_set) > (4 << 20).max(scan.shared_set / 32)
     }
+
     /// Shared pages of a process by its last scan; none for a process that cannot be
     /// opened.
     pub fn of(&self, key: &(u32, u64)) -> Option<SharedBytes> {
         self.scans.get(key).and_then(|scan| scan.shared)
     }
+
     /// The largest read-only shared set of one process: its pages are distinct, so
     /// DLLs and mapped files take at least that much memory.
     pub fn readonly_floor(&self) -> u64 {
@@ -96,11 +104,13 @@ impl SharedPages {
             .max()
             .unwrap_or(0)
     }
+
     /// Frees the buffer, which grows to the largest working set, while no window
     /// shows the history.
     pub fn clear(&mut self) {
         *self = Self::default();
     }
+
     fn scan(&mut self, pid: u32, working_set: u64) -> Option<SharedBytes> {
         // PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, as the query requires.
         let process = Handle::new(unsafe { OpenProcess(0x0410, 0, pid) }).ok()?;
@@ -131,6 +141,7 @@ impl SharedPages {
         }
         None
     }
+
     /// Sums the shared pages listed by the last `QueryWorkingSet` by protection.
     fn classify(&self) -> SharedBytes {
         let count = (self.entries[0] as usize).min(self.entries.len() - 1);
@@ -149,6 +160,7 @@ impl SharedPages {
         shared
     }
 }
+
 #[link(name = "kernel32")]
 extern "system" {
     fn K32QueryWorkingSet(process: Raw, buffer: Raw, size: u32) -> i32;
@@ -157,6 +169,7 @@ extern "system" {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn writable_sections_count_as_data_and_images_as_readonly() {
         let pid = unsafe { GetCurrentProcessId() };
@@ -186,6 +199,7 @@ mod tests {
             assert!(after.data >= before.data + size as u64, "{after:?}");
         }
     }
+
     #[link(name = "kernel32")]
     extern "system" {
         fn CreateFileMappingW(

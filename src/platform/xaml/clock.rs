@@ -7,6 +7,7 @@ thread_local! { static CLOCKS: RefCell<HashMap<u64, Com>> = RefCell::new(HashMap
 /// The tray and task-list can be separate XAML roots. Diagnostics discovers both.
 /// Only weak references are retained, exclusively on the clock's own UI thread.
 pub(crate) struct ClockCatalog;
+
 impl ClockCatalog {
     pub fn register(handle: u64, clock: &Com) -> Result<()> {
         let weak = clock.query(&WEAK_SOURCE)?.object(3)?;

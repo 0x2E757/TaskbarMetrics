@@ -17,12 +17,15 @@ pub struct PixelRows {
     /// Row of the last value drawn.
     shown: Option<f64>,
 }
+
 impl PixelRows {
     const WINDOW: Duration = Duration::from_secs(3);
+
     /// Row of `value` from the bottom: 0 to `SPAN`.
     fn row(value: f64) -> f64 {
         (value.clamp(0.0, 100.0) / 100.0 * SPAN).round()
     }
+
     /// The value to draw for a sample taken at `now`; gaps stay gaps.
     pub fn snap(&mut self, value: &MetricValue, now: Instant) -> MetricValue {
         let value = match *value {
@@ -62,6 +65,7 @@ impl PixelRows {
 mod tests {
     use super::*;
     use crate::presentation::history::MetricHistory;
+
     /// Draws `values` taken 500 ms apart, from `clock` on.
     fn drawn(rows: &mut PixelRows, clock: &mut Instant, values: &[f64]) -> Vec<f32> {
         let mut history = MetricHistory::spanning(100.0);
@@ -76,6 +80,7 @@ mod tests {
             .map(|p| p.y)
             .collect()
     }
+
     #[test]
     fn lines_sit_on_pixel_centres() {
         let ys = drawn(
@@ -87,6 +92,7 @@ mod tests {
             assert!((y - 0.5).fract().abs() < 1e-4, "{y}");
         }
     }
+
     #[test]
     fn wavering_by_a_row_averages_and_a_real_change_shows_at_once() {
         // A row is 100/33 ≈ 3.03 °C: 61.5 °C and 62.5 °C fall into rows 20 and 21.
@@ -102,6 +108,7 @@ mod tests {
         let ys = drawn(&mut rows, &mut clock, &[61.5, 61.5, 75.0]);
         assert_eq!(ys[2], 34.5 - 25.0);
     }
+
     #[test]
     fn gaps_restart_the_window() {
         let mut rows = PixelRows::default();

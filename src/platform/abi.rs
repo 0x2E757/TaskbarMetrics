@@ -1,7 +1,9 @@
 use std::ffi::c_void;
+
 pub type Raw = *mut c_void;
 pub type Hr = i32;
 pub type Result<T> = std::result::Result<T, Hr>;
+
 pub const E_FAIL: Hr = 0x80004005u32 as i32;
 pub const E_POINTER: Hr = 0x80004003u32 as i32;
 pub const E_NOINTERFACE: Hr = 0x80004002u32 as i32;
@@ -19,6 +21,7 @@ pub struct Guid {
     pub c: u16,
     pub d: [u8; 8],
 }
+
 impl Guid {
     pub const fn from_u128(value: u128) -> Self {
         Self {
@@ -29,13 +32,17 @@ impl Guid {
         }
     }
 }
+
 pub const CLSID: Guid = Guid::from_u128(0x64b850da_9a93_41a7_a614_8fba1ca8b348);
+
 pub fn wide(value: &str) -> Vec<u16> {
     value.encode_utf16().chain(Some(0)).collect()
 }
+
 pub fn event_name(kind: &str, pid: u32) -> Vec<u16> {
     wide(&format!("Local\\TaskbarMetrics.{pid}.{kind}"))
 }
+
 /// The event `kind` of the Explorer `pid` exists and is set: `stop` while the tiles
 /// are stopped, `restart` while the collectors are asked to start again.
 pub fn signaled(kind: &str, pid: u32) -> bool {
@@ -43,6 +50,7 @@ pub fn signaled(kind: &str, pid: u32) -> bool {
     Handle::new(unsafe { OpenEventW(0x100000, 0, event_name(kind, pid).as_ptr()) })
         .is_ok_and(|event| unsafe { WaitForSingleObject(event.0, 0) } == 0)
 }
+
 pub fn check(hr: Hr) -> Result<()> {
     if hr < 0 {
         Err(hr)
@@ -50,15 +58,18 @@ pub fn check(hr: Hr) -> Result<()> {
         Ok(())
     }
 }
+
 pub fn last_error() -> Hr {
     unsafe { (0x80070000 | (GetLastError() & 0xffff)) as Hr }
 }
+
 pub fn log(message: &str) {
     super::logging::DiagnosticLog::write(message);
     unsafe {
         OutputDebugStringW(wide(&format!("[TaskbarMetrics] {message}\n")).as_ptr());
     }
 }
+
 pub fn boundary(action: impl FnOnce() -> Result<()>) -> Hr {
     match std::panic::catch_unwind(std::panic::AssertUnwindSafe(action)) {
         Ok(Ok(())) => 0,
@@ -66,7 +77,9 @@ pub fn boundary(action: impl FnOnce() -> Result<()>) -> Hr {
         Err(_) => E_FAIL,
     }
 }
+
 pub struct Handle(pub Raw);
+
 impl Handle {
     pub fn new(raw: Raw) -> Result<Self> {
         if raw.is_null() {
@@ -76,6 +89,7 @@ impl Handle {
         }
     }
 }
+
 impl Drop for Handle {
     fn drop(&mut self) {
         unsafe {
@@ -88,6 +102,7 @@ unsafe impl Send for Handle {}
 unsafe impl Sync for Handle {}
 /// A DLL from System32, loaded on demand and released on drop.
 pub struct SystemLibrary(Raw);
+
 impl SystemLibrary {
     pub fn load(name: &str) -> Result<Self> {
         // LOAD_LIBRARY_SEARCH_SYSTEM32: never a same-named DLL from elsewhere.
@@ -98,6 +113,7 @@ impl SystemLibrary {
             Ok(Self(module))
         }
     }
+
     /// An exported function; valid while the library is held.
     pub fn symbol(&self, name: &std::ffi::CStr) -> Result<Raw> {
         let raw = unsafe { GetProcAddress(self.0, name.as_ptr().cast()) };
@@ -108,6 +124,7 @@ impl SystemLibrary {
         }
     }
 }
+
 impl Drop for SystemLibrary {
     fn drop(&mut self) {
         unsafe {
@@ -117,6 +134,7 @@ impl Drop for SystemLibrary {
 }
 // Apartment initialization and uninitialization must happen on the same thread.
 pub struct Apartment(std::marker::PhantomData<std::rc::Rc<()>>);
+
 impl Apartment {
     pub fn mta() -> Result<Self> {
         unsafe {
@@ -125,6 +143,7 @@ impl Apartment {
         Ok(Self(std::marker::PhantomData))
     }
 }
+
 impl Drop for Apartment {
     fn drop(&mut self) {
         unsafe {
@@ -159,11 +178,13 @@ extern "system" {
     pub fn GetModuleHandleExW(flags: u32, address: *const u16, module: *mut Raw) -> i32;
     pub fn OutputDebugStringW(text: *const u16);
 }
+
 #[link(name = "user32")]
 extern "system" {
     pub fn FindWindowW(class: *const u16, name: *const u16) -> Raw;
     pub fn GetWindowThreadProcessId(window: Raw, pid: *mut u32) -> u32;
 }
+
 #[link(name = "runtimeobject")]
 extern "system" {
     pub fn RoInitialize(kind: u32) -> Hr;
@@ -174,6 +195,7 @@ extern "system" {
     pub fn WindowsDeleteString(text: Raw) -> Hr;
     pub fn WindowsGetStringRawBuffer(text: Raw, length: *mut u32) -> *const u16;
 }
+
 #[link(name = "ole32")]
 extern "system" {
     pub fn RoGetAgileReference(options: u32, iid: *const Guid, object: Raw, result: *mut Raw)

@@ -3,6 +3,7 @@ use crate::{
     metrics::{MetricDescriptor, MetricProvider, MetricValue},
     platform::abi::*,
 };
+
 use std::ptr;
 
 /// Read-only, nonblocking adapter. Explorer never opens the hardware driver.
@@ -10,6 +11,7 @@ pub(crate) struct CpuTemperatureProvider {
     descriptor: MetricDescriptor,
     channel: Option<TemperatureChannel>,
 }
+
 impl CpuTemperatureProvider {
     pub fn new() -> Self {
         Self {
@@ -18,10 +20,12 @@ impl CpuTemperatureProvider {
         }
     }
 }
+
 impl MetricProvider for CpuTemperatureProvider {
     fn descriptor(&self) -> &MetricDescriptor {
         &self.descriptor
     }
+
     fn sample(&mut self) -> MetricValue {
         if self.channel.is_none() {
             let mut pid = 0;

@@ -1,5 +1,6 @@
 //! When the watcher acts: decisions over what one check found, apart from the
 //! processes themselves.
+
 use std::time::{Duration, Instant};
 
 /// What one check found.
@@ -33,8 +34,10 @@ struct Restart {
     last: Option<Instant>,
     failed: bool,
 }
+
 impl Restart {
     const PAUSE: Duration = Duration::from_secs(60);
+
     fn due(&mut self, alive: bool, now: Instant) -> bool {
         let due = !alive
             && self.missing
@@ -59,6 +62,7 @@ pub struct Supervision {
     recorder: Restart,
     sensor: Restart,
 }
+
 impl Supervision {
     /// Attaches are tried every 5 s for a minute, as after sign-in, then once a minute.
     const QUICK_ATTEMPTS: u32 = 12;
@@ -75,6 +79,7 @@ impl Supervision {
             sensor: Restart::default(),
         }
     }
+
     pub fn next(&mut self, seen: Observation, now: Instant) -> Vec<Action> {
         let Some(pid) = seen.explorer else {
             return Vec::new();
@@ -108,6 +113,7 @@ impl Supervision {
         }
         actions
     }
+
     /// The launcher started for `pid` ended; it attached unless it failed.
     pub fn attached(&mut self, pid: u32, success: bool) {
         if success {
@@ -118,6 +124,7 @@ impl Supervision {
             self.sensor = Restart::default();
         }
     }
+
     /// A collector did not start; it is not tried again until the next attach.
     pub fn failed(&mut self, action: Action) {
         match action {
@@ -131,6 +138,7 @@ impl Supervision {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     fn seen(explorer: u32) -> Observation {
         Observation {
             explorer: Some(explorer),
@@ -138,6 +146,7 @@ mod tests {
             ..Observation::default()
         }
     }
+
     #[test]
     fn a_new_explorer_is_attached_quickly_then_once_a_minute() {
         let start = Instant::now();
@@ -176,6 +185,7 @@ mod tests {
             .next(seen(2), later + Duration::from_secs(61))
             .is_empty());
     }
+
     #[test]
     fn collectors_come_back_when_missing_twice_and_once_a_minute() {
         let start = Instant::now();
@@ -205,6 +215,7 @@ mod tests {
         assert!(stopped.next(quiet, start).is_empty());
         assert!(stopped.next(quiet, start).is_empty());
     }
+
     #[test]
     fn only_a_sensor_that_ran_is_brought_back() {
         let start = Instant::now();

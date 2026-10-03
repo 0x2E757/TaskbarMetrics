@@ -6,6 +6,7 @@ use super::{
         RamProvider, ShareThroughputProvider,
     },
 };
+
 use crate::{
     application::MonitoringService,
     config::Settings,
@@ -15,6 +16,7 @@ use crate::{
 
 /// The only place that knows concrete providers. Extend this catalog to add a metric.
 pub struct Composition;
+
 impl Composition {
     /// Taskbar tiles: a bare kind (`disk`) keeps its unsuffixed reading ids.
     pub fn monitor(settings: &Settings) -> Result<MonitoringService, String> {
@@ -25,10 +27,12 @@ impl Composition {
             .collect::<Result<Vec<_>, _>>()?;
         Self::build(&devices, false)
     }
+
     /// Recorder totals for the given devices.
     pub fn history_monitor(devices: &[DeviceId]) -> Result<MonitoringService, String> {
         Self::build(devices, true)
     }
+
     fn build(devices: &[DeviceId], detailed: bool) -> Result<MonitoringService, String> {
         let mut registry = MetricRegistry::default();
         for id in devices {

@@ -1,4 +1,5 @@
 //! Application policy is independent of COM and the Windows taskbar.
+
 pub mod application;
 pub mod config;
 pub mod metrics;

@@ -6,10 +6,12 @@ use super::{
     pins::PinnedLayer,
     ui::Ui,
 };
+
 use crate::platform::process_history::{
     memory::MemoryRows,
     store::{Frame, RETENTION},
 };
+
 use std::sync::Arc;
 
 /// Samples on the time axis: always the last 300 s at 0.5 s.
@@ -28,6 +30,7 @@ pub struct ChartLayout {
     /// Physical pixels per XAML pixel.
     scale: f64,
 }
+
 impl ChartLayout {
     pub fn new(width: f64, height: f64) -> Self {
         Self {
@@ -39,15 +42,18 @@ impl ChartLayout {
             scale: 1.0,
         }
     }
+
     /// Physical pixels per XAML pixel, for the lines kept on whole pixels.
     pub fn scale(mut self, scale: f64) -> Self {
         self.scale = scale.max(1.0);
         self
     }
+
     /// `x` moved to the middle of the physical pixel column it falls in.
     pub fn pixel(self, x: f64) -> f64 {
         ((x * self.scale).floor() + 0.5) / self.scale
     }
+
     /// Canvas height, one for every page: 270 (the mirrored DISK/NET charts of the
     /// artboards), 210 in compact windows.
     pub fn height(compact: bool) -> f64 {
@@ -57,11 +63,13 @@ impl ChartLayout {
             270.0
         }
     }
+
     /// The artboards keep the 44 px right margin even without a temperature axis.
     pub fn for_resource(mut self, resource: Resource) -> Self {
         self.temperature = resource.temperature_axis();
         self
     }
+
     /// `padCompact` for windows narrower than 1100.
     pub fn compact(mut self, compact: bool) -> Self {
         if compact {
@@ -70,24 +78,31 @@ impl ChartLayout {
         }
         self
     }
+
     pub fn x0(self) -> f64 {
         self.left
     }
+
     pub fn x1(self) -> f64 {
         (self.width - self.right).max(self.left + 1.0)
     }
+
     pub fn y0(self) -> f64 {
         28.0
     }
+
     pub fn y1(self) -> f64 {
         self.height - 22.0
     }
+
     fn plot_width(self) -> f64 {
         self.x1() - self.x0()
     }
+
     pub fn fraction(self, x: f64) -> f64 {
         ((x - self.x0()) / self.plot_width()).clamp(0.0, 1.0)
     }
+
     /// Bucket under the horizontal position `x` for a window ending at `end`.
     pub fn bucket(self, x: f64, end: u64) -> f64 {
         end.saturating_sub(WINDOW - 1) as f64 + self.fraction(x) * WINDOW as f64 - 0.5
@@ -96,6 +111,7 @@ impl ChartLayout {
 
 /// Upper bound of the value axis: fixed 100 % or the 1-2-5 step above the peak.
 pub struct ChartScale;
+
 impl ChartScale {
     pub fn maximum<'a>(
         resource: Resource,
@@ -111,7 +127,9 @@ impl ChartScale {
         }
         Self::step(peak).max(resource.floor())
     }
+
     const RAM_STEP: f64 = 4096.0;
+
     fn step(value: f64) -> f64 {
         let magnitude = 10f64.powf(value.max(1.0).log10().floor());
         [1.0, 2.0, 5.0, 10.0]
@@ -128,6 +146,7 @@ struct SeriesGeometry {
     line: String,
     area: String,
 }
+
 impl SeriesGeometry {
     /// A line command takes any number of points, so `L` is written once per run:
     /// the chart markup is parsed on every update and shorter data parses faster.
@@ -175,10 +194,12 @@ impl SeriesGeometry {
 /// oldest ones leave the chart. `StrokeDashArray` counts from the first point of the
 /// path and would restart at the left edge on each redraw of a full window.
 struct DashedLine;
+
 impl DashedLine {
     /// 4 px dashes, 3 px gaps, as `StrokeDashArray="3.2,2.4"` with a 1.25 px stroke.
     const DASH: f64 = 4.0;
     const PERIOD: f64 = 7.0;
+
     /// Path data for `samples` (bucket, x, y); `pixels` is the width of a bucket.
     /// Missing samples and gaps in the buckets break the line.
     fn path(samples: impl IntoIterator<Item = (u64, f64, Option<f64>)>, pixels: f64) -> String {
@@ -249,6 +270,7 @@ impl DashedLine {
         close(&mut dash);
         path
     }
+
     /// Whether the position falls into a dash.
     fn on(at: f64) -> bool {
         at.rem_euclid(Self::PERIOD) < Self::DASH
@@ -259,9 +281,11 @@ impl DashedLine {
 /// so a steady temperature flips between neighbours every sample; averaging keeps
 /// the dashed line readable while real changes still show as ramps.
 struct Smoothing;
+
 impl Smoothing {
     /// Samples on each side: 5 samples, 2.5 s in all.
     const RADIUS: usize = 2;
+
     fn temperatures(frames: &[Arc<Frame>], device: &Device) -> Vec<Option<f64>> {
         Self::apply(
             &frames
@@ -270,6 +294,7 @@ impl Smoothing {
                 .collect::<Vec<_>>(),
         )
     }
+
     fn apply(samples: &[(u64, Option<f64>)]) -> Vec<Option<f64>> {
         let joined = |a: usize, b: usize| {
             samples[a].1.is_some() && samples[b].1.is_some() && samples[a].0 + 1 == samples[b].0
@@ -300,15 +325,18 @@ struct Plot {
     maximum: f64,
     mirrored: bool,
 }
+
 impl Plot {
     fn x(&self, bucket: u64) -> f64 {
         self.layout.x0()
             + (bucket.saturating_sub(self.start) as f64 + 0.5) / WINDOW as f64
                 * self.layout.plot_width()
     }
+
     fn half_sample(&self) -> f64 {
         self.layout.plot_width() / WINDOW as f64 / 2.0
     }
+
     fn baseline(&self) -> f64 {
         if self.mirrored {
             (self.layout.y0() + self.layout.y1()) / 2.0
@@ -316,6 +344,7 @@ impl Plot {
             self.layout.y1()
         }
     }
+
     fn y(&self, value: f64, direction: usize) -> f64 {
         let amplitude =
             (self.layout.y1() - self.layout.y0()) / if self.mirrored { 2.0 } else { 1.0 };
@@ -324,6 +353,7 @@ impl Plot {
                 / self.maximum
                 * amplitude
     }
+
     fn temperature(&self, value: f64) -> f64 {
         self.layout.y1() - value.clamp(0.0, 100.0) / 100.0 * (self.layout.y1() - self.layout.y0())
     }
@@ -351,6 +381,7 @@ pub struct ChartRenderer {
     /// Width of the total line; pinned and highlighted processes scale with it.
     pub line: f64,
 }
+
 impl ChartRenderer {
     fn text(
         &self,
@@ -371,6 +402,7 @@ impl ChartRenderer {
             Ui::xml(text)
         )
     }
+
     /// A chip centered on `center` (kept inside `[low, high]`); width is estimated from the text.
     fn chip(
         center: f64,
@@ -391,6 +423,7 @@ impl ChartRenderer {
             center - 200.0
         )
     }
+
     fn axis_value(&self, value: f64) -> String {
         let precision = if value.fract().abs() < 1e-9 {
             0
@@ -401,6 +434,7 @@ impl ChartRenderer {
         };
         self.language.number(value, precision)
     }
+
     fn axes(&self, out: &mut String, plot: &Plot, resource: Resource) {
         let d = self.design;
         let l = plot.layout;
@@ -457,6 +491,7 @@ impl ChartRenderer {
             }
         }
     }
+
     /// A 1 px vertical line across the plot at `x`. The chart scrolls by 1.4 px a
     /// sample, so a line drawn at a fractional x alternates between one sharp and
     /// two smeared pixel columns; kept in the middle of a pixel column it stays
@@ -474,6 +509,7 @@ impl ChartRenderer {
             }
         )
     }
+
     fn time_axis(&self, out: &mut String, plot: &Plot, end: u64, live: bool) {
         let d = self.design;
         let l = plot.layout;
@@ -506,6 +542,7 @@ impl ChartRenderer {
             true,
         ));
     }
+
     fn series(
         &self,
         out: &mut String,
@@ -554,6 +591,7 @@ impl ChartRenderer {
             }
         }
     }
+
     fn temperature(&self, out: &mut String, plot: &Plot, frames: &[Arc<Frame>], device: &Device) {
         let d = self.design;
         let color = d.color("temp");
@@ -615,6 +653,7 @@ impl ChartRenderer {
             ));
         }
     }
+
     /// Spans without measurements of `device`: buckets without frames, and frames
     /// the recorder took while it was not recording this device.
     fn unmeasured(frames: &[Arc<Frame>], device: &Device) -> Vec<(u64, u64)> {
@@ -635,6 +674,7 @@ impl ChartRenderer {
         }
         spans
     }
+
     /// RAM: spans of frames with processes but without their shared memory. The
     /// recorder scans for shared pages only while the window is open.
     pub fn unshared(frames: &[Arc<Frame>]) -> Vec<(u64, u64)> {
@@ -655,6 +695,7 @@ impl ChartRenderer {
         }
         spans
     }
+
     /// RAM: hatched spans without the shared memory of processes, dashed borders
     /// inside the plot and a chip over the wider spans.
     fn shared_gaps(&self, out: &mut String, plot: &Plot, frames: &[Arc<Frame>]) {
@@ -699,6 +740,7 @@ impl ChartRenderer {
             ));
         }
     }
+
     /// Interruptions of at least one second: hatched columns and a duration chip.
     fn gaps(&self, out: &mut String, plot: &Plot, frames: &[Arc<Frame>], device: &Device) {
         let d = self.design;
@@ -741,6 +783,7 @@ impl ChartRenderer {
             }
         }
     }
+
     /// Live DISK/NET: the newest samples still wait for ETW attribution.
     fn etw(&self, out: &mut String, plot: &Plot, last: u64) {
         let d = self.design;
@@ -767,6 +810,7 @@ impl ChartRenderer {
             d.color("text2")
         ));
     }
+
     /// Less than 5 minutes collected: a dashed start line and a centered note.
     fn empty(&self, out: &mut String, plot: &Plot, first: u64, last: u64) {
         let d = self.design;
@@ -794,6 +838,7 @@ impl ChartRenderer {
             d.color("text2")
         ));
     }
+
     /// «↓ Read» above and «↑ Write» below the mirrored axis.
     fn directions(&self, out: &mut String, plot: &Plot, resource: Resource) {
         let d = self.design;
@@ -817,6 +862,7 @@ impl ChartRenderer {
             ));
         }
     }
+
     fn moment(&self, out: &mut String, plot: &Plot, bucket: u64) {
         let d = self.design;
         let l = plot.layout;
@@ -843,6 +889,7 @@ impl ChartRenderer {
             ),
         ));
     }
+
     fn dot(&self, out: &mut String, x: f64, y: f64, color: &str) {
         out.push_str(&format!(
             r#"<Ellipse Canvas.Left="{:.2}" Canvas.Top="{:.2}" Width="8.5" Height="8.5" Fill="{}" Stroke="{color}" StrokeThickness="2"/>"#,
@@ -851,6 +898,7 @@ impl ChartRenderer {
             self.design.color("card")
         ));
     }
+
     pub fn series_of(
         frames: &[Arc<Frame>],
         device: &Device,
@@ -877,6 +925,7 @@ impl ChartRenderer {
             })
             .collect()
     }
+
     /// Axis maximum shared by the chart and the «Scale» statistic.
     pub fn scale(frames: &[Arc<Frame>], device: &Device, pinned: &[PinnedLayer]) -> f64 {
         let totals: Vec<_> = frames.iter().map(|f| device.total(f)).collect();
@@ -893,6 +942,7 @@ impl ChartRenderer {
                 .chain(std::iter::once(&capacity)),
         )
     }
+
     /// Shared coordinate transform of the base chart and its overlay.
     fn plot(
         frames: &[Arc<Frame>],
@@ -915,6 +965,7 @@ impl ChartRenderer {
             mirrored: device.resource.dual(),
         }
     }
+
     /// Axes, total and pinned series, temperature, gaps and ETW marks. The series sit
     /// in the `Series` canvas, dimmed while a process is highlighted by `overlay`.
     pub fn markup(
@@ -1006,6 +1057,7 @@ impl ChartRenderer {
         out.push_str("</Canvas>");
         out
     }
+
     /// Highlighted process and the selected moment with its dots: small enough to be
     /// redrawn on every hover and drag without touching the base chart.
     pub fn overlay(
@@ -1082,6 +1134,7 @@ impl ChartRenderer {
 mod tests {
     use super::*;
     use crate::platform::devices::DeviceId;
+
     #[test]
     fn dashes_keep_their_moments_when_the_window_scrolls() {
         // 1.4 px a bucket, a line that wanders, x counted from the window start.
@@ -1112,6 +1165,7 @@ mod tests {
         );
         assert!(!gap.contains('L'));
     }
+
     fn frame(bucket: u64, totals: Vec<(&str, Option<f64>)>) -> Arc<Frame> {
         Arc::new(Frame {
             bucket,
@@ -1125,6 +1179,7 @@ mod tests {
             sample_ms: 0.0,
         })
     }
+
     #[test]
     fn process_series_follow_reordered_and_missing_samples() {
         use crate::platform::process_history::store::{Identity, Sample};
@@ -1161,6 +1216,7 @@ mod tests {
             .collect();
         assert_eq!(cpu, [Some(20.0), Some(21.0), Some(22.0), None, Some(24.0)]);
     }
+
     fn renderer() -> ChartRenderer {
         ChartRenderer {
             design: Design { dark: false },
@@ -1168,6 +1224,7 @@ mod tests {
             line: super::super::chart_line::ChartLine::DEFAULT,
         }
     }
+
     #[test]
     fn mirrored_directions_share_scale_and_temperature_is_clipped() {
         let frames = [frame(
@@ -1195,6 +1252,7 @@ mod tests {
             cpu.contains("100\u{A0}%") && cpu.contains("100 °C") && cpu.contains(r#"Text="now""#)
         );
     }
+
     #[test]
     fn moment_is_drawn_by_the_overlay_over_the_named_series() {
         let frames: Vec<_> = (0..3)
@@ -1213,6 +1271,7 @@ mod tests {
         );
         assert!(overlay.contains("<Ellipse") && !overlay.contains(r#"x:Name="Series""#));
     }
+
     #[test]
     fn unmeasured_canvas_never_produces_negative_sizes() {
         let frames = [frame(
@@ -1228,6 +1287,7 @@ mod tests {
         );
         assert!(!markup.contains("Width=\"-") && !markup.contains("Height=\"-"));
     }
+
     #[test]
     fn scale_grows_by_steps_above_resource_minimum() {
         let values = [[Some(12.0), Some(3.0)]];
@@ -1261,6 +1321,7 @@ mod tests {
             100.0
         );
     }
+
     #[test]
     fn gaps_are_hatched_and_live_io_waits_for_etw() {
         let frames: Vec<_> = (0..10)
@@ -1278,6 +1339,7 @@ mod tests {
         assert!(markup.contains("per-process · ETW ~2 s"));
         assert!(markup.contains("Receive") && markup.contains("Send"));
     }
+
     #[test]
     fn frames_without_the_device_are_hatched_like_missing_samples() {
         let frames: Vec<_> = (0..30)
@@ -1296,6 +1358,7 @@ mod tests {
         let markup = renderer().markup(&frames, &disk, None, &[], layout);
         assert!(markup.contains("no samples · 5 s"));
     }
+
     #[test]
     fn ram_hatches_frames_without_shared_memory() {
         use crate::platform::process_history::store::{Identity, Sample};
@@ -1329,6 +1392,7 @@ mod tests {
         let markup = renderer().markup(&frames, &Device::of(Resource::Ram), None, &[], layout);
         assert!(markup.contains("shared memory not measured"));
     }
+
     #[test]
     fn vertical_rules_stay_in_the_middle_of_a_pixel_column() {
         let plain = ChartLayout::new(900.0, 260.0);
@@ -1337,6 +1401,7 @@ mod tests {
         let scaled = plain.scale(1.25);
         assert!((scaled.pixel(100.2) - 100.4).abs() < 1e-9);
     }
+
     #[test]
     fn resized_chart_preserves_hit_testing_and_stroke_sizes() {
         for width in [400.0, 900.0, 1500.0] {
@@ -1349,6 +1414,7 @@ mod tests {
             assert!(!markup.contains("Viewbox Width=\"400\""));
         }
     }
+
     #[test]
     fn temperature_jitter_is_averaged_within_runs_only() {
         let samples = [
@@ -1370,6 +1436,7 @@ mod tests {
         assert_eq!(smoothed[6], Some(60.0));
         assert_eq!(smoothed[7], Some(70.0));
     }
+
     #[test]
     fn filled_areas_close_each_run_without_bridging_missing_samples() {
         let shape = SeriesGeometry::new(

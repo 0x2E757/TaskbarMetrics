@@ -2,6 +2,7 @@
 /// from the edge) instead of the system bar that appears only on pointer input.
 /// Placed into a ScrollViewer's resources, it restyles only that viewer's bars.
 pub struct ScrollIndicator;
+
 impl ScrollIndicator {
     pub const PLACEHOLDER: &'static str = "<!--SCROLL-INDICATOR-->";
     const STYLE: &'static str = r#"<Style TargetType="ScrollBar"><Setter Property="IsTabStop" Value="False"/><Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ScrollBar"><Grid Background="Transparent">

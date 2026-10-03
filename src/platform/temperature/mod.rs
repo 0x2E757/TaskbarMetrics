@@ -10,15 +10,18 @@ pub(crate) use provider::CpuTemperatureProvider;
 
 /// The only entry point that opens a driver. Runs elevated, outside Explorer.
 pub struct SensorCollector;
+
 impl SensorCollector {
     /// The collector for this Explorer is publishing.
     pub(crate) fn running(pid: u32) -> bool {
         channel::TemperatureChannel::open(pid).is_ok_and(|channel| channel.fresh())
     }
+
     /// The collector's shared memory is gone, so a new collector can create it.
     pub(crate) fn released(pid: u32) -> bool {
         channel::TemperatureChannel::open(pid).is_err()
     }
+
     pub(crate) fn launch(executable: &std::path::Path, pid: u32) -> Result<()> {
         if Self::running(pid) {
             return Ok(());
@@ -33,6 +36,7 @@ impl SensorCollector {
         {
             return Ok(());
         }
+
         use std::os::windows::ffi::OsStrExt;
         let path: Vec<_> = executable
             .as_os_str()
@@ -55,6 +59,7 @@ impl SensorCollector {
             Ok(())
         }
     }
+
     pub fn run() -> std::result::Result<(), String> {
         let executable = std::env::current_exe().map_err(|e| e.to_string())?;
         let args: Vec<_> = std::env::args().skip(1).collect();
@@ -105,6 +110,7 @@ impl SensorCollector {
         }
     }
 }
+
 #[link(name = "shell32")]
 extern "system" {
     fn ShellExecuteW(

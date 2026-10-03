@@ -1,5 +1,6 @@
 use super::{Palette, TileStyle};
 use std::path::Path;
+
 pub(crate) struct Appearance;
 struct Field {
     name: &'static str,
@@ -24,6 +25,7 @@ macro_rules! switch {
         }
     };
 }
+
 const SWITCHES: &[Switch] = &[
     switch!(cpu_temperature),
     switch!(gpu_temperature),
@@ -62,6 +64,7 @@ const FIELDS: &[Field] = &[
 impl Appearance {
     /// The disk tile showed busy time and reddened by it; it shows MB/s now.
     const RETIRED: [&'static str; 2] = ["alerts.disk_hot_x", "alerts.disk_hot_y"];
+
     pub fn read(path: &Path) -> std::io::Result<TileStyle> {
         Self::decode(&std::fs::read_to_string(path)?).ok_or_else(|| {
             std::io::Error::new(
@@ -70,6 +73,7 @@ impl Appearance {
             )
         })
     }
+
     /// Persisted settings that differ between two styles; preview values are not persisted.
     pub fn differences(a: &TileStyle, b: &TileStyle) -> usize {
         FIELDS.iter().filter(|f| (f.get)(a) != (f.get)(b)).count()
@@ -77,12 +81,14 @@ impl Appearance {
             + (0..14).filter(|i| a.light.0[*i] != b.light.0[*i]).count()
             + (0..14).filter(|i| a.dark.0[*i] != b.dark.0[*i]).count()
     }
+
     pub fn save(path: &Path, style: &TileStyle) -> std::io::Result<()> {
         let text = Self::encode(style);
         let temporary = path.with_extension("appearance.tmp");
         std::fs::write(&temporary, text)?;
         std::fs::rename(temporary, path)
     }
+
     fn encode(style: &TileStyle) -> String {
         let mut text = String::from("version=1\n");
         for field in FIELDS {
@@ -102,6 +108,7 @@ impl Appearance {
         }
         text
     }
+
     fn decode(text: &str) -> Option<TileStyle> {
         let mut style = TileStyle::default();
         let mut seen = std::collections::HashSet::new();
@@ -170,9 +177,11 @@ impl Appearance {
         Some(style)
     }
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn settings_roundtrip_and_reject_invalid_ranges() {
         let mut style = TileStyle {

@@ -3,6 +3,7 @@
 //! rights of whoever runs the task; the launcher then runs the task instead of
 //! asking for elevation. Only binaries in Program Files are registered, so no
 //! process of the user can swap the file the task elevates.
+
 use super::{abi::*, com::Com, executables::Executables};
 use std::{path::Path, ptr};
 
@@ -11,15 +12,18 @@ pub(crate) struct CollectorTask {
     name: &'static str,
     executable: &'static str,
 }
+
 impl CollectorTask {
     pub const HISTORY: Self = Self {
         name: "History",
         executable: Executables::HISTORY,
     };
+
     pub const SENSORS: Self = Self {
         name: "Sensors",
         executable: Executables::SENSORS,
     };
+
     const ALL: [Self; 2] = [Self::HISTORY, Self::SENSORS];
     const FOLDER: &'static str = "Taskbar Metrics";
 
@@ -37,6 +41,7 @@ impl CollectorTask {
         }
         Ok(())
     }
+
     /// Removes the tasks and their folder; missing ones are not an error.
     pub fn remove_all() -> Result<()> {
         let scheduler = TaskScheduler::connect()?;
@@ -48,6 +53,7 @@ impl CollectorTask {
         scheduler.delete_folder();
         Ok(())
     }
+
     /// Starts `executable --serve <pid>` through the task in this session, when the
     /// task starts this very file; an error otherwise, and the caller asks for UAC.
     pub fn run(&self, executable: &Path, pid: u32) -> Result<()> {
@@ -66,6 +72,7 @@ impl CollectorTask {
 struct TaskXml {
     text: String,
 }
+
 impl TaskXml {
     fn new(command: &str) -> Self {
         let command = command
@@ -91,6 +98,7 @@ impl TaskXml {
             ),
         }
     }
+
     /// The executable a registered definition starts.
     fn command(xml: &str) -> Option<String> {
         let start = xml.find("<Command>")? + "<Command>".len();
@@ -108,6 +116,7 @@ impl TaskXml {
 
 /// Binaries in `%ProgramFiles%`, which only administrators can change.
 struct ProgramFiles;
+
 impl ProgramFiles {
     fn contains(directory: &Path) -> bool {
         std::env::var_os("ProgramW6432")
@@ -127,10 +136,12 @@ struct TaskScheduler {
     service: Com,
     _apartment: Apartment,
 }
+
 impl TaskScheduler {
     /// Administrators and the system manage the tasks; users read and run them.
     const TASK_ACCESS: &'static str = "D:(A;;GA;;;BA)(A;;GA;;;SY)(A;;GRGX;;;AU)";
     const FOLDER_ACCESS: &'static str = "D:(A;;GA;;;BA)(A;;GA;;;SY)(A;;GR;;;AU)";
+
     fn connect() -> Result<Self> {
         let apartment = Apartment::mta()?;
         let mut raw = ptr::null_mut();
@@ -158,6 +169,7 @@ impl TaskScheduler {
             })
         }
     }
+
     fn root(&self) -> Result<TaskFolder> {
         let path = Bstr::new("\\");
         let mut raw = ptr::null_mut();
@@ -168,12 +180,14 @@ impl TaskScheduler {
             Ok(TaskFolder(Com::owned(raw)?))
         }
     }
+
     /// `\Taskbar Metrics`, created when missing.
     fn folder(&self) -> Result<TaskFolder> {
         let root = self.root()?;
         root.child(CollectorTask::FOLDER)
             .or_else(|_| root.create(CollectorTask::FOLDER, Self::FOLDER_ACCESS))
     }
+
     fn delete_folder(&self) {
         if let Ok(root) = self.root() {
             let name = Bstr::new(CollectorTask::FOLDER);
@@ -187,6 +201,7 @@ impl TaskScheduler {
 
 /// `ITaskFolder`.
 struct TaskFolder(Com);
+
 impl TaskFolder {
     fn child(&self, name: &str) -> Result<Self> {
         let name = Bstr::new(name);
@@ -197,6 +212,7 @@ impl TaskFolder {
             Ok(Self(Com::owned(raw)?))
         }
     }
+
     fn create(&self, name: &str, access: &str) -> Result<Self> {
         let (name, access) = (Bstr::new(name), Bstr::new(access));
         let mut raw = ptr::null_mut();
@@ -212,6 +228,7 @@ impl TaskFolder {
             Ok(Self(Com::owned(raw)?))
         }
     }
+
     fn task(&self, name: &str) -> Result<RegisteredTask> {
         let name = Bstr::new(name);
         let mut raw = ptr::null_mut();
@@ -221,6 +238,7 @@ impl TaskFolder {
             Ok(RegisteredTask(Com::owned(raw)?))
         }
     }
+
     fn delete(&self, name: &str) {
         let name = Bstr::new(name);
         unsafe {
@@ -228,6 +246,7 @@ impl TaskFolder {
             delete(self.0.raw(), name.0, 0);
         }
     }
+
     fn register(&self, name: &str, xml: &str) -> Result<()> {
         const CREATE_OR_UPDATE: i32 = 6;
         const LOGON_GROUP: i32 = 4;
@@ -266,6 +285,7 @@ impl TaskFolder {
 
 /// `IRegisteredTask`.
 struct RegisteredTask(Com);
+
 impl RegisteredTask {
     fn xml(&self) -> Result<String> {
         let mut raw = ptr::null_mut();
@@ -275,6 +295,7 @@ impl RegisteredTask {
         }
         Ok(Bstr(raw).text())
     }
+
     /// `RunEx` with one argument, in the session of this process.
     fn run(&self, argument: &str) -> Result<()> {
         const USE_SESSION_ID: i32 = 4;
@@ -303,10 +324,12 @@ impl RegisteredTask {
 
 /// An owned `BSTR`.
 struct Bstr(*mut u16);
+
 impl Bstr {
     fn new(text: &str) -> Self {
         Self(unsafe { SysAllocString(wide(text).as_ptr()) })
     }
+
     fn text(&self) -> String {
         if self.0.is_null() {
             return String::new();
@@ -317,6 +340,7 @@ impl Bstr {
         }
     }
 }
+
 impl Drop for Bstr {
     fn drop(&mut self) {
         unsafe { SysFreeString(self.0) }
@@ -331,12 +355,14 @@ struct Variant {
     reserved: [u16; 3],
     value: [usize; 2],
 }
+
 impl Variant {
     const EMPTY: Self = Self {
         kind: 0,
         reserved: [0; 3],
         value: [0; 2],
     };
+
     fn text(text: &Bstr) -> Self {
         Self {
             kind: 8,
@@ -356,12 +382,14 @@ extern "system" {
         result: *mut Raw,
     ) -> Hr;
 }
+
 #[link(name = "oleaut32")]
 extern "system" {
     fn SysAllocString(text: *const u16) -> *mut u16;
     fn SysFreeString(text: *mut u16);
     fn SysStringLen(text: *mut u16) -> u32;
 }
+
 #[link(name = "kernel32")]
 extern "system" {
     fn ProcessIdToSessionId(pid: u32, session: *mut u32) -> i32;
@@ -370,6 +398,7 @@ extern "system" {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn the_definition_starts_the_escaped_command_and_reads_it_back() {
         let command = r"C:\Program Files\R&D <x>\TaskbarMetrics.History.exe";
@@ -378,6 +407,7 @@ mod tests {
         assert!(xml.text.contains("<Arguments>--serve $(Arg0)</Arguments>"));
         assert_eq!(TaskXml::command(&xml.text).as_deref(), Some(command));
     }
+
     #[test]
     fn only_copies_inside_program_files_are_registered() {
         let root = std::env::var("ProgramW6432")

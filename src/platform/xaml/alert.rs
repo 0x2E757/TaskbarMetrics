@@ -18,6 +18,7 @@ pub(crate) struct AlertSettings {
     pub ram_hot_x: f64,
     pub ram_hot_y: f64,
 }
+
 impl Default for AlertSettings {
     fn default() -> Self {
         Self {
@@ -38,6 +39,7 @@ impl Default for AlertSettings {
         }
     }
 }
+
 impl AlertSettings {
     /// How red the number of a `kind` tile showing `value` % is, from 0 to 1.
     pub fn hot(&self, kind: &str, value: f64) -> f64 {
@@ -52,6 +54,7 @@ impl AlertSettings {
         }
         ((value - x) / (y - x).max(1.0)).clamp(0.0, 1.0)
     }
+
     fn level(&self, id: &str, value: &crate::metrics::MetricValue) -> (f64, bool) {
         let (x, y) = match id {
             "cpu" => (self.cpu_x, self.cpu_y),
@@ -80,6 +83,7 @@ pub(super) struct AlertVisual {
     pulse: Com,
     pulsing: bool,
 }
+
 impl AlertVisual {
     pub fn new(background: Com, pulse: Com) -> Result<Self> {
         Ok(Self {
@@ -88,6 +92,7 @@ impl AlertVisual {
             pulsing: false,
         })
     }
+
     pub fn update(
         &mut self,
         settings: &AlertSettings,
@@ -114,6 +119,7 @@ impl AlertVisual {
 mod tests {
     use super::*;
     use crate::metrics::MetricValue::*;
+
     #[test]
     fn thresholds_ramp_pulse_and_clear_on_missing_data() {
         let s = AlertSettings::default();
@@ -124,6 +130,7 @@ mod tests {
         assert_eq!(s.level("gpu", &Unavailable), (0.0, false));
         assert_eq!(s.level("net", &Available(100.0)), (0.0, false));
     }
+
     #[test]
     fn numbers_redden_gradually_over_five_points_before_the_threshold() {
         let mut s = AlertSettings::default();

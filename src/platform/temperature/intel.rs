@@ -2,6 +2,7 @@ use super::{
     pawnio::PawnModule,
     sensor::{Celsius, CpuIdentity, ModuleFolder, TemperatureSensor},
 };
+
 use crate::platform::abi::*;
 
 const TEMPERATURE_TARGET: u64 = 0x1a2;
@@ -15,6 +16,7 @@ pub(super) struct IntelTemperature {
     tjmax: f64,
     package: bool,
 }
+
 impl IntelTemperature {
     pub fn open(modules: &ModuleFolder) -> Result<Self> {
         let module = modules.load("IntelMSR.bin")?;
@@ -24,6 +26,7 @@ impl IntelTemperature {
             module,
         })
     }
+
     /// 100 °C when the CPU predates the TjMax register, as Linux assumes.
     fn tjmax(target: Option<u64>) -> f64 {
         match target.map(|value| (value >> 16) & 0xff) {
@@ -31,9 +34,11 @@ impl IntelTemperature {
             _ => 100.0,
         }
     }
+
     fn decode(status: u64, tjmax: f64) -> Result<f64> {
         Celsius::checked(tjmax - ((status >> 16) & 0x7f) as f64)
     }
+
     fn read(&self, register: u64) -> Result<f64> {
         Self::decode(
             self.module.read(c"ioctl_read_msr", &[register])?,
@@ -41,6 +46,7 @@ impl IntelTemperature {
         )
     }
 }
+
 impl TemperatureSensor for IntelTemperature {
     fn name(&self) -> &'static str {
         if self.package {
@@ -49,6 +55,7 @@ impl TemperatureSensor for IntelTemperature {
             "Intel CPU hottest core"
         }
     }
+
     fn sample(&self) -> Result<f64> {
         if self.package {
             return self.read(PACKAGE_THERM_STATUS);
@@ -62,10 +69,12 @@ impl TemperatureSensor for IntelTemperature {
 
 /// Keeps the current thread on one logical processor of group 0 while a per-core MSR is read.
 struct ProcessorPin(usize);
+
 impl ProcessorPin {
     fn count() -> u32 {
         unsafe { GetActiveProcessorCount(0) }.min(usize::BITS)
     }
+
     fn new(processor: u32) -> Result<Self> {
         match unsafe { SetThreadAffinityMask(GetCurrentThread(), 1 << processor) } {
             0 => Err(last_error()),
@@ -73,6 +82,7 @@ impl ProcessorPin {
         }
     }
 }
+
 impl Drop for ProcessorPin {
     fn drop(&mut self) {
         unsafe {
@@ -80,6 +90,7 @@ impl Drop for ProcessorPin {
         }
     }
 }
+
 #[link(name = "kernel32")]
 extern "system" {
     fn GetActiveProcessorCount(group: u16) -> u32;
@@ -90,6 +101,7 @@ extern "system" {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn readout_counts_down_from_tjmax() {
         assert_eq!(IntelTemperature::tjmax(Some(0x0064_0000)), 100.0);

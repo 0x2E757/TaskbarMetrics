@@ -9,6 +9,7 @@ struct Rect {
     right: i32,
     bottom: i32,
 }
+
 #[repr(C)]
 #[derive(Default)]
 struct Message {
@@ -21,6 +22,7 @@ struct Message {
     y: i32,
     private: u32,
 }
+
 #[repr(C)]
 struct WindowClass {
     size: u32,
@@ -39,6 +41,7 @@ struct WindowClass {
 
 /// `COPYDATASTRUCT.dwData` of a request to show a device in the running window.
 pub(super) const DEVICE_REQUEST: usize = 0x544D_4445;
+
 type Refresh = dyn FnMut() -> Result<()>;
 thread_local! {
     static TICK: std::cell::Cell<Option<*mut Refresh>> = const { std::cell::Cell::new(None) };
@@ -48,6 +51,7 @@ thread_local! {
     /// Smallest visible frame the user can size the window to, in 96-DPI pixels.
     static MINIMUM: std::cell::Cell<(i32, i32)> = const { std::cell::Cell::new((0, 0)) };
 }
+
 /// MINMAXINFO: points as `[x, y]`.
 #[repr(C)]
 struct MinMaxInfo {
@@ -57,6 +61,7 @@ struct MinMaxInfo {
     min_track: [i32; 2],
     max_track: [i32; 2],
 }
+
 /// MONITORINFOEXW, as `displays.rs` declares the same function.
 #[repr(C)]
 #[derive(Default)]
@@ -67,6 +72,7 @@ struct MonitorInfo {
     flags: u32,
     device: [u16; 32],
 }
+
 /// WINDOWPLACEMENT; the normal frame is in workspace coordinates both ways.
 #[repr(C)]
 #[derive(Default)]
@@ -78,10 +84,12 @@ struct WindowPlacement {
     maximized: [i32; 2],
     normal: Rect,
 }
+
 /// Refresh callback of `NativeWindow::run`, reachable from the window procedure:
 /// while the window is resized or moved, the modal loop of Windows dispatches
 /// WM_TIMER there instead of returning to `run`, and the content would freeze.
 struct Tick<'a>(std::marker::PhantomData<&'a mut ()>);
+
 impl<'a> Tick<'a> {
     fn install(refresh: &'a mut (dyn FnMut() -> Result<()> + 'a)) -> Self {
         // SAFETY: only the lifetime is erased; `Drop` removes the pointer before it ends.
@@ -91,6 +99,7 @@ impl<'a> Tick<'a> {
         TICK.with(|tick| tick.set(Some(raw)));
         Self(std::marker::PhantomData)
     }
+
     /// Runs the callback unless it is already running further up the stack.
     fn fire() -> Result<()> {
         let Some(refresh) = TICK.with(|tick| tick.take()) else {
@@ -101,11 +110,13 @@ impl<'a> Tick<'a> {
         TICK.with(|tick| tick.set(Some(refresh)));
         result
     }
+
     /// Error of a refresh that ran inside a modal loop.
     fn failure() -> Result<()> {
         TICK_ERROR.with(|error| error.take()).map_or(Ok(()), Err)
     }
 }
+
 impl Drop for Tick<'_> {
     fn drop(&mut self) {
         TICK.with(|tick| tick.set(None));
@@ -113,6 +124,7 @@ impl Drop for Tick<'_> {
 }
 
 pub(super) struct NativeWindow(Raw);
+
 impl NativeWindow {
     pub(super) fn new(dark: bool) -> Result<Self> {
         Self::named(
@@ -123,6 +135,7 @@ impl NativeWindow {
             800,
         )
     }
+
     pub(super) fn named(
         dark: bool,
         class_name: &str,
@@ -174,6 +187,7 @@ impl NativeWindow {
             Ok(Self(hwnd))
         }
     }
+
     /// A new window opens in the middle of the primary monitor's work area, no
     /// larger than it. The size asked for is the visible frame: Windows 11 adds
     /// invisible resize borders around it, which DWM leaves out of the extended
@@ -202,11 +216,13 @@ impl NativeWindow {
             0x14,
         );
     }
+
     /// The window cannot be sized below `width`×`height` of visible frame (96-DPI
     /// pixels), nor above the work area of its monitor when that is smaller.
     pub(super) fn set_minimum(&self, width: i32, height: i32) {
         MINIMUM.with(|minimum| minimum.set((width, height)));
     }
+
     /// The outer size for `MINIMUM` at the window's DPI: the invisible resize
     /// borders come on top of the visible frame.
     unsafe fn minimum_track(hwnd: Raw) -> Option<(i32, i32)> {
@@ -234,32 +250,39 @@ impl NativeWindow {
         }
         Some((width, height))
     }
+
     pub(super) fn raw(&self) -> Raw {
         self.0
     }
+
     pub(super) fn chrome(&self) -> WindowChrome {
         WindowChrome(self.0)
     }
+
     pub(super) fn attach(&self, child: Raw) {
         unsafe {
             SetWindowLongPtrW(self.0, -21, child as isize);
             Self::resize(self.0);
         }
     }
+
     pub(super) fn show(&self) {
         unsafe {
             ShowWindow(self.0, 5);
         }
     }
+
     pub(super) fn show_maximized(&self) {
         unsafe {
             ShowWindow(self.0, 3);
         }
     }
+
     /// Frame of the window as it was closed; None while it is open.
     pub(super) fn closed_placement() -> Option<Placement> {
         CLOSED.with(|closed| closed.get())
     }
+
     unsafe fn placement_of(hwnd: Raw) -> Option<Placement> {
         let mut placement = WindowPlacement {
             length: std::mem::size_of::<WindowPlacement>() as u32,
@@ -279,6 +302,7 @@ impl NativeWindow {
             bottom: normal.bottom,
         })
     }
+
     /// Moves the hidden window back to `placement`; false when that frame is on no
     /// monitor any more, and the window stays centred.
     pub(super) fn restore(&self, placement: &Placement) -> bool {
@@ -303,11 +327,13 @@ impl NativeWindow {
             SetWindowPlacement(self.0, &placement) != 0
         }
     }
+
     /// Frame period of a window that follows the pointer: timers fire on the 15.6 ms
     /// system tick, so 15 ms is every tick (64 Hz) while 16 ms waits for two (32 Hz).
     pub(super) const POINTER_FRAME: u32 = 15;
     /// Frame period of a window that only polls its controls (32 Hz).
     pub(super) const POLL_FRAME: u32 = 16;
+
     /// Runs the message loop, calling `refresh` every `period` ms.
     pub(super) fn run(
         &self,
@@ -352,6 +378,7 @@ impl NativeWindow {
             }
         }
     }
+
     pub(super) fn drain() {
         unsafe {
             let mut message = Message::default();
@@ -361,6 +388,7 @@ impl NativeWindow {
             }
         }
     }
+
     unsafe fn resize(hwnd: Raw) {
         let child = GetWindowLongPtrW(hwnd, -21) as Raw;
         if !child.is_null() {
@@ -369,6 +397,7 @@ impl NativeWindow {
             SetWindowPos(child, ptr::null_mut(), 0, 0, rect.right, rect.bottom, 0x54);
         }
     }
+
     unsafe extern "system" fn procedure(
         hwnd: Raw,
         message: u32,
@@ -443,9 +472,11 @@ impl NativeWindow {
         }
     }
 }
+
 /// System title bar tinted like the app background, with the app logo as the window icon.
 #[derive(Clone, Copy)]
 pub(super) struct WindowChrome(Raw);
+
 impl WindowChrome {
     /// `caption` and `text` are `#RRGGBB` colors.
     pub(super) fn apply(self, dark: bool, caption: &str, text: &str) {
@@ -461,6 +492,7 @@ impl WindowChrome {
             }
         }
     }
+
     /// Nothing of the window is on screen: it is minimized, or cloaked on another
     /// virtual desktop (`DWMWA_CLOAKED`).
     pub(super) fn hidden(self) -> bool {
@@ -471,15 +503,18 @@ impl WindowChrome {
                     && cloaked != 0)
         }
     }
+
     pub(super) fn icon(self) {
         // SAFETY: plain query of the window's DPI.
         self.icon_for(unsafe { GetDpiForWindow(self.0) });
     }
+
     /// Physical pixels per XAML pixel at the window's DPI.
     pub(super) fn scale(self) -> f64 {
         // SAFETY: plain query of the window's DPI.
         unsafe { GetDpiForWindow(self.0) }.max(96) as f64 / 96.0
     }
+
     /// Drawn for `dpi`, so neither icon is scaled: the taskbar shows the big one at
     /// 24 px per 96 DPI, the title bar the small one at 16. The replaced ones are freed.
     pub(super) fn icon_for(self, dpi: u32) {
@@ -510,6 +545,7 @@ struct IconInfoRaw {
 
 /// The logo as an icon handle of one size.
 struct WindowIcon;
+
 impl WindowIcon {
     unsafe fn create(size: i32) -> Raw {
         #[repr(C)]
@@ -582,6 +618,7 @@ extern "system" {
     fn SetTimer(window: Raw, id: usize, milliseconds: u32, callback: Raw) -> usize;
     fn GetModuleHandleW(name: *const u16) -> Raw;
 }
+
 #[link(name = "gdi32")]
 extern "system" {
     fn CreateDIBSection(
@@ -595,11 +632,13 @@ extern "system" {
     fn CreateBitmap(width: i32, height: i32, planes: u32, bits: u32, data: *const u8) -> Raw;
     fn DeleteObject(object: Raw) -> i32;
 }
+
 #[link(name = "dwmapi")]
 extern "system" {
     fn DwmSetWindowAttribute(hwnd: Raw, attribute: u32, value: Raw, size: u32) -> Hr;
     fn DwmGetWindowAttribute(hwnd: Raw, attribute: u32, value: Raw, size: u32) -> Hr;
 }
+
 #[link(name = "user32")]
 extern "system" {
     fn RegisterClassExW(class: *const WindowClass) -> u16;

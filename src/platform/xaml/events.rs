@@ -1,19 +1,23 @@
 //! Owning XAML event subscriptions; callbacks never unwind across the ABI.
+
 use super::*;
 use std::{
     rc::Rc,
     sync::atomic::{AtomicU32, Ordering},
 };
+
 const ROUTED: Guid = Guid::from_u128(0xa856e674_b0b6_4bc3_bba8_1ba06e40d4b5);
 const POINTER: Guid = Guid::from_u128(0xe4385929_c004_4bcf_8970_359486e39f88);
 const BUTTON: Guid = Guid::from_u128(0xfa002c1a_494e_46cf_91d4_e14a8d798674);
 const UI_ELEMENT_STATICS: Guid = Guid::from_u128(0x58d3573b_f52c_45be_988b_a5869564873c);
 const POINTER_ARGS: Guid = Guid::from_u128(0xda628f0a_9752_49e2_bde2_49eccab9194d);
+
 #[repr(C)]
 struct Vtable {
     base: UnknownVtbl,
     invoke: unsafe extern "system" fn(Raw, Raw, Raw) -> Hr,
 }
+
 #[repr(C)]
 struct Handler {
     vtable: &'static Vtable,
@@ -21,6 +25,7 @@ struct Handler {
     iid: Guid,
     action: Box<dyn Fn(Raw, Raw) -> Result<()>>,
 }
+
 unsafe extern "system" fn query(raw: Raw, iid: *const Guid, out: *mut Raw) -> Hr {
     if iid.is_null() || out.is_null() {
         return E_POINTER;
@@ -34,12 +39,14 @@ unsafe extern "system" fn query(raw: Raw, iid: *const Guid, out: *mut Raw) -> Hr
     add(raw);
     0
 }
+
 unsafe extern "system" fn add(raw: Raw) -> u32 {
     (*(raw as *const Handler))
         .refs
         .fetch_add(1, Ordering::Relaxed)
         + 1
 }
+
 unsafe extern "system" fn release(raw: Raw) -> u32 {
     let count = (*(raw as *const Handler))
         .refs
@@ -50,6 +57,7 @@ unsafe extern "system" fn release(raw: Raw) -> u32 {
     }
     count
 }
+
 unsafe extern "system" fn invoke(raw: Raw, sender: Raw, args: Raw) -> Hr {
     std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
         ((*(raw as *const Handler)).action)(sender, args)
@@ -58,6 +66,7 @@ unsafe extern "system" fn invoke(raw: Raw, sender: Raw, args: Raw) -> Hr {
     .err()
     .unwrap_or(0)
 }
+
 static VTABLE: Vtable = Vtable {
     base: UnknownVtbl {
         query,
@@ -66,10 +75,12 @@ static VTABLE: Vtable = Vtable {
     },
     invoke,
 };
+
 /// `IReference<PointerEventHandler>`: `UIElement.AddHandler` takes the
 /// delegate boxed, as C++/WinRT's `box_value` does.
 const POINTER_REFERENCE: Guid = Guid::from_u128(0xe33644c8_e0e0_5645_8722_60066c85873c);
 const INSPECTABLE: Guid = Guid::from_u128(0xaf86e2e0_b12d_4c6a_9c5a_d7aa65101e90);
+
 #[repr(C)]
 struct BoxVtable {
     base: UnknownVtbl,
@@ -78,6 +89,7 @@ struct BoxVtable {
     trust: unsafe extern "system" fn(Raw, *mut i32) -> Hr,
     value: unsafe extern "system" fn(Raw, *mut Raw) -> Hr,
 }
+
 #[repr(C)]
 struct Boxed {
     vtable: &'static BoxVtable,
@@ -85,6 +97,7 @@ struct Boxed {
     iid: Guid,
     value: Com,
 }
+
 impl Boxed {
     fn wrap(iid: Guid, value: Com) -> Result<Com> {
         let boxed = Box::new(Self {
@@ -96,6 +109,7 @@ impl Boxed {
         unsafe { Com::owned(Box::into_raw(boxed).cast()) }
     }
 }
+
 unsafe extern "system" fn box_query(raw: Raw, iid: *const Guid, out: *mut Raw) -> Hr {
     if iid.is_null() || out.is_null() {
         return E_POINTER;
@@ -108,12 +122,14 @@ unsafe extern "system" fn box_query(raw: Raw, iid: *const Guid, out: *mut Raw) -
     box_add(raw);
     0
 }
+
 unsafe extern "system" fn box_add(raw: Raw) -> u32 {
     (*(raw as *const Boxed))
         .refs
         .fetch_add(1, Ordering::Relaxed)
         + 1
 }
+
 unsafe extern "system" fn box_release(raw: Raw) -> u32 {
     let count = (*(raw as *const Boxed)).refs.fetch_sub(1, Ordering::AcqRel) - 1;
     if count == 0 {
@@ -121,19 +137,23 @@ unsafe extern "system" fn box_release(raw: Raw) -> u32 {
     }
     count
 }
+
 unsafe extern "system" fn box_iids(_: Raw, count: *mut u32, iids: *mut Raw) -> Hr {
     *count = 0;
     *iids = std::ptr::null_mut();
     0
 }
+
 unsafe extern "system" fn box_class_name(_: Raw, name: *mut Raw) -> Hr {
     *name = std::ptr::null_mut();
     0
 }
+
 unsafe extern "system" fn box_trust(_: Raw, level: *mut i32) -> Hr {
     *level = 0;
     0
 }
+
 unsafe extern "system" fn box_value(raw: Raw, value: *mut Raw) -> Hr {
     let inner = &(*(raw as *const Boxed)).value;
     let add: unsafe extern "system" fn(Raw) -> u32 = inner.slot(1);
@@ -141,6 +161,7 @@ unsafe extern "system" fn box_value(raw: Raw, value: *mut Raw) -> Hr {
     *value = inner.raw();
     0
 }
+
 static BOX_VTABLE: BoxVtable = BoxVtable {
     base: UnknownVtbl {
         query: box_query,
@@ -152,6 +173,7 @@ static BOX_VTABLE: BoxVtable = BoxVtable {
     trust: box_trust,
     value: box_value,
 };
+
 enum Registration {
     Token {
         source: Com,
@@ -165,6 +187,7 @@ enum Registration {
         handler: Com,
     },
 }
+
 impl Drop for Registration {
     fn drop(&mut self) {
         unsafe {
@@ -189,14 +212,17 @@ impl Drop for Registration {
         }
     }
 }
+
 #[derive(Clone)]
 pub(crate) struct Subscription {
     _registration: Rc<Registration>,
 }
+
 impl Subscription {
     pub fn click(source: &Com, action: impl Fn() -> Result<()> + 'static) -> Result<Self> {
         Self::new(source.query(&BUTTON)?, ROUTED, 14, move |_, _| action())
     }
+
     /// UIElement routed events such as GotFocus (45) and LostFocus (47).
     pub fn routed(
         source: &Com,
@@ -207,6 +233,7 @@ impl Subscription {
             action()
         })
     }
+
     pub fn pointer(
         source: &Com,
         slot: usize,
@@ -214,6 +241,7 @@ impl Subscription {
     ) -> Result<Self> {
         Self::new(source.query(&UI_ELEMENT)?, POINTER, slot, action)
     }
+
     /// Pointer events of `source` and its children, including those a child
     /// already handled (a Button handles its own presses). `event` is the
     /// UIElementStatics getter: PointerPressed 9, Moved 10, Released 11,
@@ -242,6 +270,7 @@ impl Subscription {
             })
         }
     }
+
     fn handler(iid: Guid, action: impl Fn(Raw, Raw) -> Result<()> + 'static) -> Result<Com> {
         let handler = Box::new(Handler {
             vtable: &VTABLE,
@@ -251,6 +280,7 @@ impl Subscription {
         });
         unsafe { Com::owned(Box::into_raw(handler).cast()) }
     }
+
     fn new(
         source: Com,
         iid: Guid,
@@ -271,6 +301,7 @@ impl Subscription {
             })
         }
     }
+
     /// Routes further pointer events to `sender` while the button is held (drag).
     pub fn capture(sender: Raw, args: Raw) -> Result<()> {
         unsafe {
@@ -285,6 +316,7 @@ impl Subscription {
             check(capture(sender.raw(), pointer.raw(), &mut captured))
         }
     }
+
     /// Borrowed ABI arguments: take our own reference before wrapping.
     unsafe fn retain(raw: Raw) -> Result<Com> {
         if raw.is_null() {
@@ -295,6 +327,7 @@ impl Subscription {
         add(raw);
         Com::owned(raw)
     }
+
     pub fn position(sender: Raw, args: Raw) -> Result<(f32, f32)> {
         unsafe {
             let sender = Self::retain(sender)?.query(&UI_ELEMENT)?;
@@ -312,19 +345,23 @@ impl Subscription {
             Ok((value.x, value.y))
         }
     }
+
     /// The left mouse button, or the contact of a pen or finger, is down.
     pub fn primary(sender: Raw, args: Raw) -> Result<bool> {
         Self::button(sender, args, 16)
     }
+
     /// The right mouse button is down.
     pub fn secondary(sender: Raw, args: Raw) -> Result<bool> {
         Self::button(sender, args, 17)
     }
+
     /// `slot` is the IPointerPointProperties getter: IsLeftButtonPressed 16,
     /// IsRightButtonPressed 17.
     fn button(sender: Raw, args: Raw, slot: usize) -> Result<bool> {
         Ok(Self::property::<u8>(sender, args, slot)? != 0)
     }
+
     /// The turn of the vertical mouse wheel, 120 per notch, positive away from the
     /// user; a horizontal wheel gives 0.
     pub fn wheel(sender: Raw, args: Raw) -> Result<i32> {
@@ -334,6 +371,7 @@ impl Subscription {
         }
         Self::property::<i32>(sender, args, 19)
     }
+
     fn property<T: Default>(sender: Raw, args: Raw, slot: usize) -> Result<T> {
         unsafe {
             let sender = Self::retain(sender)?.query(&UI_ELEMENT)?;
@@ -348,6 +386,7 @@ impl Subscription {
             Ok(value)
         }
     }
+
     /// Keeps the event from reaching the taskbar behind `sender`.
     pub fn handle(args: Raw) -> Result<()> {
         unsafe {
@@ -356,6 +395,7 @@ impl Subscription {
             check(set(args.raw(), 1))
         }
     }
+
     /// Whether `sender` still holds a pointer capture.
     pub fn captured(sender: Raw) -> Result<bool> {
         unsafe {
@@ -374,6 +414,7 @@ impl Subscription {
             Ok(count > 0)
         }
     }
+
     pub fn release(sender: Raw) -> Result<()> {
         unsafe {
             let sender = Self::retain(sender)?.query(&UI_ELEMENT)?;

@@ -1,4 +1,5 @@
 //! Connected monitors and the choice of those that show the taskbar tiles.
+
 use super::abi::Raw;
 use crate::config::NO_MONITORS;
 use std::ptr;
@@ -22,6 +23,7 @@ pub struct Display {
 
 /// The monitors connected now, the main one first, the others from left to right.
 pub struct Displays(Vec<Display>);
+
 impl Displays {
     pub fn current() -> Self {
         let mut monitors: Vec<isize> = Vec::new();
@@ -68,6 +70,7 @@ impl Displays {
         displays.sort_by_key(|display| (!display.primary, display.left));
         Self(displays)
     }
+
     /// `\\?\DISPLAY#DEL41A8#5&2f2c1c2&0&UID4353#{e6f07b5f-…}` → `DEL41A8/5&2f2c1c2&0&UID4353`.
     fn id(path: &str) -> Option<String> {
         let mut parts = path.split('#').skip(1);
@@ -75,15 +78,18 @@ impl Displays {
         (!hardware.is_empty() && !instance.is_empty() && parts.next().is_some())
             .then(|| format!("{hardware}/{instance}"))
     }
+
     pub fn list(&self) -> &[Display] {
         &self.0
     }
+
     /// The monitor that holds most of `window`.
     pub fn of_window(&self, window: isize) -> Option<&Display> {
         // SAFETY: a stale window handle only yields the nearest monitor.
         let monitor = unsafe { MonitorFromWindow(window as Raw, 2) } as isize;
         self.0.iter().find(|display| display.monitor == monitor)
     }
+
     /// Whether `display` shows the tiles when `chosen` lists the monitors for them.
     /// An empty choice means every monitor, [`NO_MONITORS`] none; when none of the
     /// chosen ones is connected, the main monitor shows them, so the tiles do not
@@ -105,6 +111,7 @@ impl Displays {
 
 /// Monitor of each active display path, by the GDI name of its source (`\\.\DISPLAY1`).
 struct DisplayPaths;
+
 impl DisplayPaths {
     fn query() -> Vec<(String, TargetName)> {
         let mut result = Vec::new();
@@ -180,6 +187,7 @@ struct Rect {
     right: i32,
     bottom: i32,
 }
+
 #[repr(C)]
 #[derive(Default)]
 struct MonitorInfo {
@@ -189,12 +197,14 @@ struct MonitorInfo {
     flags: u32,
     device: [u16; 32],
 }
+
 #[repr(C)]
 #[derive(Default, Clone, Copy)]
 struct Luid {
     low: u32,
     high: i32,
 }
+
 /// DISPLAYCONFIG_PATH_INFO, with only the ids read here named.
 #[repr(C)]
 #[derive(Default, Clone, Copy)]
@@ -207,6 +217,7 @@ struct PathInfo {
     target_rest: [u32; 9],
     flags: u32,
 }
+
 #[repr(C)]
 #[derive(Default)]
 struct Header {
@@ -215,6 +226,7 @@ struct Header {
     adapter: Luid,
     id: u32,
 }
+
 impl Header {
     fn new(kind: u32, size: usize, adapter: Luid, id: u32) -> Self {
         Self {
@@ -225,11 +237,13 @@ impl Header {
         }
     }
 }
+
 #[repr(C)]
 struct SourceName {
     header: Header,
     gdi: [u16; 32],
 }
+
 #[repr(C)]
 struct TargetName {
     header: Header,
@@ -240,6 +254,7 @@ struct TargetName {
     name: [u16; 64],
     path: [u16; 128],
 }
+
 impl Default for TargetName {
     fn default() -> Self {
         Self {
@@ -279,6 +294,7 @@ extern "system" {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     fn display(id: &str, primary: bool) -> Display {
         Display {
             id: id.into(),
@@ -291,6 +307,7 @@ mod tests {
             monitor: 0,
         }
     }
+
     #[test]
     fn layouts_match_the_windows_sdk() {
         assert_eq!(std::mem::size_of::<MonitorInfo>(), 104);
@@ -298,6 +315,7 @@ mod tests {
         assert_eq!(std::mem::size_of::<SourceName>(), 84);
         assert_eq!(std::mem::size_of::<TargetName>(), 420);
     }
+
     #[test]
     fn ids_come_from_the_monitor_path() {
         assert_eq!(
@@ -310,6 +328,7 @@ mod tests {
         assert_eq!(Displays::id(""), None);
         assert_eq!(Displays::id(r"\\?\DISPLAY#DEL41A8"), None);
     }
+
     #[test]
     fn the_main_monitor_stands_in_for_disconnected_choices() {
         let (main, side) = (display("A/1", true), display("B/2", false));

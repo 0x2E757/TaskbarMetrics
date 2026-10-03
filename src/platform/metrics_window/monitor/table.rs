@@ -38,6 +38,7 @@ pub struct TableLayout {
     /// Width of the table card, used to trim long process names.
     pub width: f64,
 }
+
 impl TableLayout {
     fn widths(&self) -> &'static [u32] {
         match self.resource {
@@ -51,15 +52,18 @@ impl TableLayout {
             Resource::Net => &[104, 104, 104, 196],
         }
     }
+
     /// Disk and network pages show the bytes since the recorder started, where the
     /// window is wide enough.
     pub fn totals(&self) -> bool {
         self.resource.dual() && !self.compact
     }
+
     /// Space before the total and its title, taken from the PID column: the sort
     /// chevron (12 px and 4 px apart) appears in it without moving the title.
     const INDENT: u32 = 20;
     const CHEVRON: u32 = 16;
+
     fn pid_width(&self) -> u32 {
         if self.totals() {
             72 - Self::INDENT
@@ -67,15 +71,18 @@ impl TableLayout {
             72
         }
     }
+
     /// Columns the header sorts by: both values, their sum and the total.
     pub fn sortable(&self) -> usize {
         3 + usize::from(self.totals())
     }
+
     /// Sorted by `column`, or by the sum where this table has no total column.
     pub fn sorted_by(mut self, column: usize) -> Self {
         self.sort = column.min(self.sortable() - 1);
         self
     }
+
     /// The sum and «(1500.00 + 320.00)», each direction: all in MB like the header,
     /// so that rows compare at a glance, always to hundredths and without
     /// thousands separators; «0.00» and nothing else without I/O.
@@ -90,6 +97,7 @@ impl TableLayout {
             format!("({} + {})", number(first), number(second)),
         )
     }
+
     /// Left-aligned, as the lengths differ a lot: the sum's whole part keeps the
     /// room of «00000» right-aligned and its fraction that of «.00», so that the
     /// decimal points and the brackets after them stand in one line.
@@ -122,10 +130,12 @@ impl TableLayout {
             ),
         )
     }
+
     /// «12.5» → «12» and «.5».
     fn split(number: &str) -> (&str, &str) {
         number.split_at(number.find('.').unwrap_or(number.len()))
     }
+
     fn first_value(&self) -> usize {
         if self.compact {
             2
@@ -133,6 +143,7 @@ impl TableLayout {
             3
         }
     }
+
     pub fn columns(&self) -> String {
         let mut result = String::from(
             r#"<Grid.ColumnDefinitions><ColumnDefinition Width="28"/><ColumnDefinition/>"#,
@@ -149,6 +160,7 @@ impl TableLayout {
         result.push_str("</Grid.ColumnDefinitions>");
         result
     }
+
     /// Space left for the name after the pin, swatch, PID and value columns.
     fn name_width(&self) -> f64 {
         let fixed: u32 = self.widths().iter().map(|w| w + 12).sum::<u32>()
@@ -159,6 +171,7 @@ impl TableLayout {
             };
         (self.width - 16.0 - 16.0 - 40.0 - 18.0 - fixed as f64).max(60.0)
     }
+
     pub fn values(&self, values: [Option<f64>; 2], color: &str) -> String {
         let number = |v: Option<f64>| {
             v.map(|v| self.language.number(v, 2))
@@ -184,6 +197,7 @@ impl TableLayout {
         };
         strings.iter().enumerate().map(|(i,s)|format!(r#"<TextBlock Grid.Column="{}" Text="{}" Foreground="{color}" HorizontalAlignment="Right" VerticalAlignment="Center" FontSize="13" Typography.NumeralAlignment="Tabular" TextTrimming="CharacterEllipsis"/>"#,i+self.first_value(),Ui::xml(s))).collect()
     }
+
     /// Italic note over the value columns; a single value column also lends it the PID column.
     fn missing(&self) -> String {
         let borrow = usize::from(self.widths().len() == 1 && !self.compact);
@@ -195,6 +209,7 @@ impl TableLayout {
             self.design.color("text3")
         )
     }
+
     pub fn header(&self) -> String {
         let d = self.design;
         let titles: &[&str] = match self.resource {
@@ -268,12 +283,14 @@ impl TableLayout {
         markup.push_str("</Grid>");
         markup
     }
+
     pub fn divider(&self) -> String {
         format!(
             r#"<Border Height="1" Margin="44,4,8,0" Background="{}"/>"#,
             self.design.color("divider")
         )
     }
+
     /// Quiet line with an icon, e.g. the empty pinned section or «no matches»; as compact
     /// as in the artboards, where the overflowing list shrinks it to its content.
     pub fn note(&self, icon: Option<&str>, text: &str) -> String {
@@ -285,6 +302,7 @@ impl TableLayout {
             Ui::xml(text)
         )
     }
+
     fn swatch(&self, row: &RowContent) -> String {
         match (row.kind, row.color) {
             (RowKind::Pinned, Some(color)) => format!(
@@ -297,6 +315,7 @@ impl TableLayout {
             _ => String::new(),
         }
     }
+
     pub fn row(&self, row: &RowContent) -> String {
         let d = self.design;
         let pinned = row.kind != RowKind::Regular;
@@ -352,6 +371,7 @@ impl TableLayout {
             }),
         )
     }
+
     pub fn footer(
         &self,
         count: usize,
@@ -371,6 +391,7 @@ impl TableLayout {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     fn table(resource: Resource, compact: bool) -> TableLayout {
         TableLayout {
             resource,
@@ -381,6 +402,7 @@ mod tests {
             sort: 0,
         }
     }
+
     #[test]
     fn rows_share_columns_and_mark_pins_without_color_alone() {
         let disk = table(Resource::Disk, false);
@@ -409,6 +431,7 @@ mod tests {
         assert!(values.contains("0.00") && values.matches("<TextBlock").count() == 1);
         assert!(!gpu.header().contains("PID") && !gpu.header().contains("Engine"));
     }
+
     #[test]
     fn disk_and_network_show_bytes_since_the_recorder_started() {
         let net = table(Resource::Net, false);
@@ -475,6 +498,7 @@ mod tests {
         assert!(!table(Resource::Net, true).header().contains("All time"));
         assert!(!table(Resource::Cpu, false).totals());
     }
+
     #[test]
     fn value_headers_of_disk_and_network_sort_and_mark_their_column() {
         let mut disk = table(Resource::Disk, false);

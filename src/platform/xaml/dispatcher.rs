@@ -6,18 +6,22 @@ use std::{
         Mutex,
     },
 };
+
 #[repr(C)]
 struct HandlerVtbl {
     base: UnknownVtbl,
     invoke: unsafe extern "system" fn(Raw) -> Hr,
 }
+
 #[repr(C)]
 struct Handler {
     vtable: &'static HandlerVtbl,
     refs: AtomicU32,
     action: Mutex<Option<UiAction>>,
 }
+
 type UiAction = Box<dyn FnOnce() -> Result<()> + Send>;
+
 unsafe extern "system" fn handler_query(raw: Raw, iid: *const Guid, out: *mut Raw) -> Hr {
     if iid.is_null() || out.is_null() {
         return E_POINTER;
@@ -30,12 +34,14 @@ unsafe extern "system" fn handler_query(raw: Raw, iid: *const Guid, out: *mut Ra
     handler_add(raw);
     0
 }
+
 unsafe extern "system" fn handler_add(raw: Raw) -> u32 {
     (*(raw as *const Handler))
         .refs
         .fetch_add(1, Ordering::Relaxed)
         + 1
 }
+
 unsafe extern "system" fn handler_release(raw: Raw) -> u32 {
     let count = (*(raw as *const Handler))
         .refs
@@ -46,6 +52,7 @@ unsafe extern "system" fn handler_release(raw: Raw) -> u32 {
     }
     count
 }
+
 unsafe extern "system" fn handler_invoke(raw: Raw) -> Hr {
     let hr = boundary(|| {
         let action = (*(raw as *const Handler))
@@ -63,6 +70,7 @@ unsafe extern "system" fn handler_invoke(raw: Raw) -> Hr {
     }
     0 // Do not propagate failed UI updates into Explorer's dispatcher.
 }
+
 static HANDLER_VTABLE: HandlerVtbl = HandlerVtbl {
     base: UnknownVtbl {
         query: handler_query,
@@ -71,6 +79,7 @@ static HANDLER_VTABLE: HandlerVtbl = HandlerVtbl {
     },
     invoke: handler_invoke,
 };
+
 impl Handler {
     fn delegate(action: impl FnOnce() -> Result<()> + Send + 'static) -> Com {
         let object = Box::new(Handler {
@@ -81,12 +90,14 @@ impl Handler {
         unsafe { Com::owned(Box::into_raw(object).cast()).expect("Box is non-null") }
     }
 }
+
 pub struct Target {
     pub key: u64,
     queue: Agile,
     pub active: AtomicBool,
     pending: AtomicBool,
 }
+
 impl Target {
     pub fn current(key: u64) -> Result<Arc<Self>> {
         let queue = factory("Windows.System.DispatcherQueue", &QUEUE_STATICS)?.object(6)?;
@@ -97,6 +108,7 @@ impl Target {
             pending: AtomicBool::new(false),
         }))
     }
+
     pub fn enqueue(&self, action: impl FnOnce() -> Result<()> + Send + 'static) -> Result<()> {
         let queue = self.queue.resolve(&QUEUE)?;
         let handler = Handler::delegate(action);
@@ -111,6 +123,7 @@ impl Target {
             Ok(())
         }
     }
+
     pub fn update(self: &Arc<Self>, readings: Vec<crate::metrics::MetricReading>) {
         if !self.active.load(Ordering::Acquire) || self.pending.swap(true, Ordering::AcqRel) {
             return;
@@ -129,6 +142,7 @@ impl Target {
             log(&format!("Enqueue failed: 0x{:08X}", hr as u32));
         }
     }
+
     pub fn remove(self: &Arc<Self>) {
         self.active.store(false, Ordering::Release);
         let key = self.key;
@@ -137,9 +151,11 @@ impl Target {
         }
     }
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn real_dispatcher_marshals_manual_delegate_to_its_own_thread() {
         #[repr(C)]
@@ -148,6 +164,7 @@ mod tests {
             thread: i32,
             apartment: i32,
         }
+
         #[link(name = "CoreMessaging")]
         extern "system" {
             fn CreateDispatcherQueueController(options: Options, out: *mut Raw) -> Hr;
@@ -218,6 +235,7 @@ mod tests {
             std::thread::sleep(std::time::Duration::from_millis(10));
         }
     }
+
     #[test]
     fn delegate_identity_lifetime_and_single_invocation() {
         let count = Arc::new(AtomicU32::new(0));

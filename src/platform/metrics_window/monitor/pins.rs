@@ -10,23 +10,28 @@ struct Pin {
     identity: Arc<Identity>,
     color: usize,
 }
+
 #[derive(Default)]
 pub struct PinnedProcesses {
     identities: Vec<Pin>,
 }
+
 pub struct ProcessRow {
     pub identity: Arc<Identity>,
     pub sample: Option<usize>,
     pub pinned: bool,
 }
+
 pub struct PinnedLayer {
     pub key: ProcessKey,
     pub color: String,
     pub name: String,
 }
+
 impl PinnedProcesses {
     /// Palette size; a seventh pin is refused.
     pub const LIMIT: usize = 6;
+
     pub fn layers(
         &self,
         design: super::design::Design,
@@ -41,20 +46,24 @@ impl PinnedProcesses {
             })
             .collect()
     }
+
     pub fn full(&self) -> bool {
         self.identities.len() >= Self::LIMIT
     }
+
     pub fn process_color(&self, key: ProcessKey, design: super::design::Design) -> Option<String> {
         self.identities
             .iter()
             .find(|p| (p.identity.pid, p.identity.created) == key)
             .map(|p| design.pin(p.color).into())
     }
+
     pub fn contains(&self, key: ProcessKey) -> bool {
         self.identities
             .iter()
             .any(|p| (p.identity.pid, p.identity.created) == key)
     }
+
     pub fn toggle(&mut self, identity: Arc<Identity>) {
         let key = (identity.pid, identity.created);
         if self.contains(key) {
@@ -64,6 +73,7 @@ impl PinnedProcesses {
             self.push(identity);
         }
     }
+
     /// The first palette index not used by another pin.
     fn push(&mut self, identity: Arc<Identity>) {
         let color = (0..Self::LIMIT)
@@ -71,6 +81,7 @@ impl PinnedProcesses {
             .unwrap_or(0);
         self.identities.push(Pin { identity, color });
     }
+
     pub fn rows(
         &self,
         frame: Option<&Frame>,
@@ -124,6 +135,7 @@ impl PinnedProcesses {
         }));
         (rows, ranked[limit..].to_vec())
     }
+
     pub fn load(path: &Path) -> Self {
         let mut result = Self::default();
         if let Ok(text) = std::fs::read_to_string(path) {
@@ -149,6 +161,7 @@ impl PinnedProcesses {
         }
         result
     }
+
     pub fn save(&self, path: &Path) -> std::io::Result<()> {
         let text = self
             .identities
@@ -167,10 +180,12 @@ impl PinnedProcesses {
         std::fs::rename(temporary, path)
     }
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::platform::process_history::store::Sample;
+
     #[test]
     fn pins_cross_tabs_ignore_search_and_do_not_follow_reused_pid() {
         let identity = Arc::new(Identity {
@@ -221,6 +236,7 @@ mod tests {
         pins.toggle(identity);
         assert!(!pins.contains((7, 10)));
     }
+
     #[test]
     fn pinned_rows_follow_the_sort_and_missing_ones_go_last() {
         let identity = |pid| {
@@ -250,6 +266,7 @@ mod tests {
         let order: Vec<_> = rows.iter().map(|r| r.identity.pid).collect();
         assert_eq!(order, [2, 1, 3]);
     }
+
     #[test]
     fn colors_stay_with_their_pin_and_seventh_pin_is_refused() {
         let design = super::super::design::Design { dark: false };

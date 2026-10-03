@@ -1,7 +1,9 @@
 //! The collectors run in the background. Windows 11 24H2 gives them no console
 //! when nothing started them from one (`consoleAllocationPolicy` in their manifest);
 //! older builds open a console window for them, which they leave at once.
+
 pub struct DetachedConsole;
+
 impl DetachedConsole {
     /// Leaves a console that exists only for this process; a terminal the
     /// process was started from is shared with the shell and stays.

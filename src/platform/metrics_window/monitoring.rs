@@ -5,6 +5,7 @@ use std::path::PathBuf;
 pub(super) struct MonitoringConfig {
     file: crate::config::ConfigFile,
 }
+
 impl MonitoringConfig {
     pub fn locate() -> Result<Self> {
         let directory =
@@ -13,23 +14,28 @@ impl MonitoringConfig {
             file: crate::config::ConfigFile::locate(&directory),
         })
     }
+
     pub fn appearance_path(&self) -> PathBuf {
         self.file
             .path()
             .with_file_name("taskbar-metrics.appearance")
     }
+
     /// Devices an open window shows, read by the recorder.
     pub fn watch_path(&self) -> PathBuf {
         self.file.path().with_file_name("taskbar-metrics.watch")
     }
+
     pub fn enabled(&self) -> Result<bool> {
         Ok(crate::config::Settings::load(self.file.path())
             .map_err(|_| E_FAIL)?
             .process_monitoring)
     }
+
     pub fn settings(&self) -> Result<crate::config::Settings> {
         crate::config::Settings::load(self.file.path()).map_err(|_| E_FAIL)
     }
+
     /// Taskbar tiles and background history; the taskbar and the recorder pick
     /// them up within a second.
     pub fn store_devices(&self, metrics: &[String], history: &[String]) -> std::io::Result<()> {
@@ -38,6 +44,7 @@ impl MonitoringConfig {
             ("history", history.join(",")),
         ])
     }
+
     /// Rewrites the key and restarts the collector when enabling.
     pub fn store(&self, enabled: bool) -> std::io::Result<()> {
         self.file
@@ -63,10 +70,12 @@ pub(super) struct MonitoringSetting {
     enabled: bool,
     verifying: bool,
 }
+
 impl MonitoringSetting {
     pub fn appearance_path(&self) -> PathBuf {
         self.config.appearance_path()
     }
+
     pub fn new(root: &Com) -> Result<Self> {
         let config = MonitoringConfig::locate()?;
         let enabled = config.enabled()?;
@@ -90,6 +99,7 @@ impl MonitoringSetting {
             }),
         })
     }
+
     pub fn refresh(&mut self) -> Result<()> {
         let mut enabled = 0u8;
         unsafe {

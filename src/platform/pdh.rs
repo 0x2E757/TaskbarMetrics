@@ -66,6 +66,7 @@ impl PdhCounter {
     pub fn new(path: &'static str) -> Self {
         Self::several(&[path])
     }
+
     /// Counters collected by one query; read them with `collected`.
     pub fn several(paths: &[&'static str]) -> Self {
         Self {
@@ -135,6 +136,7 @@ impl PdhCounter {
             other => other,
         }
     }
+
     pub fn scalar_raw(&mut self) -> MetricValue {
         if let Err(value) = self.collect() {
             return value;
@@ -178,6 +180,7 @@ impl PdhCounter {
         }
         aggregator.value()
     }
+
     /// Value of the single-instance counter at `index` as of the last `collect`.
     pub fn collected_value(&self, index: usize) -> Option<f64> {
         let counter = *self.counters.get(index)?;
@@ -188,10 +191,12 @@ impl PdhCounter {
             && value.valid())
         .then_some(value.value)
     }
+
     pub(crate) fn entries(&mut self) -> Result<Vec<(String, f64)>, MetricValue> {
         self.collect()?;
         self.collected(0)
     }
+
     /// Instances of the counter at `index` as of the last `collect`.
     pub fn collected(&self, index: usize) -> Result<Vec<(String, f64)>, MetricValue> {
         let counter = *self.counters.get(index).ok_or(MetricValue::Unavailable)?;

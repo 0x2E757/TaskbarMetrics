@@ -1,4 +1,5 @@
 //! COM TAP entry points. Subscription never runs inline in SetSite or DllMain.
+
 mod islands;
 mod session;
 use super::{
@@ -7,6 +8,7 @@ use super::{
     composition::Composition,
     xaml::{self, Target},
 };
+
 use crate::{application::MetricSink, config::Settings};
 use session::Session;
 use std::{
@@ -27,6 +29,7 @@ struct SourceInfo {
     position: u32,
     hash: Raw,
 }
+
 #[repr(C)]
 #[derive(Clone, Copy)]
 struct Relation {
@@ -34,6 +37,7 @@ struct Relation {
     child: u64,
     index: u32,
 }
+
 #[repr(C)]
 #[derive(Clone, Copy)]
 struct Element {
@@ -43,18 +47,21 @@ struct Element {
     name: Raw,
     children: u32,
 }
+
 #[repr(C)]
 struct SiteVtbl {
     base: UnknownVtbl,
     set_site: unsafe extern "system" fn(Raw, Raw) -> Hr,
     get_site: unsafe extern "system" fn(Raw, *const Guid, *mut Raw) -> Hr,
 }
+
 #[repr(C)]
 struct CallbackVtbl {
     base: UnknownVtbl,
     change: unsafe extern "system" fn(Raw, Relation, Element, i32) -> Hr,
     state: unsafe extern "system" fn(Raw, u64, i32, *const u16) -> Hr,
 }
+
 #[repr(C)]
 struct Tap {
     site_vtable: &'static SiteVtbl,
@@ -65,14 +72,17 @@ struct Tap {
 // Holds the stop marker and session state as long as the pinned DLL exists.
 static SESSION: OnceLock<Arc<Session>> = OnceLock::new();
 static NEXT_TARGET: AtomicU64 = AtomicU64::new(1);
+
 unsafe fn tap_from_callback(raw: Raw) -> *mut Tap {
     (raw as *mut u8)
         .sub(std::mem::offset_of!(Tap, callback_vtable))
         .cast()
 }
+
 unsafe fn callback_ptr(tap: *mut Tap) -> Raw {
     ptr::addr_of_mut!((*tap).callback_vtable).cast()
 }
+
 unsafe extern "system" fn tap_query(raw: Raw, iid: *const Guid, out: *mut Raw) -> Hr {
     if iid.is_null() || out.is_null() {
         return E_POINTER;
@@ -88,9 +98,11 @@ unsafe extern "system" fn tap_query(raw: Raw, iid: *const Guid, out: *mut Raw) -
     tap_add(raw);
     0
 }
+
 unsafe extern "system" fn tap_add(raw: Raw) -> u32 {
     (*(raw as *const Tap)).refs.fetch_add(1, Ordering::Relaxed) + 1
 }
+
 unsafe extern "system" fn tap_release(raw: Raw) -> u32 {
     let count = (*(raw as *const Tap)).refs.fetch_sub(1, Ordering::AcqRel) - 1;
     if count == 0 {
@@ -98,15 +110,19 @@ unsafe extern "system" fn tap_release(raw: Raw) -> u32 {
     }
     count
 }
+
 unsafe extern "system" fn callback_query(raw: Raw, iid: *const Guid, out: *mut Raw) -> Hr {
     tap_query(tap_from_callback(raw).cast(), iid, out)
 }
+
 unsafe extern "system" fn callback_add(raw: Raw) -> u32 {
     tap_add(tap_from_callback(raw).cast())
 }
+
 unsafe extern "system" fn callback_release(raw: Raw) -> u32 {
     tap_release(tap_from_callback(raw).cast())
 }
+
 unsafe extern "system" fn on_change(
     raw: Raw,
     relation: Relation,
@@ -124,12 +140,14 @@ unsafe extern "system" fn on_change(
     }
     0
 }
+
 unsafe extern "system" fn on_state(_: Raw, _: u64, _: i32, _: *const u16) -> Hr {
     0
 }
 
 // One owning reference to our free-threaded COM object (not a XAML object).
 struct TapRef(*mut Tap);
+
 unsafe impl Send for TapRef {}
 impl TapRef {
     fn work(self, session: Arc<Session>) {
@@ -165,6 +183,7 @@ impl TapRef {
         }
     }
 }
+
 impl Drop for TapRef {
     fn drop(&mut self) {
         unsafe {
@@ -172,9 +191,11 @@ impl Drop for TapRef {
         }
     }
 }
+
 unsafe extern "system" fn set_site(raw: Raw, site: Raw) -> Hr {
     boundary(|| (*(raw as *const Tap)).set_site(site))
 }
+
 impl Tap {
     unsafe fn set_site(&self, site: Raw) -> Result<()> {
         let tap = self;
@@ -257,6 +278,7 @@ impl Tap {
         Ok(())
     }
 }
+
 unsafe extern "system" fn get_site(raw: Raw, iid: *const Guid, out: *mut Raw) -> Hr {
     if iid.is_null() || out.is_null() {
         return E_POINTER;
@@ -268,6 +290,7 @@ unsafe extern "system" fn get_site(raw: Raw, iid: *const Guid, out: *mut Raw) ->
         Ok(())
     })
 }
+
 static SITE_VTABLE: SiteVtbl = SiteVtbl {
     base: UnknownVtbl {
         query: tap_query,
@@ -277,6 +300,7 @@ static SITE_VTABLE: SiteVtbl = SiteVtbl {
     set_site,
     get_site,
 };
+
 static CALLBACK_VTABLE: CallbackVtbl = CallbackVtbl {
     base: UnknownVtbl {
         query: callback_query,
@@ -286,17 +310,20 @@ static CALLBACK_VTABLE: CallbackVtbl = CallbackVtbl {
     change: on_change,
     state: on_state,
 };
+
 #[repr(C)]
 struct FactoryVtbl {
     base: UnknownVtbl,
     create: unsafe extern "system" fn(Raw, Raw, *const Guid, *mut Raw) -> Hr,
     lock: unsafe extern "system" fn(Raw, i32) -> Hr,
 }
+
 #[repr(C)]
 struct Factory {
     vtable: &'static FactoryVtbl,
     refs: AtomicU32,
 }
+
 unsafe extern "system" fn factory_query(raw: Raw, iid: *const Guid, out: *mut Raw) -> Hr {
     if iid.is_null() || out.is_null() {
         return E_POINTER;
@@ -309,12 +336,14 @@ unsafe extern "system" fn factory_query(raw: Raw, iid: *const Guid, out: *mut Ra
     factory_add(raw);
     0
 }
+
 unsafe extern "system" fn factory_add(raw: Raw) -> u32 {
     (*(raw as *const Factory))
         .refs
         .fetch_add(1, Ordering::Relaxed)
         + 1
 }
+
 unsafe extern "system" fn factory_release(raw: Raw) -> u32 {
     let count = (*(raw as *const Factory))
         .refs
@@ -325,6 +354,7 @@ unsafe extern "system" fn factory_release(raw: Raw) -> u32 {
     }
     count
 }
+
 unsafe extern "system" fn create(_: Raw, outer: Raw, iid: *const Guid, out: *mut Raw) -> Hr {
     if out.is_null() || iid.is_null() {
         return E_POINTER;
@@ -345,9 +375,11 @@ unsafe extern "system" fn create(_: Raw, outer: Raw, iid: *const Guid, out: *mut
         Ok(())
     })
 }
+
 unsafe extern "system" fn lock(_: Raw, _: i32) -> Hr {
     0
 }
+
 static FACTORY_VTABLE: FactoryVtbl = FactoryVtbl {
     base: UnknownVtbl {
         query: factory_query,
@@ -381,6 +413,7 @@ pub unsafe extern "system" fn DllGetClassObject(
         Ok(())
     })
 }
+
 #[no_mangle]
 pub extern "system" fn DllCanUnloadNow() -> Hr {
     1
@@ -389,6 +422,7 @@ pub extern "system" fn DllCanUnloadNow() -> Hr {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn factory_interfaces_and_com_identity() {
         unsafe {
@@ -425,6 +459,7 @@ mod tests {
             assert_eq!(DllCanUnloadNow(), 1);
         }
     }
+
     #[test]
     fn sdk_layouts() {
         assert_eq!(std::mem::size_of::<SourceInfo>(), 32);

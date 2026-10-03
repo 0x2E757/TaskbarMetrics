@@ -36,6 +36,7 @@ pub(crate) struct TileStyle {
     pub light: Palette,
     pub dark: Palette,
 }
+
 impl Default for TileStyle {
     fn default() -> Self {
         Self {
@@ -71,6 +72,7 @@ impl Default for TileStyle {
         }
     }
 }
+
 impl TileStyle {
     /// Whether a tile of `kind` shows its temperature; only CPU and GPU tiles have one.
     pub fn temperature(&self, kind: &str) -> bool {
@@ -83,16 +85,20 @@ impl TileStyle {
 }
 
 pub(crate) struct WidgetPreview(button::MetricsButton);
+
 impl WidgetPreview {
     pub fn new(style: &TileStyle, dark: bool) -> Result<Self> {
         Ok(Self(button::MetricsButton::preview(style, dark)?))
     }
+
     pub fn element(&self) -> Result<Com> {
         self.0.element()
     }
+
     pub fn refresh_layout(&mut self) -> Result<()> {
         self.0.preview_layout()
     }
+
     pub fn alert_opacity(&self) -> Result<f64> {
         self.0.preview_alert_opacity()
     }

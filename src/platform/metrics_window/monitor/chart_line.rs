@@ -4,13 +4,16 @@ use std::path::PathBuf;
 /// Width of the total line in the window's chart, kept in the data directory.
 /// Pinned and highlighted processes keep their proportion to it.
 pub(super) struct ChartLine;
+
 impl ChartLine {
     pub const DEFAULT: f64 = 1.0;
     const RANGE: (f64, f64) = (1.0, 4.0);
     const STEP: f64 = 0.25;
+
     fn path() -> Option<PathBuf> {
         crate::platform::data_directory::DataDirectory::file("taskbar-metrics.chart").ok()
     }
+
     /// Checks and demos draw the default line.
     pub fn load() -> f64 {
         persistent()
@@ -20,6 +23,7 @@ impl ChartLine {
             .and_then(|text| Self::parse(&text))
             .unwrap_or(Self::DEFAULT)
     }
+
     pub fn save(width: f64) -> std::io::Result<()> {
         if !persistent() {
             return Ok(());
@@ -27,6 +31,7 @@ impl ChartLine {
         let path = Self::path().ok_or(std::io::ErrorKind::NotFound)?;
         std::fs::write(path, format!("line={width}\n"))
     }
+
     fn parse(text: &str) -> Option<f64> {
         text.lines()
             .find_map(|line| line.trim().strip_prefix("line="))
@@ -34,10 +39,12 @@ impl ChartLine {
             .filter(|width| width.is_finite())
             .map(Self::snap)
     }
+
     /// The nearest step inside the range.
     fn snap(width: f64) -> f64 {
         ((width / Self::STEP).round() * Self::STEP).clamp(Self::RANGE.0, Self::RANGE.1)
     }
+
     /// The settings row: icon, title, caption, slider and the width it shows.
     pub fn markup() -> String {
         format!(
@@ -55,6 +62,7 @@ pub(super) struct ChartLineSlider {
     slider: Com,
     shown: f64,
 }
+
 impl ChartLineSlider {
     pub fn new(root: &Com) -> Result<Self> {
         let slider = Self {
@@ -66,9 +74,11 @@ impl ChartLineSlider {
         slider.caption()?;
         Ok(slider)
     }
+
     fn caption(&self) -> Result<()> {
         Ui::text(&self.root, "ChartLineValue", &format!("{} px", self.shown))
     }
+
     /// The new width once the slider moved; a failed write keeps it for this run.
     pub fn refresh(&mut self) -> Result<Option<f64>> {
         let width = ChartLine::snap(Ui::range(&self.slider, None)?);
@@ -85,6 +95,7 @@ impl ChartLineSlider {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn saved_widths_snap_into_the_range() {
         assert_eq!(ChartLine::parse("line=2.5\n"), Some(2.5));

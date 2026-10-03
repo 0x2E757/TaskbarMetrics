@@ -1,25 +1,31 @@
 //! Native XAML view; all element references remain on their UI thread.
+
 use super::{abi::*, com::*, data_directory::DataDirectory, displays::Displays};
 use crate::{
     config::{Settings, NO_MONITORS},
     presentation::{OccupiedRange, TileStrip},
 };
+
 use std::{
     cell::{Cell, RefCell},
     collections::HashMap,
     rc::Rc,
     sync::{atomic::Ordering, Arc},
 };
+
 mod alert;
 pub(crate) mod appearance;
 mod button;
 pub(crate) use alert::AlertSettings;
+
 mod palette;
 mod preview;
 pub(crate) use palette::Palette;
 pub(crate) use preview::{TileStyle, WidgetPreview};
+
 mod clock;
 pub(crate) use clock::ClockCatalog;
+
 mod dispatcher;
 pub(crate) mod events;
 mod geometry;
@@ -30,9 +36,11 @@ mod resources;
 mod rounded_clip;
 mod visual_tree;
 use button::MetricsButton;
+
 pub(crate) fn verify_tiles() -> Result<()> {
     MetricsButton::verify()
 }
+
 /// The topmost element above `element`: the root of its XAML island.
 pub fn island_root(element: &Com) -> Result<Com> {
     visual_tree::VisualTree::new()?
@@ -41,9 +49,11 @@ pub fn island_root(element: &Com) -> Result<Com> {
         .next()
         .ok_or(E_UNEXPECTED)
 }
+
 pub use dispatcher::Target;
 use geometry::TaskbarGeometry;
 use interop::{XamlElement, XamlVector};
+
 pub const FRAMEWORK: Guid = Guid::from_u128(0xa391d09b_4a99_4b7c_9d8d_6fa5d01f6fbf);
 const UI_ELEMENT: Guid = Guid::from_u128(0x676d0be9_b65c_41c6_ba40_58cf87f201c1);
 const DEPENDENCY_OBJECT: Guid = Guid::from_u128(0x5c526665_f60e_4912_af59_5fe0680f089d);

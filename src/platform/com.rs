@@ -1,5 +1,6 @@
 //! Small owning COM/HSTRING wrappers. Com is intentionally !Send + !Sync.
 //! Vtable slots below are the ABI from Windows SDK, not Rust trait-object vtables.
+
 use super::abi::*;
 use std::{marker::PhantomData, ptr, rc::Rc};
 
@@ -18,10 +19,12 @@ pub struct UnknownVtbl {
     pub add_ref: unsafe extern "system" fn(Raw) -> u32,
     pub release: unsafe extern "system" fn(Raw) -> u32,
 }
+
 pub struct Com {
     raw: Raw,
     _apartment: PhantomData<Rc<()>>,
 }
+
 impl Com {
     /// Takes ownership of one COM reference. Null pointers are errors.
     pub unsafe fn owned(raw: Raw) -> Result<Self> {
@@ -34,20 +37,24 @@ impl Com {
             })
         }
     }
+
     pub fn raw(&self) -> Raw {
         self.raw
     }
+
     pub fn into_raw(self) -> Raw {
         let raw = self.raw;
         std::mem::forget(self);
         raw
     }
+
     /// Caller must use the exact signature and interface slot defined in the SDK.
     pub unsafe fn slot<T: Copy>(&self, index: usize) -> T {
         assert_eq!(std::mem::size_of::<T>(), std::mem::size_of::<Raw>());
         let table = *(self.raw as *const *const Raw);
         std::mem::transmute_copy(&*table.add(index))
     }
+
     pub fn query(&self, iid: &Guid) -> Result<Self> {
         unsafe {
             let call: unsafe extern "system" fn(Raw, *const Guid, *mut Raw) -> Hr = self.slot(0);
@@ -56,6 +63,7 @@ impl Com {
             Self::owned(result)
         }
     }
+
     pub fn object(&self, slot: usize) -> Result<Self> {
         unsafe {
             let call: unsafe extern "system" fn(Raw, *mut Raw) -> Hr = self.slot(slot);
@@ -64,6 +72,7 @@ impl Com {
             Self::owned(result)
         }
     }
+
     pub fn string(&self, slot: usize) -> Result<String> {
         unsafe {
             let call: unsafe extern "system" fn(Raw, *mut Raw) -> Hr = self.slot(slot);
@@ -72,6 +81,7 @@ impl Com {
             Ok(HString(result).text())
         }
     }
+
     /// The HSTRING a getter at `slot` returns, without converting it.
     pub fn hstring(&self, slot: usize) -> Result<HString> {
         unsafe {
@@ -81,6 +91,7 @@ impl Com {
             Ok(HString(result))
         }
     }
+
     pub fn set_string(&self, slot: usize, value: &str) -> Result<()> {
         let value = HString::new(value)?;
         unsafe {
@@ -89,6 +100,7 @@ impl Com {
         }
     }
 }
+
 impl Clone for Com {
     fn clone(&self) -> Self {
         unsafe {
@@ -98,6 +110,7 @@ impl Clone for Com {
         }
     }
 }
+
 impl Drop for Com {
     fn drop(&mut self) {
         unsafe {
@@ -108,6 +121,7 @@ impl Drop for Com {
 }
 
 pub struct HString(pub Raw);
+
 impl HString {
     pub fn new(text: &str) -> Result<Self> {
         let units: Vec<_> = text.encode_utf16().collect();
@@ -121,6 +135,7 @@ impl HString {
         }
         Ok(Self(result))
     }
+
     /// UTF-16 code units of the string.
     pub fn units(&self) -> &[u16] {
         unsafe {
@@ -133,10 +148,12 @@ impl HString {
             }
         }
     }
+
     /// Equal to `text`, compared without allocating.
     pub fn is(&self, text: &str) -> bool {
         self.units().iter().copied().eq(text.encode_utf16())
     }
+
     pub fn text(&self) -> String {
         unsafe {
             let mut length = 0;
@@ -149,6 +166,7 @@ impl HString {
         }
     }
 }
+
 impl Drop for HString {
     fn drop(&mut self) {
         unsafe {
@@ -156,6 +174,7 @@ impl Drop for HString {
         }
     }
 }
+
 pub fn activate(class: &str, iid: &Guid) -> Result<Com> {
     let name = HString::new(class)?;
     let mut result = ptr::null_mut();
@@ -164,6 +183,7 @@ pub fn activate(class: &str, iid: &Guid) -> Result<Com> {
         Com::owned(result)?.query(iid)
     }
 }
+
 pub fn factory(class: &str, iid: &Guid) -> Result<Com> {
     let name = HString::new(class)?;
     let mut result = ptr::null_mut();
@@ -174,6 +194,7 @@ pub fn factory(class: &str, iid: &Guid) -> Result<Com> {
 }
 // IAgileReference is the documented cross-apartment transport, unlike a raw XAML pointer.
 pub struct Agile(Com);
+
 unsafe impl Send for Agile {}
 unsafe impl Sync for Agile {}
 impl Agile {
@@ -184,6 +205,7 @@ impl Agile {
             Ok(Self(Com::owned(raw)?))
         }
     }
+
     pub fn resolve(&self, iid: &Guid) -> Result<Com> {
         unsafe {
             let call: unsafe extern "system" fn(Raw, *const Guid, *mut Raw) -> Hr = self.0.slot(3);

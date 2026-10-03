@@ -31,6 +31,7 @@ pub(super) struct ColorEditor {
     palettes: [Palette; 2],
     invalid: bool,
 }
+
 impl ColorEditor {
     /// Element / light theme / dark theme table, grouped like the settings artboards.
     /// Colors are `$token$` placeholders and texts `@text@` ones for `Language::markup`;
@@ -74,7 +75,9 @@ impl ColorEditor {
         ));
         markup
     }
+
     const HINT: &'static str = "Format #RRGGBB or #AARRGGBB, where AA is opacity.";
+
     /// Replaces both palettes, e.g. when unapplied changes are reverted.
     pub fn load(&mut self, palettes: [Palette; 2]) -> Result<()> {
         self.palettes = palettes;
@@ -86,6 +89,7 @@ impl ColorEditor {
         }
         Ok(())
     }
+
     pub fn new(root: &Com) -> Result<Self> {
         let mut fields = Vec::new();
         let mut pickers = Vec::new();
@@ -142,6 +146,7 @@ impl ColorEditor {
         }
         Ok(editor)
     }
+
     pub fn read(&mut self) -> Result<[Palette; 2]> {
         let current: Vec<u32> = self.pickers.iter().map(|p| p.color).collect();
         if let Some((index, color)) = self.picker.refresh(|i| current[i])? {
@@ -168,6 +173,7 @@ impl ColorEditor {
         }
         Ok(self.palettes)
     }
+
     /// Verification and demo runs neither read nor write the color draft.
     fn verifying() -> bool {
         std::env::args().any(|arg| {
@@ -177,9 +183,11 @@ impl ColorEditor {
             )
         })
     }
+
     fn path() -> Option<std::path::PathBuf> {
         crate::platform::data_directory::DataDirectory::file("taskbar-metrics.colors").ok()
     }
+
     pub fn save(&self) {
         if Self::verifying() {
             return;
@@ -194,6 +202,7 @@ impl ColorEditor {
             let _ = std::fs::write(path, text);
         }
     }
+
     pub fn verify(&mut self) -> Result<()> {
         for index in [0, ROLES.len()] {
             let (target, color) = self.picker.verify(index, 0x40123456)?.ok_or(E_FAIL)?;
@@ -232,6 +241,7 @@ struct ColorSelection {
     color: u32,
     last_text: String,
 }
+
 impl ColorSelection {
     fn markup(name: &str, label: &str, theme: &str, column: u32) -> String {
         format!(
@@ -243,6 +253,7 @@ impl ColorSelection {
         </StackPanel>"##
         )
     }
+
     fn new(root: &Com, name: &str) -> Result<Self> {
         Ok(Self {
             brush: Playground::find(root, &format!("{name}Swatch"))?.query(&BRUSH)?,
@@ -250,6 +261,7 @@ impl ColorSelection {
             last_text: String::new(),
         })
     }
+
     fn set(&mut self, color: u32) -> Result<()> {
         unsafe {
             let set: unsafe extern "system" fn(Raw, [u8; 4]) -> Hr = self.brush.slot(7);
@@ -258,6 +270,7 @@ impl ColorSelection {
         self.color = color;
         Ok(())
     }
+
     fn read(&mut self, field: &Com) -> Result<Option<u32>> {
         let text = field.string(6)?;
         if text != self.last_text {

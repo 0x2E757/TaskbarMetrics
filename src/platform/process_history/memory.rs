@@ -1,5 +1,6 @@
 //! RAM in use split into processes and the memory outside them, so that the rows of
 //! a frame add up to what the RAM tile shows.
+
 use super::store::{Identity, Sample};
 use crate::platform::{pdh::PdhCounter, providers::PhysicalMemory};
 use std::sync::Arc;
@@ -21,6 +22,7 @@ pub(crate) struct SystemMemory {
 
 /// `SystemMemory` from the memory counters, all read by one PDH query.
 pub(super) struct SystemMemoryCounters(PdhCounter);
+
 impl SystemMemoryCounters {
     pub fn new() -> Self {
         Self(PdhCounter::several(&[
@@ -32,6 +34,7 @@ impl SystemMemoryCounters {
             r"\Memory\System Cache Resident Bytes",
         ]))
     }
+
     /// None until the query works: a split with missing parts would not add up.
     pub fn sample(&mut self) -> Option<SystemMemory> {
         self.0.collect().ok()?;
@@ -57,6 +60,7 @@ impl SystemMemoryCounters {
 pub(crate) struct MemoryRows {
     identities: [Arc<Identity>; 6],
 }
+
 impl MemoryRows {
     pub const PID: u32 = 0;
     /// Row names, translated by the window. The last row holds what is left of the
@@ -80,6 +84,7 @@ impl MemoryRows {
             }),
         }
     }
+
     /// Appends the rows to the processes of a frame. Kernel parts count as private
     /// memory (nothing else maps them), file cache and the rest as shared.
     ///
@@ -132,6 +137,7 @@ impl MemoryRows {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn rows_add_up_to_the_memory_in_use() {
         let mut process = Sample::new(

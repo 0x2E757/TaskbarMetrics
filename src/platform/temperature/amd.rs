@@ -2,10 +2,12 @@ use super::{
     pawnio::PawnModule,
     sensor::{Celsius, CpuIdentity, ModuleFolder, PciMutex, TemperatureSensor, NOT_SUPPORTED},
 };
+
 use crate::platform::abi::*;
 
 /// CurTmp of K10 and Zen: bits 31:21 in 1/8 °C, read as the control temperature (Tctl).
 struct Tctl;
+
 impl Tctl {
     /// `range_select` is Zen's bit 19; both generations shift by 49 °C when bits 17:16 are set.
     fn decode(raw: u64, range_select: bool) -> Result<f64> {
@@ -23,6 +25,7 @@ pub(super) struct ZenTemperature {
     module: PawnModule,
     pci: PciMutex,
 }
+
 impl ZenTemperature {
     pub fn open(modules: &ModuleFolder) -> Result<Self> {
         Ok(Self {
@@ -31,10 +34,12 @@ impl ZenTemperature {
         })
     }
 }
+
 impl TemperatureSensor for ZenTemperature {
     fn name(&self) -> &'static str {
         "AMD CPU Tctl"
     }
+
     fn sample(&self) -> Result<f64> {
         let _guard = self.pci.lock()?;
         Tctl::decode(self.module.read(c"ioctl_read_smn", &[0x59800])?, true)
@@ -48,6 +53,7 @@ pub(super) struct K10Temperature {
     pci: PciMutex,
     smu: bool,
 }
+
 impl K10Temperature {
     pub fn open(modules: &ModuleFolder, cpu: &CpuIdentity) -> Result<Self> {
         if Self::unreliable(cpu) {
@@ -59,6 +65,7 @@ impl K10Temperature {
             smu: cpu.family == 0x15 && matches!(cpu.model & 0xf0, 0x60 | 0x70),
         })
     }
+
     /// Erratum 319: the sensor of family 10h on sockets F and AM2+ may be unreliable.
     fn unreliable(cpu: &CpuIdentity) -> bool {
         cpu.family == 0x10
@@ -69,10 +76,12 @@ impl K10Temperature {
             }
     }
 }
+
 impl TemperatureSensor for K10Temperature {
     fn name(&self) -> &'static str {
         "AMD CPU Tctl"
     }
+
     fn sample(&self) -> Result<f64> {
         let _guard = self.pci.lock()?;
         let raw = if self.smu {
@@ -91,6 +100,7 @@ pub(super) struct K8Temperature {
     cores: u64,
     offset: f64,
 }
+
 impl K8Temperature {
     pub fn open(modules: &ModuleFolder, cpu: &CpuIdentity) -> Result<Self> {
         // The sensor exists since revision SH-C0.
@@ -108,6 +118,7 @@ impl K8Temperature {
             },
         })
     }
+
     /// Desktop revision G parts read 21 °C below ambient without an offset.
     fn revision_g_desktop(cpu: &CpuIdentity) -> bool {
         let brand = (cpu.brand >> 9) & 0x1f;
@@ -116,6 +127,7 @@ impl K8Temperature {
             && !(matches!(cpu.model, 0x6f | 0x7f) && matches!(brand, 0x7 | 0x9 | 0xc))
             && !(cpu.model == 0x6b && matches!(brand, 0xb | 0xc))
     }
+
     fn decode(raw: u64, offset: f64) -> Result<f64> {
         match (raw >> 16) & 0xff {
             0 => Err(E_FAIL),
@@ -123,10 +135,12 @@ impl K8Temperature {
         }
     }
 }
+
 impl TemperatureSensor for K8Temperature {
     fn name(&self) -> &'static str {
         "AMD K8 CPU"
     }
+
     fn sample(&self) -> Result<f64> {
         let _guard = self.pci.lock()?;
         Celsius::hottest((0..self.cores).map(|core| {
@@ -142,6 +156,7 @@ impl TemperatureSensor for K8Temperature {
 mod tests {
     use super::*;
     use crate::platform::temperature::sensor::Vendor;
+
     fn cpu(family: u32, model: u32, stepping: u32, brand: u32) -> CpuIdentity {
         CpuIdentity {
             vendor: Vendor::Amd,
@@ -151,6 +166,7 @@ mod tests {
             brand,
         }
     }
+
     #[test]
     fn decodes_both_temperature_ranges_and_rejects_bad_reads() {
         assert_eq!(Tctl::decode(480 << 21, true), Ok(60.0));
@@ -160,11 +176,13 @@ mod tests {
             assert!(Tctl::decode(bad, true).is_err());
         }
     }
+
     #[test]
     fn range_select_bit_shifts_only_zen() {
         assert_eq!(Tctl::decode((480 << 21) | (1 << 19), false), Ok(60.0));
         assert_eq!(Tctl::decode((872 << 21) | 0x30000, false), Ok(60.0));
     }
+
     #[test]
     fn family_10h_on_sockets_f_and_am2_plus_is_unreliable() {
         assert!(K10Temperature::unreliable(&cpu(0x10, 4, 3, 0)));
@@ -173,6 +191,7 @@ mod tests {
         assert!(!K10Temperature::unreliable(&cpu(0x10, 4, 3, 1 << 28)));
         assert!(!K10Temperature::unreliable(&cpu(0x15, 2, 0, 0)));
     }
+
     #[test]
     fn k8_offsets_only_revision_g_desktop_parts() {
         assert_eq!(K8Temperature::decode(100 << 16, 0.0), Ok(51.0));

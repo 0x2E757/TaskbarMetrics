@@ -22,6 +22,7 @@ pub(super) struct MonitorOptions {
     writable: bool,
     language: Language,
 }
+
 impl MonitorOptions {
     /// Check boxes of `displays`, for the `@MONITORS@` place of the page.
     pub fn markup(displays: &Displays, language: Language) -> String {
@@ -37,6 +38,7 @@ impl MonitorOptions {
             })
             .collect()
     }
+
     /// `LG ULTRAGEAR · 2560 × 1440 · main`.
     fn label(display: &Display, language: Language) -> String {
         let name = match (display.name.as_str(), display.internal) {
@@ -50,6 +52,7 @@ impl MonitorOptions {
         }
         label
     }
+
     pub fn new(root: &Com, displays: Displays, language: Language) -> Result<Self> {
         let chosen = Self::settings().monitors;
         let mut options = Self {
@@ -70,18 +73,21 @@ impl MonitorOptions {
         options.describe()?;
         Ok(options)
     }
+
     fn settings() -> Settings {
         DataDirectory::file("taskbar-metrics.conf")
             .ok()
             .and_then(|path| Settings::load(&path).ok())
             .unwrap_or_default()
     }
+
     fn render(&mut self) -> Result<()> {
         for (check, on) in self.checks.iter().zip(&self.shown) {
             Ui::checked(check, *on)?;
         }
         Ok(())
     }
+
     /// The hint under the boxes, or that the tiles are off when none is checked.
     fn describe(&self) -> Result<()> {
         let text = if self.shown.contains(&true) {
@@ -91,6 +97,7 @@ impl MonitorOptions {
         };
         Ui::text(&self.root, STATUS, self.language.text(text))
     }
+
     /// Stores a click; a failed write puts the boxes back and says why.
     pub fn refresh(&mut self) -> Result<()> {
         let checked = self
@@ -111,6 +118,7 @@ impl MonitorOptions {
         self.shown = checked;
         self.describe()
     }
+
     /// Every monitor checked is an empty choice, so a monitor connected later
     /// shows the tiles too; none checked is [`NO_MONITORS`]. Chosen monitors that
     /// are away now stay chosen.

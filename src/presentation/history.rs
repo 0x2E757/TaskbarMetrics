@@ -20,6 +20,7 @@ pub struct MetricHistory {
     values: VecDeque<Option<f64>>,
     width: f32,
 }
+
 impl MetricHistory {
     pub fn spanning(width: f32) -> Self {
         Self {
@@ -27,30 +28,36 @@ impl MetricHistory {
             width: width.max(0.0),
         }
     }
+
     fn capacity(&self) -> usize {
         (self.width / STEP) as usize + 1
     }
+
     /// Continues `older`, keeping as many of its newest samples as fit.
     pub fn replay(&mut self, older: &Self) {
         for value in &older.values {
             self.push_value(*value);
         }
     }
+
     pub fn push(&mut self, value: &MetricValue) {
         self.push_value(match value {
             MetricValue::Available(n) if n.is_finite() && *n >= 0.0 => Some(*n),
             _ => None,
         });
     }
+
     fn push_value(&mut self, value: Option<f64>) {
         if self.values.len() == self.capacity() {
             self.values.pop_front();
         }
         self.values.push_back(value);
     }
+
     pub fn peak(&self) -> f64 {
         self.values.iter().flatten().copied().fold(0.0, f64::max)
     }
+
     /// Called after push: missing samples stay missing, never become zeroes.
     pub fn mean_last_two(&self, current: &MetricValue) -> MetricValue {
         if !matches!(current, MetricValue::Available(value) if value.is_finite() && *value >= 0.0) {
@@ -64,15 +71,19 @@ impl MetricHistory {
             _ => current.clone(),
         }
     }
+
     pub fn points(&self, maximum: f64) -> Vec<ChartPoint> {
         self.points_range(0.0, maximum)
     }
+
     pub fn points_range(&self, minimum: f64, maximum: f64) -> Vec<ChartPoint> {
         self.project(minimum, maximum, None)
     }
+
     pub fn points_with_hidden_zero(&self, maximum: f64) -> Vec<ChartPoint> {
         self.points_with_hidden_idle(maximum, 0.0, -0.1)
     }
+
     pub fn points_with_hidden_idle(
         &self,
         maximum: f64,
@@ -81,6 +92,7 @@ impl MetricHistory {
     ) -> Vec<ChartPoint> {
         self.project(0.0, maximum, Some((threshold, idle_normalized)))
     }
+
     fn project(&self, minimum: f64, maximum: f64, idle: Option<(f64, f64)>) -> Vec<ChartPoint> {
         let start = self
             .values
@@ -114,6 +126,7 @@ impl MetricHistory {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn numbers_average_two_samples_without_averaging_graph_or_missing_values() {
         let mut h = MetricHistory::spanning(100.0);
@@ -139,6 +152,7 @@ mod tests {
             MetricValue::Available(60.0)
         ));
     }
+
     #[test]
     fn throughput_scale_has_one_mb_floor_and_tracks_visible_peak() {
         let mut history = MetricHistory::spanning(100.0);
@@ -157,6 +171,7 @@ mod tests {
         }
         assert_eq!(history.peak().max(1.0), 1.0);
     }
+
     #[test]
     fn disk_idle_threshold_maps_only_values_below_half_a_percent_to_zero() {
         let mut history = MetricHistory::spanning(100.0);
@@ -172,6 +187,7 @@ mod tests {
             assert_eq!(points[i].y, normal[i].y);
         }
     }
+
     #[test]
     fn hidden_zero_does_not_move_nonzero_samples_or_change_history() {
         let mut history = MetricHistory::spanning(100.0);
@@ -188,6 +204,7 @@ mod tests {
         history.push(&MetricValue::Unavailable);
         assert!(history.points_with_hidden_zero(100.0).is_empty());
     }
+
     #[test]
     fn temperature_chart_uses_fixed_range_and_keeps_gaps() {
         let mut history = MetricHistory::spanning(104.0);
@@ -201,6 +218,7 @@ mod tests {
         history.push(&MetricValue::Unavailable);
         assert!(history.points_range(30.0, 100.0).is_empty());
     }
+
     #[test]
     fn half_of_the_scale_sits_mid_height() {
         let mut history = MetricHistory::spanning(100.0);
@@ -209,6 +227,7 @@ mod tests {
         assert_eq!(history.points_range(0.0, 100.0)[0].y, 18.0);
         assert_eq!(history.points(100.0)[0].y, 18.0);
     }
+
     #[test]
     fn samples_sit_two_pixels_apart_from_the_right_edge() {
         let mut history = MetricHistory::spanning(104.0);
@@ -229,6 +248,7 @@ mod tests {
         assert_eq!(points[52].x, 104.0);
         assert_eq!(points[52].y, 1.5);
     }
+
     #[test]
     fn a_resized_chart_keeps_the_newest_samples() {
         let mut wide = MetricHistory::spanning(100.0);

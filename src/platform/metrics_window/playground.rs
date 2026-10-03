@@ -11,6 +11,7 @@ struct InputDefinition {
     max: f64,
     step: f64,
 }
+
 const INPUTS: [InputDefinition; 37] = [
     InputDefinition {
         name: "TileWidth",
@@ -301,6 +302,7 @@ pub(super) struct Playground {
     last: Option<TileStyle>,
     layout_pending: bool,
 }
+
 impl Playground {
     pub fn apply_to_taskbar(&mut self) -> std::io::Result<()> {
         let mut style = self
@@ -315,10 +317,12 @@ impl Playground {
             &style,
         )
     }
+
     /// The standalone editor, in English.
     pub fn markup() -> String {
         Language::English.markup(&Self::markup_with(include_str!("settings.xaml")))
     }
+
     pub(super) fn markup_with(template: &str) -> String {
         let controls = INPUTS.iter().map(|input| format!(r##"
           <Border BorderBrush="#20808080" BorderThickness="0,0,0,1" Padding="0,6,0,12">
@@ -351,6 +355,7 @@ impl Playground {
                 &Self::neutral(&super::colors::ColorEditor::markup(false)),
             )
     }
+
     /// The design lab has no theme tokens: shared markup gets neutral colors.
     fn neutral(markup: &str) -> String {
         [
@@ -388,6 +393,7 @@ impl Playground {
             markup.replace(token, color)
         })
     }
+
     /// Restores the default palettes of both themes.
     pub fn reset_colors(&mut self) -> Result<()> {
         self.colors.load([
@@ -395,10 +401,12 @@ impl Playground {
             crate::platform::xaml::Palette::dark(),
         ])
     }
+
     /// "Tile width, px" → ("Tile width", "px").
     fn split(label: &str) -> (&str, &str) {
         label.rsplit_once(", ").unwrap_or((label, ""))
     }
+
     /// The label with `@name@` for `Language::markup` and the unit, translated if it reads
     /// differently in another language.
     fn label(input: &InputDefinition) -> String {
@@ -407,6 +415,7 @@ impl Playground {
             (name, unit) => format!("@{name}@, {}", Language::marked(unit)),
         }
     }
+
     /// Settings-card rows of the main window: label, 220 px slider, 64 px field and unit.
     pub(super) fn rows(indices: &[usize]) -> String {
         let rows: String = indices.iter().enumerate().map(|(position, index)| {
@@ -418,6 +427,7 @@ impl Playground {
         }).collect();
         format!("<StackPanel>{rows}</StackPanel>")
     }
+
     /// Settings-card rows of the temperature switches, below slider rows.
     pub(super) fn switch_rows() -> String {
         SWITCHES
@@ -425,6 +435,7 @@ impl Playground {
             .map(|(name, label)| format!(r#"<Grid MinHeight="48" Padding="48,0,16,0" BorderBrush="$divider$" BorderThickness="0,1,0,0"><CheckBox x:Name="{name}" VerticalAlignment="Center" AutomationProperties.Name="@{label}@"><TextBlock Text="@{label}@"/></CheckBox></Grid>"#))
             .collect()
     }
+
     /// Preview values: a column per tile in the tiles' order, its name on top and
     /// below it the load and temperature, or the two directions of a rate.
     pub(super) fn preview_values() -> String {
@@ -458,6 +469,7 @@ impl Playground {
         markup.push_str("</Grid>");
         markup
     }
+
     /// Sets the preview values that are known, in `PREVIEW_VALUES` order.
     pub fn preview(&self, values: &[Option<f64>; 9]) -> Result<()> {
         for (control, value) in self.controls[PREVIEW_VALUES].iter().zip(values) {
@@ -467,6 +479,7 @@ impl Playground {
         }
         Ok(())
     }
+
     /// Lower and upper thresholds of the rule whose sliders are `{name}X` and `{name}Y`.
     pub fn set_alert(&self, name: &str, x: f64, y: f64) -> Result<()> {
         for (suffix, value) in [("X", x), ("Y", y)] {
@@ -479,6 +492,7 @@ impl Playground {
         }
         Ok(())
     }
+
     /// Live values are read-only in the fields.
     pub fn lock_preview(&self, locked: bool) -> Result<()> {
         for field in &self.preview_fields {
@@ -491,10 +505,12 @@ impl Playground {
         }
         Ok(())
     }
+
     /// The last style shown in the previews, colors included.
     pub fn style(&self) -> Option<TileStyle> {
         self.last
     }
+
     /// Loads saved appearance into the controls; preview values stay as they are.
     pub fn load(&mut self, style: &TileStyle) -> Result<()> {
         let alerts = style.alerts;
@@ -543,6 +559,7 @@ impl Playground {
         }
         self.colors.load([style.light, style.dark])
     }
+
     pub fn new(root: &Com) -> Result<Self> {
         let controls = INPUTS
             .iter()
@@ -624,6 +641,7 @@ impl Playground {
         result.refresh()?;
         Ok(result)
     }
+
     fn restore_draft(&self) -> Result<()> {
         if std::env::args().any(|arg| {
             matches!(
@@ -706,6 +724,7 @@ impl Playground {
         }
         Ok(())
     }
+
     pub(super) fn find(root: &Com, name: &str) -> Result<Com> {
         let frame = root.query(&FRAMEWORK)?;
         let name = HString::new(name)?;
@@ -716,12 +735,14 @@ impl Playground {
             Com::owned(object)
         }
     }
+
     fn set(control: &Com, value: f64) -> Result<()> {
         unsafe {
             let set: unsafe extern "system" fn(Raw, f64) -> Hr = control.slot(15);
             check(set(control.raw(), value))
         }
     }
+
     fn read(&self) -> Result<TileStyle> {
         let mut values = [0.0; INPUTS.len()];
         for ((control, value), input) in self.controls.iter().zip(&mut values).zip(&INPUTS) {
@@ -789,6 +810,7 @@ impl Playground {
             dark: crate::platform::xaml::Palette::dark(),
         })
     }
+
     pub fn refresh(&mut self) -> Result<()> {
         self.monitoring.refresh()?;
         let mut style = self.read()?;
@@ -833,6 +855,7 @@ impl Playground {
         }
         Ok(())
     }
+
     pub fn verify(&mut self, root: &Com) -> Result<()> {
         self.colors.verify()?;
         for maximum in [false, true] {
@@ -883,6 +906,7 @@ impl Playground {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn design_lab_markup_has_no_unexpanded_tokens() {
         let markup = Playground::markup();

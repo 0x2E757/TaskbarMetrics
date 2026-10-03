@@ -4,6 +4,7 @@ use super::{
     model::{Device, Resource},
     ui::Ui,
 };
+
 use crate::platform::process_history::store::Frame;
 
 /// Left navigation: section buttons with their values at the shared moment.
@@ -12,6 +13,7 @@ pub struct Navigation {
     pub language: Language,
     pub compact: bool,
 }
+
 impl Navigation {
     /// Button declarations for the XAML template, one per menu entry titled `titles`;
     /// content is rendered by `item`. Only `icon_only` buttons repeat their title in a tooltip.
@@ -32,6 +34,7 @@ impl Navigation {
             })
             .collect()
     }
+
     /// A network adapter shows its link; demo adapters, which the machine does not
     /// list, are told by their name.
     pub fn icon(device: &Device) -> &'static str {
@@ -55,6 +58,7 @@ impl Navigation {
             other => other.id(),
         }
     }
+
     pub fn value(&self, device: &Device, frame: Option<&Frame>) -> String {
         let Some(frame) = frame else {
             return String::new();
@@ -81,6 +85,7 @@ impl Navigation {
             _ => format!("{} · {} MB/s", rate(values[0]), rate(values[1])),
         }
     }
+
     /// Content of one navigation button; `value` is empty for Settings.
     pub fn item(&self, icon: &str, title: &str, value: &str, selected: bool) -> String {
         let text = self.design.color("text");
@@ -118,6 +123,7 @@ impl Navigation {
 mod tests {
     use super::*;
     use crate::platform::devices::DeviceId;
+
     #[test]
     fn network_adapters_show_their_link() {
         let adapter = |tag: &str, link| {
@@ -134,6 +140,7 @@ mod tests {
         assert_eq!(Navigation::icon(&adapter("Wi‑Fi", None)), "wifi");
         assert_eq!(Navigation::icon(&Device::of(Resource::Ram)), "mem");
     }
+
     #[test]
     fn buttons_are_named_per_prefix_and_items_mark_selection() {
         let titles = ["CPU".into(), "Disk D:".into()];

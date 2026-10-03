@@ -6,10 +6,12 @@ use super::{
     model::{Device, Resource},
     ui::Ui,
 };
+
 use crate::platform::xaml::events::Subscription;
 use crate::platform::{
     process_history::store::Frame, providers::PhysicalMemory, xaml::AlertSettings,
 };
+
 use std::sync::Arc;
 
 /// One statistic: label, value, an optional quiet caption and an optional hint
@@ -36,10 +38,12 @@ pub struct StatsSource<'a> {
     /// Live values of the shown device; none for a past moment.
     pub facts: Facts,
 }
+
 impl StatsSource<'_> {
     fn text(&self, key: &str) -> String {
         self.language.text(key).to_owned()
     }
+
     fn stat(&self, label: &str, value: String, caption: Option<String>) -> Stat {
         Stat {
             label: self.text(label),
@@ -49,9 +53,11 @@ impl StatsSource<'_> {
             alert: false,
         }
     }
+
     fn missing() -> String {
         "—".into()
     }
+
     /// Temperature or RAM value with the alert state of its upper threshold.
     fn alerting(
         &self,
@@ -82,6 +88,7 @@ impl StatsSource<'_> {
             alert,
         }
     }
+
     fn temperature(&self) -> Stat {
         let value = self.frame.and_then(|f| self.device.temperature(f));
         let limit = if self.device.resource == Resource::Gpu {
@@ -99,6 +106,7 @@ impl StatsSource<'_> {
             None,
         )
     }
+
     fn total(&self, id: &str) -> Option<f64> {
         self.frame?
             .totals
@@ -106,6 +114,7 @@ impl StatsSource<'_> {
             .find(|(key, _)| key == id)
             .and_then(|(_, v)| *v)
     }
+
     /// The scale explains its minimum and growth on demand, not in a caption.
     fn scale(&self) -> Stat {
         let minimum = self.language.rate(self.device.resource.floor(), 0);
@@ -121,6 +130,7 @@ impl StatsSource<'_> {
             )
         }
     }
+
     /// Hottest moment of the 5-minute window, or of the part of it collected so far.
     fn temperature_peak(&self) -> Stat {
         let peak = self
@@ -137,6 +147,7 @@ impl StatsSource<'_> {
             None => self.stat("5-min peak", Self::missing(), Some(self.text("no data"))),
         }
     }
+
     pub fn stats(&self) -> Vec<Stat> {
         let values = self
             .frame
@@ -232,10 +243,12 @@ impl StatsSource<'_> {
         }
         stats
     }
+
     /// A value that may be missing, without a caption.
     fn plain(&self, label: &str, value: Option<String>) -> Stat {
         self.stat(label, value.unwrap_or_else(Self::missing), None)
     }
+
     /// Live values the window shows for the current moment only.
     fn live(&self) -> Vec<Stat> {
         let f = self.facts;
@@ -289,6 +302,7 @@ pub struct StatWidths {
     section: Option<(Resource, bool)>,
     widths: Vec<f64>,
 }
+
 impl StatWidths {
     /// Starts over for another section or window layout; true when it is the same one.
     pub fn track(&mut self, section: (Resource, bool)) -> bool {
@@ -299,12 +313,14 @@ impl StatWidths {
         }
         same
     }
+
     pub fn grow(&mut self, index: usize, width: f64) {
         if self.widths.len() <= index {
             self.widths.resize(index + 1, 0.0);
         }
         self.widths[index] = self.widths[index].max(width);
     }
+
     pub fn get(&self, index: usize) -> f64 {
         self.widths.get(index).copied().unwrap_or(0.0)
     }
@@ -318,6 +334,7 @@ pub struct StatsPanel {
     pub compact: bool,
     pub available: f64,
 }
+
 impl StatsPanel {
     fn spacing(&self) -> f64 {
         if self.compact {
@@ -326,6 +343,7 @@ impl StatsPanel {
             36.0
         }
     }
+
     /// Compact windows keep one row: the statistics that do not fit it are left out,
     /// the last first.
     pub fn fitting(&self, mut stats: Vec<Stat>, widths: &StatWidths) -> Vec<Stat> {
@@ -334,6 +352,7 @@ impl StatsPanel {
         }
         stats
     }
+
     /// Index of the first statistic of each row. Columns not laid out yet are
     /// estimated from their text; once measured they only widen, so the rows settle.
     pub fn rows(&self, stats: &[Stat], widths: &StatWidths) -> Vec<usize> {
@@ -354,6 +373,7 @@ impl StatsPanel {
         }
         starts
     }
+
     pub fn markup(&self, stats: &[Stat], widths: &StatWidths) -> String {
         let starts = self.rows(stats, widths);
         let rows: String = starts
@@ -382,6 +402,7 @@ impl StatsPanel {
             r#"<StackPanel xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" Spacing="12">{rows}</StackPanel>"#
         )
     }
+
     /// One statistic: label, value with an alert icon, caption, and an optional hint.
     fn item(&self, index: usize, stat: &Stat, widths: &StatWidths) -> String {
         let d = self.design;
@@ -425,6 +446,7 @@ impl StatsPanel {
             d.color("text3")
         )
     }
+
     /// What the markup holds apart from values and captions: rows of the same shape
     /// are updated in place, so a hint under the pointer is not rebuilt away.
     pub fn shape(&self, stats: &[Stat], widths: &StatWidths) -> String {
@@ -438,6 +460,7 @@ impl StatsPanel {
             self.rows(stats, widths)
         )
     }
+
     /// Shows each hint card while the pointer is over its icon.
     pub fn hints(row: &Com, stats: &[Stat]) -> Result<Vec<Subscription>> {
         let mut events = Vec::new();
@@ -454,6 +477,7 @@ impl StatsPanel {
         }
         Ok(events)
     }
+
     /// Values and captions of a row built from stats of the same shape; columns
     /// keep the widest width they have had.
     pub fn update(row: &Com, stats: &[Stat], widths: &StatWidths) -> Result<()> {
@@ -473,6 +497,7 @@ impl StatsPanel {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     fn frame(temperature: f64) -> Frame {
         Frame {
             bucket: 10,
@@ -489,6 +514,7 @@ mod tests {
             sample_ms: 0.0,
         }
     }
+
     fn source<'a>(frame: &'a Frame) -> StatsSource<'a> {
         StatsSource {
             language: Language::English,
@@ -502,6 +528,7 @@ mod tests {
             facts: Facts::default(),
         }
     }
+
     #[test]
     fn cpu_stats_mark_alerts_and_a_peak_without_samples() {
         let hot = frame(105.0);
@@ -536,6 +563,7 @@ mod tests {
         .markup(&stats, &StatWidths::default());
         assert!(markup.contains("#C42B1C") && markup.contains(r#"FontSize="20""#));
     }
+
     #[test]
     fn peak_is_the_hottest_moment_and_the_scale_explains_itself_in_a_hint() {
         let timeline = [frame(61.0), frame(74.0), frame(58.0)].map(Arc::new);
@@ -564,6 +592,7 @@ mod tests {
         .markup(&disk, &StatWidths::default());
         assert_eq!(markup.matches(r#"x:Name="HintCard"#).count(), 1);
     }
+
     #[test]
     fn memory_in_use_carries_its_share() {
         let mut memory = frame(50.0);
@@ -579,6 +608,7 @@ mod tests {
         assert_eq!(ram[0].value, "26.2 GB (96\u{A0}%)");
         assert!(ram[0].alert && ram.len() == 3);
     }
+
     #[test]
     fn live_values_are_formatted_and_wifi_shows_its_signal() {
         use crate::platform::system_activity::SystemActivity;
@@ -618,6 +648,7 @@ mod tests {
         // A past moment has no live values.
         assert_eq!(StatsSource { ..source(&now) }.stats()[3].value, "—");
     }
+
     #[test]
     fn compact_windows_keep_the_statistics_that_fit_one_row() {
         let now = frame(50.0);
@@ -641,6 +672,7 @@ mod tests {
         // Full windows wrap instead.
         assert_eq!(shown(false, 400.0), 5);
     }
+
     #[test]
     fn statistics_wrap_before_the_available_width() {
         let now = frame(50.0);
@@ -669,6 +701,7 @@ mod tests {
             panel(f64::INFINITY).shape(&stats, &widths)
         );
     }
+
     #[test]
     fn stat_columns_only_widen_within_a_section() {
         let mut widths = StatWidths::default();

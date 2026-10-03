@@ -14,15 +14,18 @@ pub struct AlertRule {
     /// Above the upper threshold the tile pulses (hatched zone) rather than stays red.
     pub pulses: bool,
 }
+
 impl AlertRule {
     /// A rule is off when both thresholds sit at the top of the track.
     pub fn off(&self) -> (f64, f64) {
         (self.maximum - 1.0, self.maximum)
     }
+
     pub fn enabled(&self, x: f64) -> bool {
         x < self.off().0
     }
 }
+
 /// Rules of the alert group; the rest redden tile numbers.
 pub const ALERTS: usize = 3;
 /// Tile alerts first, then tile numbers.
@@ -88,9 +91,11 @@ pub struct AlertRange {
     pub design: Design,
     pub language: Language,
 }
+
 impl AlertRange {
     const WIDTH: f64 = 260.0;
     const THUMB: f64 = 20.0;
+
     /// Settings row: label, the 260 px range and the rule switch.
     pub fn row(index: usize, rule: &AlertRule, divided: bool) -> String {
         let slider = |suffix: &str| {
@@ -110,10 +115,12 @@ impl AlertRange {
             upper = slider("Y"),
         )
     }
+
     fn position(rule: &AlertRule, value: f64) -> f64 {
         let fraction = ((value - rule.minimum) / (rule.maximum - rule.minimum)).clamp(0.0, 1.0);
         Self::THUMB / 2.0 + fraction * (Self::WIDTH - Self::THUMB)
     }
+
     /// Painted track and threshold captions for the current `(x, y)`.
     pub fn track(&self, rule: &AlertRule, x: f64, y: f64) -> String {
         let d = self.design;
@@ -161,6 +168,7 @@ impl AlertRange {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn rules_switch_off_at_the_top_and_tracks_follow_thresholds() {
         let cpu = &RULES[0];

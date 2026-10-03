@@ -1,10 +1,12 @@
 //! Bytes each process moved since the recorder started, as of a moment.
+
 use super::model::{Device, ProcessKey, Timeline};
 use crate::platform::process_history::store::{Frame, IoBytes};
 use std::{collections::HashMap, sync::Arc};
 
 /// Read and written (received and sent) bytes of each process on one device.
 pub struct IoTotals(HashMap<ProcessKey, [u64; 2]>);
+
 impl IoTotals {
     /// Totals at `bucket`: the recorder's totals now, less the I/O of the frames after
     /// it. `frames` are the live ones, in order, from the same packet as `now`.
@@ -33,6 +35,7 @@ impl IoTotals {
         }
         Self(totals)
     }
+
     /// None for a process without I/O since the recorder started.
     pub fn of(&self, key: ProcessKey) -> Option<[u64; 2]> {
         self.0.get(&key).copied()
@@ -46,6 +49,7 @@ mod tests {
         devices::DeviceId,
         process_history::store::{Identity, Sample},
     };
+
     fn frame(bucket: u64, read: u64) -> Arc<Frame> {
         Arc::new(Frame {
             gpu_engines: Vec::new(),
@@ -72,6 +76,7 @@ mod tests {
             sample_ms: 1.0,
         })
     }
+
     #[test]
     fn totals_at_a_moment_leave_out_later_frames() {
         let frames = [frame(1, 100), frame(2, 200), frame(3, 400)];

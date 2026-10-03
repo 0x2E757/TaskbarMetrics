@@ -15,20 +15,24 @@ pub struct VersionInfo<'a> {
 pub struct ResourceFile {
     bytes: Vec<u8>,
 }
+
 impl ResourceFile {
     const RT_ICON: u16 = 3;
     const RT_GROUP_ICON: u16 = 14;
     const RT_VERSION: u16 = 16;
     const ENGLISH: u16 = 0x0409;
+
     /// A .res file opens with an empty entry that marks its format.
     pub fn new() -> Self {
         let mut file = Self { bytes: Vec::new() };
         file.entry(0, 0, 0, 0, &[]);
         file
     }
+
     pub fn bytes(&self) -> &[u8] {
         &self.bytes
     }
+
     fn entry(&mut self, kind: u16, name: u16, flags: u16, language: u16, data: &[u8]) {
         let out = &mut self.bytes;
         out.extend((data.len() as u32).to_le_bytes());
@@ -43,6 +47,7 @@ impl ResourceFile {
         out.extend(data);
         pad(out);
     }
+
     /// Icon group 1 with one 32-bit image per size, a bitmap or a PNG; Explorer
     /// and the shell pick the size they need from it.
     pub fn icons(mut self, images: &[(u32, Vec<u8>)]) -> Self {
@@ -64,6 +69,7 @@ impl ResourceFile {
         self.entry(Self::RT_GROUP_ICON, 1, 0x1030, Self::ENGLISH, &group);
         self
     }
+
     /// A DIB icon image: the header with a doubled height, the colors bottom-up,
     /// then the 1-bit mask, set where the image is fully transparent.
     pub fn bitmap(size: u32, pixels: &[u32]) -> Vec<u8> {
@@ -94,6 +100,7 @@ impl ResourceFile {
         }
         out
     }
+
     pub fn version(mut self, info: &VersionInfo) -> Self {
         let mut numbers = info
             .version
@@ -162,11 +169,13 @@ fn wide(text: &str) -> Vec<u8> {
         .flat_map(u16::to_le_bytes)
         .collect()
 }
+
 fn pad(out: &mut Vec<u8>) {
     while !out.len().is_multiple_of(4) {
         out.push(0);
     }
 }
+
 /// A version block: length, value length, type, key, value and children, each
 /// starting on a 4-byte boundary; the length leaves out the trailing padding.
 fn block(key: &str, value: &[u8], value_length: u16, kind: u16, children: &[Vec<u8>]) -> Vec<u8> {

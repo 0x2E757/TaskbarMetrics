@@ -9,6 +9,7 @@ pub(super) struct Placement {
     pub right: i32,
     pub bottom: i32,
 }
+
 impl Placement {
     /// «1,100,80,1380,1104»: maximized flag, then the frame.
     fn parse(text: &str) -> Option<Self> {
@@ -27,6 +28,7 @@ impl Placement {
             bottom,
         })
     }
+
     fn line(&self) -> String {
         format!(
             "{},{},{},{},{}",
@@ -46,6 +48,7 @@ struct WindowState {
     reset: bool,
     placement: Option<Placement>,
 }
+
 impl Default for WindowState {
     fn default() -> Self {
         Self {
@@ -54,6 +57,7 @@ impl Default for WindowState {
         }
     }
 }
+
 impl WindowState {
     fn parse(text: &str) -> Self {
         let mut state = Self::default();
@@ -66,6 +70,7 @@ impl WindowState {
         }
         state
     }
+
     fn text(&self) -> String {
         let mut text = format!("reset={}\n", self.reset);
         if let Some(placement) = self.placement {
@@ -78,6 +83,7 @@ impl WindowState {
 pub(super) struct WindowMemory {
     path: PathBuf,
 }
+
 impl WindowMemory {
     pub fn locate() -> Option<Self> {
         Some(Self {
@@ -85,30 +91,36 @@ impl WindowMemory {
                 .ok()?,
         })
     }
+
     fn state(&self) -> WindowState {
         std::fs::read_to_string(&self.path)
             .map(|text| WindowState::parse(&text))
             .unwrap_or_default()
     }
+
     fn store(&self, state: WindowState) -> std::io::Result<()> {
         let temporary = self.path.with_extension("window.tmp");
         std::fs::write(&temporary, state.text())?;
         std::fs::rename(temporary, &self.path)
     }
+
     pub fn resets(&self) -> bool {
         self.state().reset
     }
+
     pub fn set_resets(&self, reset: bool) -> std::io::Result<()> {
         self.store(WindowState {
             reset,
             ..self.state()
         })
     }
+
     /// Where to open the window; None for a fresh centred window.
     pub fn placement(&self) -> Option<Placement> {
         let state = self.state();
         state.placement.filter(|_| !state.reset)
     }
+
     /// Keeps the frame of a closing window unless the window opens afresh.
     pub fn remember(&self, placement: Option<Placement>) -> std::io::Result<()> {
         let state = self.state();
@@ -122,6 +134,7 @@ impl WindowMemory {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn the_window_opens_afresh_unless_told_to_remember() {
         assert_eq!(WindowState::parse(""), WindowState::default());

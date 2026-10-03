@@ -17,10 +17,12 @@ pub(super) struct TemperatureChannel {
     _handle: Handle,
     view: *mut Snapshot,
 }
+
 impl TemperatureChannel {
     fn name(pid: u32) -> Vec<u16> {
         wide(&format!("Local\\TaskbarMetrics.CpuTemperature.v1.{pid}"))
     }
+
     pub fn create(pid: u32) -> Result<Self> {
         unsafe {
             let handle = Handle::new(CreateFileMappingW(
@@ -52,6 +54,7 @@ impl TemperatureChannel {
             })
         }
     }
+
     pub fn open(pid: u32) -> Result<Self> {
         unsafe {
             let handle = Handle::new(OpenFileMappingW(4, 0, Self::name(pid).as_ptr()))?;
@@ -65,6 +68,7 @@ impl TemperatureChannel {
             })
         }
     }
+
     pub fn publish(&mut self, value: Option<f64>) {
         unsafe {
             let view = &*self.view;
@@ -75,6 +79,7 @@ impl TemperatureChannel {
             view.sequence.fetch_add(1, Ordering::SeqCst);
         }
     }
+
     /// The collector published within 5 s, a reading or not. Explorer keeps the
     /// mapping open for a while after the collector ended, so its existence says less.
     pub fn fresh(&self) -> bool {
@@ -84,6 +89,7 @@ impl TemperatureChannel {
             tick != 0 && now >= tick && now - tick <= 5000
         }
     }
+
     pub fn read(&self) -> Option<f64> {
         unsafe {
             let view = &*self.view;
@@ -95,6 +101,7 @@ impl TemperatureChannel {
         }
     }
 }
+
 impl Snapshot {
     fn validate(first: u64, last: u64, value: f64, tick: u64, now: u64) -> Option<f64> {
         (first != 0
@@ -107,6 +114,7 @@ impl Snapshot {
         .then_some(value)
     }
 }
+
 impl Drop for TemperatureChannel {
     fn drop(&mut self) {
         unsafe {
@@ -114,6 +122,7 @@ impl Drop for TemperatureChannel {
         }
     }
 }
+
 #[link(name = "kernel32")]
 extern "system" {
     fn CreateFileMappingW(
@@ -129,9 +138,11 @@ extern "system" {
     fn UnmapViewOfFile(view: Raw) -> i32;
     fn GetTickCount64() -> u64;
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn native_mapping_publishes_to_read_only_client_and_rejects_second_writer() {
         let pid = unsafe { GetCurrentProcessId() };
@@ -144,6 +155,7 @@ mod tests {
         writer.publish(None);
         assert_eq!(reader.read(), None);
     }
+
     #[test]
     fn rejects_torn_stale_invalid_and_future_samples() {
         assert_eq!(Snapshot::validate(2, 2, 62.125, 100, 110), Some(62.125));

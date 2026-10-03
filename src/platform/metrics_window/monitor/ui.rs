@@ -1,5 +1,7 @@
 use super::super::*;
+
 pub struct Ui;
+
 impl Ui {
     pub fn background(element: &Com, brush: &Com) -> Result<()> {
         let element = element.query(&crate::platform::xaml::PANEL)?;
@@ -9,6 +11,7 @@ impl Ui {
             check(set(element.raw(), brush.raw()))
         }
     }
+
     pub fn height(element: &Com, value: f64) -> Result<()> {
         let element = element.query(&crate::platform::xaml::FRAMEWORK)?;
         unsafe {
@@ -16,6 +19,7 @@ impl Ui {
             check(set(element.raw(), value))
         }
     }
+
     pub fn min_width(element: &Com, value: f64) -> Result<()> {
         let element = element.query(&crate::platform::xaml::FRAMEWORK)?;
         unsafe {
@@ -23,6 +27,7 @@ impl Ui {
             check(set(element.raw(), value))
         }
     }
+
     pub fn size(element: &Com) -> Result<(f64, f64)> {
         let element = element.query(&crate::platform::xaml::FRAMEWORK)?;
         let mut values = [0.0; 2];
@@ -34,6 +39,7 @@ impl Ui {
         }
         Ok((values[0], values[1]))
     }
+
     /// Unconstrained desired size of a detached element (`UIElement.Measure` + `DesiredSize`).
     pub fn measure(element: &Com) -> Result<(f64, f64)> {
         #[repr(C)]
@@ -58,6 +64,7 @@ impl Ui {
         }
         Ok((desired.width as f64, desired.height as f64))
     }
+
     /// `Control.Focus(FocusState.Keyboard)`.
     pub fn focus(element: &Com) -> Result<()> {
         let control = element.query(&Guid::from_u128(0xa8912263_2951_4f58_a9c5_5a134eaa7f07))?;
@@ -67,6 +74,7 @@ impl Ui {
             check(focus(control.raw(), 2, &mut focused))
         }
     }
+
     /// `Control.FocusState` is `Keyboard`.
     pub fn keyboard_focused(element: &Com) -> Result<bool> {
         let control = element.query(&Guid::from_u128(0xa8912263_2951_4f58_a9c5_5a134eaa7f07))?;
@@ -77,6 +85,7 @@ impl Ui {
         }
         Ok(state == 2)
     }
+
     /// `ScrollViewer.VerticalOffset` and `ViewportHeight`.
     pub fn scroll(element: &Com) -> Result<(f64, f64)> {
         let viewer = element.query(&Guid::from_u128(0x64e9be00_4dc1_493d_abe7_cbd3c577490d))?;
@@ -89,6 +98,7 @@ impl Ui {
         }
         Ok((values[0], values[1]))
     }
+
     /// `UIElement.Opacity`.
     pub fn opacity(element: &Com, value: f64) -> Result<()> {
         let element = element.query(&Guid::from_u128(0x676d0be9_b65c_41c6_ba40_58cf87f201c1))?;
@@ -97,6 +107,7 @@ impl Ui {
             check(set(element.raw(), value))
         }
     }
+
     /// `ToggleButton.IsChecked`, a boxed `IReference<bool>`.
     pub fn checked(element: &Com, value: bool) -> Result<()> {
         let toggle = element.query(&Guid::from_u128(0x589877fb_0fc7_4036_9d8b_127dfa75c16d))?;
@@ -114,6 +125,7 @@ impl Ui {
             check(set(toggle.raw(), boxed.raw()))
         }
     }
+
     /// `ToggleButton.IsChecked`; the indeterminate (null) state reads as unchecked.
     pub fn is_checked(element: &Com) -> Result<bool> {
         let toggle = element.query(&Guid::from_u128(0x589877fb_0fc7_4036_9d8b_127dfa75c16d))?;
@@ -131,6 +143,7 @@ impl Ui {
             Ok(checked != 0)
         }
     }
+
     /// `Control.IsEnabled`.
     pub fn enable(element: &Com, enabled: bool) -> Result<()> {
         let control = element.query(&Guid::from_u128(0xa8912263_2951_4f58_a9c5_5a134eaa7f07))?;
@@ -139,6 +152,7 @@ impl Ui {
             check(set(control.raw(), u8::from(enabled)))
         }
     }
+
     /// `RangeBase.Value` of `control`.
     pub fn range(control: &Com, value: Option<f64>) -> Result<f64> {
         let control = control.query(&Guid::from_u128(0xfa002c1a_494e_46cf_91d4_e14a8d798675))?;
@@ -155,6 +169,7 @@ impl Ui {
             }
         }
     }
+
     /// `FlyoutBase.Hide`.
     pub fn hide_flyout(flyout: &Com) -> Result<()> {
         let flyout = flyout.query(&Guid::from_u128(0x723eea0b_d12e_430d_a9f0_9bb32bbf9913))?;
@@ -163,14 +178,17 @@ impl Ui {
             check(hide(flyout.raw()))
         }
     }
+
     pub fn find(root: &Com, name: &str) -> Result<Com> {
         playground::Playground::find(root, name)
     }
+
     pub fn text(root: &Com, name: &str, value: &str) -> Result<()> {
         Self::find(root, name)?
             .query(&Guid::from_u128(0xae2d9271_3b4a_45fc_8468_f7949548f4d5))?
             .set_string(27, value)
     }
+
     pub fn load(markup: &str) -> Result<Com> {
         let factory = factory(
             "Windows.UI.Xaml.Markup.XamlReader",
@@ -184,6 +202,7 @@ impl Ui {
             Com::owned(raw)
         }
     }
+
     pub fn children(host: &Com, child: &Com) -> Result<()> {
         let children = host.query(&crate::platform::xaml::PANEL)?.object(6)?;
         let child = child.query(&Guid::from_u128(0x676d0be9_b65c_41c6_ba40_58cf87f201c1))?;
@@ -194,6 +213,7 @@ impl Ui {
             check(append(children.raw(), child.raw()))
         }
     }
+
     pub fn content(host: &Com, child: &Com) -> Result<()> {
         let host = host.query(&Guid::from_u128(0xa26dd1dc_cd44_435c_be94_01d6241c231c))?;
         unsafe {
@@ -201,9 +221,11 @@ impl Ui {
             check(set(host.raw(), child.raw()))
         }
     }
+
     pub fn visible(root: &Com, name: &str, visible: bool) -> Result<()> {
         Self::show(&Self::find(root, name)?, visible)
     }
+
     pub fn show(element: &Com, visible: bool) -> Result<()> {
         let element = element.query(&Guid::from_u128(0x676d0be9_b65c_41c6_ba40_58cf87f201c1))?;
         unsafe {
@@ -211,6 +233,7 @@ impl Ui {
             check(set(element.raw(), if visible { 0 } else { 1 }))
         }
     }
+
     pub fn xml(text: &str) -> String {
         text.replace('&', "&amp;")
             .replace('<', "&lt;")
@@ -224,6 +247,7 @@ impl Ui {
 /// Only hosts filled through it may be named, and it is cleared with the page.
 #[derive(Default)]
 pub struct Shown(std::cell::RefCell<std::collections::HashMap<String, String>>);
+
 impl Shown {
     /// `Ui::content` of `markup` into the host `name` under `root`.
     pub fn content(&self, root: &Com, name: &str, markup: &str) -> Result<()> {
@@ -231,12 +255,14 @@ impl Shown {
             Ui::content(&Ui::find(root, name)?, &Ui::load(markup)?)
         })
     }
+
     /// `Ui::children` of `markup` into the panel `name` under `root`.
     pub fn children(&self, root: &Com, name: &str, markup: &str) -> Result<()> {
         self.show(name, markup, || {
             Ui::children(&Ui::find(root, name)?, &Ui::load(markup)?)
         })
     }
+
     fn show(&self, name: &str, markup: &str, load: impl FnOnce() -> Result<()>) -> Result<()> {
         if self
             .0
@@ -253,6 +279,7 @@ impl Shown {
             .insert(name.to_owned(), markup.to_owned());
         Ok(())
     }
+
     pub fn clear(&self) {
         self.0.borrow_mut().clear();
     }

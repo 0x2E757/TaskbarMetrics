@@ -1,9 +1,11 @@
 //! A compositor clip cuts both chart strokes and fill at the actual tile contour.
+
 use super::*;
 use crate::presentation::history::ChartPoint;
 use std::ptr;
 
 pub(super) struct RoundedClip;
+
 impl RoundedClip {
     pub(super) fn apply(element: &Com, width: f32, height: f32, radius: f32) -> Result<()> {
         let preview = factory(

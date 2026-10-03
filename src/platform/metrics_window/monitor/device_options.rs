@@ -7,10 +7,12 @@ pub struct DeviceOptions<'a, F: Fn(&DeviceId) -> DeviceId> {
     pub settings: &'a Settings,
     pub canonical: F,
 }
+
 impl<F: Fn(&DeviceId) -> DeviceId> DeviceOptions<'_, F> {
     fn names(&self, id: &str, device: &DeviceId) -> bool {
         DeviceId::parse(id).is_some_and(|parsed| (self.canonical)(&parsed) == *device)
     }
+
     /// `(on the taskbar, always monitored)`; a tile implies monitoring.
     pub fn state(&self, device: &DeviceId) -> (bool, bool) {
         let taskbar = self
@@ -26,6 +28,7 @@ impl<F: Fn(&DeviceId) -> DeviceId> DeviceOptions<'_, F> {
                 .any(|id| self.names(id, device));
         (taskbar, always)
     }
+
     /// Tiles with `device` added or removed; `None` when it is the last tile, which
     /// the configuration requires.
     pub fn taskbar(&self, device: &DeviceId, on: bool) -> Option<Vec<String>> {
@@ -47,6 +50,7 @@ impl<F: Fn(&DeviceId) -> DeviceId> DeviceOptions<'_, F> {
         }
         (!metrics.is_empty()).then_some(metrics)
     }
+
     /// Background history list with `device` added or removed.
     pub fn history(&self, device: &DeviceId, on: bool) -> Vec<String> {
         let mut history: Vec<String> = self
@@ -66,6 +70,7 @@ impl<F: Fn(&DeviceId) -> DeviceId> DeviceOptions<'_, F> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn bare_kinds_name_the_main_device_and_the_last_tile_stays() {
         let settings = Settings::parse("metrics=cpu,disk\nhistory=net@Wi-Fi").unwrap();

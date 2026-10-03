@@ -1,6 +1,7 @@
 use super::{
     abi::*, composition::Composition, executables::Executables, scheduled_task::CollectorTask,
 };
+
 use crate::config::Settings;
 use std::{
     ffi::{OsStr, OsString},
@@ -16,11 +17,13 @@ type Initialize =
 pub(crate) const WATCH: &str = "--watch";
 
 pub struct Launcher;
+
 impl Default for Launcher {
     fn default() -> Self {
         Self::new()
     }
 }
+
 impl Launcher {
     pub fn new() -> Self {
         Self
@@ -312,6 +315,7 @@ pub(crate) struct Explorer {
     pub pid: u32,
     _process: Handle,
 }
+
 impl Explorer {
     pub fn find() -> Result<Self> {
         unsafe {
@@ -349,6 +353,7 @@ impl Explorer {
             })
         }
     }
+
     /// The path of the module `name` this Explorer has loaded.
     pub fn module(&self, name: &str) -> Option<PathBuf> {
         unsafe {
@@ -405,12 +410,14 @@ struct OsVersion {
     product: u8,
     reserved: u8,
 }
+
 #[link(name = "ntdll")]
 extern "system" {
     fn RtlGetVersion(version: *mut OsVersion) -> i32;
 }
 
 pub(crate) struct WindowsSupport;
+
 impl WindowsSupport {
     pub fn validate() -> Result<()> {
         let mut version: OsVersion = unsafe { std::mem::zeroed() };

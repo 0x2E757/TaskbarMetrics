@@ -13,6 +13,7 @@ pub struct HeaderMarkup {
     pub design: Design,
     pub language: Language,
 }
+
 impl HeaderMarkup {
     pub fn pill(&self, mode: &Mode) -> String {
         let d = self.design;
@@ -45,6 +46,7 @@ impl HeaderMarkup {
             r#"<Border xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" Background="{background}" BorderBrush="{border}" BorderThickness="1" Height="28" CornerRadius="14" Padding="10,0"><StackPanel Orientation="Horizontal" Spacing="7">{content}</StackPanel></Border>"#
         )
     }
+
     fn tail(&self, text: Option<&str>) -> String {
         text.map(|text| {
             format!(
@@ -55,6 +57,7 @@ impl HeaderMarkup {
         })
         .unwrap_or_default()
     }
+
     /// Icon, label and a badge with the amount of history collected since the freeze.
     pub fn back(&self, pending_seconds: u64) -> String {
         let foreground = self.design.color("onAccent");
@@ -76,6 +79,7 @@ impl HeaderMarkup {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn pills_show_tail_and_badge_caps_at_five_minutes() {
         let header = HeaderMarkup {

@@ -5,6 +5,7 @@ use super::{
     store::{Frame, Identity, Sample},
     trace::{IoBuckets, IoTrace},
 };
+
 use crate::{
     application::MonitoringService,
     metrics::{GpuEngineAggregator, GpuEngineLoad, GpuEngineUsage, MetricValue},
@@ -17,6 +18,7 @@ use crate::{
         providers::PhysicalMemory,
     },
 };
+
 use std::{
     collections::HashMap,
     sync::Arc,
@@ -28,6 +30,7 @@ struct GpuSampler {
     counter: PdhCounter,
     adapters: Vec<Binding<(i32, u32)>>,
 }
+
 /// One GPU sample: engines by device id, the busiest engine load of each process,
 /// query success.
 type GpuSample = (
@@ -48,6 +51,7 @@ impl GpuSampler {
                 .collect(),
         }
     }
+
     fn sample(&mut self) -> GpuSample {
         let entries = self.counter.entries().ok();
         let available = entries.is_some();
@@ -102,6 +106,7 @@ struct ProcessSampler {
     /// Shared pages of each process while a window shows the history.
     shared: SharedPages,
 }
+
 impl ProcessSampler {
     fn new() -> Result<Self> {
         let mut reader = SnapshotReader::default();
@@ -130,6 +135,7 @@ impl ProcessSampler {
             shared: SharedPages::default(),
         })
     }
+
     fn identity(p: &Process) -> Arc<Identity> {
         Arc::new(Identity {
             pid: p.pid,
@@ -137,6 +143,7 @@ impl ProcessSampler {
             name: p.name.clone().into(),
         })
     }
+
     /// `shared`: also scan the working sets for shared pages, once a second.
     fn sample(
         &mut self,
@@ -224,6 +231,7 @@ impl ProcessSampler {
             .unwrap_or_default();
         Ok((samples, events, lost, undecoded))
     }
+
     fn etw_active(&self) -> bool {
         self.trace.as_ref().is_some_and(|trace| trace.is_running())
     }
@@ -243,6 +251,7 @@ pub(super) struct Collector {
     /// A window shows the history: attribute shared pages to processes.
     pub shared: bool,
 }
+
 impl Collector {
     pub fn new(devices: Vec<DeviceId>) -> Result<Self> {
         let mut totals = crate::platform::composition::Composition::history_monitor(&devices)
@@ -261,6 +270,7 @@ impl Collector {
             shared: false,
         })
     }
+
     /// Starts or drops per-process sampling; a failed start is retried after 30 s.
     pub fn monitor_processes(&mut self, enabled: bool) {
         if !enabled {
@@ -277,6 +287,7 @@ impl Collector {
             }
         }
     }
+
     pub fn status(&self, enabled: bool) -> String {
         match (&self.processes, self.process_error) {
             _ if !enabled => "totals only".into(),
@@ -288,6 +299,7 @@ impl Collector {
             (None, None) => "starting".into(),
         }
     }
+
     pub fn sample(&mut self, bucket: u64) -> Result<(Frame, IoBuckets)> {
         let begin = Instant::now();
         let elapsed = begin.duration_since(self.last).as_secs_f64();
@@ -355,6 +367,7 @@ impl Collector {
         ))
     }
 }
+
 #[link(name = "kernel32")]
 extern "system" {
     fn GetActiveProcessorCount(group: u16) -> u32;

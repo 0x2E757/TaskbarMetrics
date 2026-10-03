@@ -1,5 +1,6 @@
 //! The watcher's notification icon: a hidden window that owns it, a timer, and a
 //! menu with two items.
+
 use crate::platform::abi::*;
 use std::{cell::RefCell, ptr};
 
@@ -37,6 +38,7 @@ struct State {
 thread_local! { static STATE: RefCell<Option<State>> = const { RefCell::new(None) }; }
 
 pub struct TrayIcon;
+
 impl TrayIcon {
     /// Shows the icon with `tooltip` and runs the window until it closes, calling
     /// `events` every `period_ms`.
@@ -104,6 +106,7 @@ impl TrayIcon {
         }
         Ok(())
     }
+
     /// Removes the icon and ends the loop. WM_DESTROY arrives while the state is
     /// out, so it is done here.
     fn quit(window: Raw, icon: &NotifyIcon) {
@@ -113,6 +116,7 @@ impl TrayIcon {
             PostQuitMessage(0);
         }
     }
+
     /// The menu at the pointer; the id of the item chosen, 0 for none.
     fn menu(window: Raw, items: &[(usize, Vec<u16>)]) -> usize {
         unsafe {
@@ -205,6 +209,7 @@ unsafe extern "system" fn procedure(
 
 /// NOTIFYICONDATAW of the icon.
 struct NotifyIcon(NotifyIconData);
+
 impl NotifyIcon {
     fn new(window: Raw, instance: Raw, tooltip: &str) -> Self {
         let mut data = NotifyIconData {
@@ -222,6 +227,7 @@ impl NotifyIcon {
         }
         Self(data)
     }
+
     /// The executable's icon at the small-icon size of the system DPI.
     fn image(instance: Raw) -> Raw {
         unsafe {
@@ -235,6 +241,7 @@ impl NotifyIcon {
             LoadImageW(instance, ptr::without_provenance(1), 1, width, height, 0)
         }
     }
+
     fn add(&self) {
         unsafe {
             // NIM_ADD; after a new Explorer an icon with this id may linger, so
@@ -244,6 +251,7 @@ impl NotifyIcon {
             }
         }
     }
+
     fn remove(&self) {
         unsafe {
             Shell_NotifyIconW(2, &self.0);
@@ -269,6 +277,7 @@ struct NotifyIconData {
     guid: Guid,
     balloon_icon: Raw,
 }
+
 impl Default for NotifyIconData {
     fn default() -> Self {
         Self {
@@ -306,12 +315,14 @@ struct WindowClass {
     name: *const u16,
     small_icon: Raw,
 }
+
 #[repr(C)]
 #[derive(Default)]
 struct Point {
     x: i32,
     y: i32,
 }
+
 #[repr(C)]
 #[derive(Default)]
 struct Message {
@@ -377,10 +388,12 @@ extern "system" {
         flags: u32,
     ) -> Raw;
 }
+
 #[link(name = "kernel32")]
 extern "system" {
     fn GetModuleHandleW(name: *const u16) -> Raw;
 }
+
 #[link(name = "shell32")]
 extern "system" {
     fn Shell_NotifyIconW(message: u32, data: *const NotifyIconData) -> i32;
@@ -389,6 +402,7 @@ extern "system" {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn layouts_match_the_windows_sdk() {
         assert_eq!(std::mem::size_of::<NotifyIconData>(), 976);

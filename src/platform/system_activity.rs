@@ -1,5 +1,6 @@
 //! System values beside the charts: the process count, uptime, the page file and
 //! the processor's current frequency.
+
 use super::{abi::Raw, pdh::PdhCounter};
 use std::time::Duration;
 
@@ -9,6 +10,7 @@ pub struct SystemActivity {
     pub processes: u32,
     pub uptime: Duration,
 }
+
 impl SystemActivity {
     pub fn read() -> Option<Self> {
         let mut info = PerformanceInformation {
@@ -33,6 +35,7 @@ pub struct PageFile {
     pub used: u64,
     pub size: u64,
 }
+
 impl PageFile {
     /// None without a page file or when the system does not answer.
     pub fn read() -> Option<Self> {
@@ -55,6 +58,7 @@ impl PageFile {
             }
         }
     }
+
     /// SYSTEM_PAGEFILE_INFORMATION records (x64): NextEntryOffset +0, TotalSize +4
     /// and TotalInUse +8, both in 4 KiB pages.
     fn parse(buffer: &[u64], length: usize) -> Option<Self> {
@@ -83,6 +87,7 @@ impl PageFile {
 pub struct CpuFrequency {
     counter: PdhCounter,
 }
+
 impl Default for CpuFrequency {
     fn default() -> Self {
         Self {
@@ -93,6 +98,7 @@ impl Default for CpuFrequency {
         }
     }
 }
+
 impl CpuFrequency {
     /// MHz; none until the second sample.
     pub fn sample(&mut self) -> Option<f64> {
@@ -122,11 +128,13 @@ struct PerformanceInformation {
     processes: u32,
     threads: u32,
 }
+
 #[link(name = "kernel32")]
 extern "system" {
     fn K32GetPerformanceInfo(info: *mut PerformanceInformation, size: u32) -> i32;
     fn GetTickCount64() -> u64;
 }
+
 #[link(name = "ntdll")]
 extern "system" {
     fn NtQuerySystemInformation(class: u32, buffer: Raw, size: u32, used: *mut u32) -> i32;
@@ -135,6 +143,7 @@ extern "system" {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn page_files_are_summed_over_their_records() {
         // Two records: 1 GiB with 256 MiB in use, then 512 MiB with none.
@@ -151,6 +160,7 @@ mod tests {
         assert_eq!((file.used, file.size), (1 << 28, (1 << 30) + (1 << 29)));
         assert_eq!(PageFile::parse(&[0; 4], 0), None);
     }
+
     #[test]
     fn the_system_answers() {
         let activity = SystemActivity::read().unwrap();

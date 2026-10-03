@@ -1,5 +1,7 @@
 use super::abi::*;
+
 pub(crate) struct WindowLauncher;
+
 impl WindowLauncher {
     pub fn open(resource: &str) -> Result<()> {
         std::process::Command::new(
@@ -10,6 +12,7 @@ impl WindowLauncher {
         .map_err(|_| E_FAIL)?;
         Ok(())
     }
+
     pub fn directory() -> Result<std::path::PathBuf> {
         // Resolve beside our DLL, not beside Explorer.exe.
         let mut module = std::ptr::null_mut();
@@ -26,12 +29,14 @@ impl WindowLauncher {
         if length == 0 || length as usize >= path.len() {
             return Err(E_FAIL);
         }
+
         use std::os::windows::ffi::OsStringExt;
         let executable =
             std::path::PathBuf::from(std::ffi::OsString::from_wide(&path[..length as usize]));
         executable.parent().map(|p| p.to_owned()).ok_or(E_FAIL)
     }
 }
+
 #[link(name = "kernel32")]
 extern "system" {
     fn FreeLibrary(module: Raw) -> i32;

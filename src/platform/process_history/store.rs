@@ -9,10 +9,12 @@ pub(crate) struct Identity {
     pub created: u64,
     pub name: Arc<str>,
 }
+
 /// Identities shared by the frames a viewer keeps: a process mentioned by all 600
 /// frames is one allocation instead of 600.
 #[derive(Default)]
 pub(crate) struct Identities(std::collections::HashMap<(u32, u64), Vec<Arc<Identity>>>);
+
 impl Identities {
     pub fn get(&mut self, pid: u32, created: u64, name: &str) -> Arc<Identity> {
         let known = self.0.entry((pid, created)).or_default();
@@ -27,6 +29,7 @@ impl Identities {
         known.push(identity.clone());
         identity
     }
+
     /// Forgets identities no frame refers to any more.
     pub fn prune(&mut self) {
         self.0.retain(|_, known| {
@@ -35,6 +38,7 @@ impl Identities {
         });
     }
 }
+
 /// Bytes of one process in one bucket: disk read, disk write, net receive and net
 /// send in total, and per device (`disk@C:` read/write, `net@Wi‑Fi` receive/send).
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -42,6 +46,7 @@ pub(crate) struct IoBytes {
     pub total: [u64; 4],
     pub devices: Vec<(Arc<str>, [u64; 2])>,
 }
+
 impl IoBytes {
     /// `column` indexes `total`; I/O without a known device counts in the total only.
     pub fn add(&mut self, column: usize, count: u64, device: Option<&Arc<str>>) {
@@ -51,6 +56,7 @@ impl IoBytes {
             bytes[column % 2] = bytes[column % 2].saturating_add(count);
         }
     }
+
     pub fn merge(&mut self, other: &Self) {
         for (total, value) in self.total.iter_mut().zip(other.total) {
             *total = total.saturating_add(value);
@@ -62,6 +68,7 @@ impl IoBytes {
             }
         }
     }
+
     fn device(&mut self, id: &Arc<str>) -> &mut [u64; 2] {
         let index = match self.devices.iter().position(|(device, _)| device == id) {
             Some(index) => index,
@@ -73,6 +80,7 @@ impl IoBytes {
         &mut self.devices[index].1
     }
 }
+
 /// One process in one frame. Values not measured are kept as the sentinels the wire
 /// format uses (NaN, `u64::MAX`) rather than as `Option`s, which would double their
 /// size in each of the 600 frames; the accessors return `Option`s again.
@@ -88,6 +96,7 @@ pub(crate) struct Sample {
     /// bucket; the others keep none instead of 56 bytes in each of the 600 frames.
     pub io_bytes: Option<Box<IoBytes>>,
 }
+
 impl Sample {
     pub fn new(
         identity: Arc<Identity>,
@@ -103,48 +112,61 @@ impl Sample {
             io_bytes,
         }
     }
+
     fn measured(value: f64) -> Option<f64> {
         (!value.is_nan()).then_some(value)
     }
+
     fn bytes(value: u64) -> Option<u64> {
         (value != u64::MAX).then_some(value)
     }
+
     pub fn cpu(&self) -> Option<f64> {
         Self::measured(self.usage[0])
     }
+
     pub fn gpu(&self) -> Option<f64> {
         Self::measured(self.usage[1])
     }
+
     pub fn private_working_set(&self) -> Option<u64> {
         Self::bytes(self.memory[0])
     }
+
     pub fn working_set(&self) -> Option<u64> {
         Self::bytes(self.memory[1])
     }
+
     pub fn private_bytes(&self) -> Option<u64> {
         Self::bytes(self.memory[2])
     }
+
     /// This process's part of the shared pages in its working set: a page mapped by
     /// n working sets counts 1/n. None while no window shows the history.
     pub fn shared(&self) -> Option<u64> {
         Self::bytes(self.memory[3])
     }
+
     pub fn set_shared(&mut self, bytes: Option<u64>) {
         self.memory[3] = bytes.unwrap_or(u64::MAX);
     }
+
     /// Disk read, disk write, net receive and net send bytes.
     pub fn io(&self) -> [u64; 4] {
         self.io_bytes.as_ref().map_or([0; 4], |io| io.total)
     }
+
     /// `io` of each disk and network adapter the I/O went through.
     pub fn device_io(&self) -> &[(Arc<str>, [u64; 2])] {
         self.io_bytes.as_ref().map_or(&[], |io| &io.devices)
     }
+
     /// `io_bytes` holding `io`: none when there was no I/O.
     pub fn boxed_io(io: IoBytes) -> Option<Box<IoBytes>> {
         (io != IoBytes::default()).then(|| Box::new(io))
     }
 }
+
 #[derive(Clone)]
 pub(crate) struct Frame {
     /// Busiest engine of each recorded GPU, by device id (`gpu@0`).
@@ -158,8 +180,10 @@ pub(crate) struct Frame {
     pub undecoded: u64,
     pub sample_ms: f64,
 }
+
 /// Buckets of 0.5 s kept by the recorder: the last 5 minutes.
 pub const RETENTION: u64 = 600;
+
 #[derive(Default)]
 pub(crate) struct History {
     pub frames: VecDeque<Arc<Frame>>,
@@ -169,6 +193,7 @@ pub(crate) struct History {
     /// frames hold only the last 5 minutes of it.
     pub io_totals: HashMap<(u32, u64), IoBytes>,
 }
+
 impl History {
     pub fn prune(&mut self, now: u64) {
         while self
@@ -179,6 +204,7 @@ impl History {
             self.frames.pop_front();
         }
     }
+
     pub fn push(&mut self, frame: Frame) {
         self.prune(frame.bucket);
         if self.frames.back().is_some_and(|f| f.bucket == frame.bucket) {
@@ -200,6 +226,7 @@ impl History {
             self.io_totals.retain(|key, _| present.contains(key));
         }
     }
+
     /// Identity that was alive in `bucket` under `pid`, not the process currently
     /// using the PID. Late ETW buffers update old frames.
     fn identity(&self, bucket: u64, pid: u32) -> Arc<Identity> {
@@ -225,6 +252,7 @@ impl History {
                 })
             })
     }
+
     pub fn add_io(&mut self, bucket: u64, pid: u32, bytes: &IoBytes) {
         let Some(position) = self.frames.iter().position(|f| f.bucket == bucket) else {
             return;
@@ -262,9 +290,11 @@ impl History {
         sample.io_bytes = Sample::boxed_io(merged);
     }
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
     fn frame(bucket: u64, created: u64) -> Frame {
         Frame {
             gpu_engines: Vec::new(),
@@ -288,6 +318,7 @@ mod tests {
             sample_ms: 0.0,
         }
     }
+
     #[test]
     fn samples_keep_missing_values_apart_from_zeroes_in_64_bytes() {
         let identity = frame(1, 1).processes[0].identity.clone();
@@ -316,6 +347,7 @@ mod tests {
         assert_eq!(missing.shared(), Some(0));
         assert_eq!(std::mem::size_of::<Sample>(), 64);
     }
+
     #[test]
     fn bounded_five_minutes_and_delayed_io_survives_pid_reuse() {
         let mut h = History::default();

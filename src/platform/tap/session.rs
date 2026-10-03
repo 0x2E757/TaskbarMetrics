@@ -1,5 +1,7 @@
 //! Sampling session and taskbar target lifecycle, composed independently of COM entry points.
+
 use super::*;
+
 pub(super) struct Session {
     pub(super) site: Agile,
     pub(super) diagnostics: Agile,
@@ -12,6 +14,7 @@ pub(super) struct Session {
     pub(super) settings: Mutex<Settings>,
     pub(super) config: std::path::PathBuf,
 }
+
 impl Session {
     pub(super) fn settings(&self) -> Result<Settings> {
         Ok(self.settings.lock().map_err(|_| E_FAIL)?.clone())
@@ -39,6 +42,7 @@ impl Session {
             .cloned()
             .collect())
     }
+
     pub(super) fn object(&self, key: u64) -> Result<Com> {
         let diagnostics = self.diagnostics.resolve(&DIAGNOSTICS)?;
         unsafe {
@@ -48,6 +52,7 @@ impl Session {
             Com::owned(result)
         }
     }
+
     /// The taskbar window that holds `element`, by the island its root belongs to.
     fn window(&self, element: &Com) -> Option<isize> {
         let root = xaml::island_root(element).ok()?;
@@ -59,6 +64,7 @@ impl Session {
         }
         self.islands.lock().ok()?.window(handle)
     }
+
     pub(super) fn change(&self, relation: Relation, element: Element, mutation: i32) -> Result<()> {
         if self.stopping.load(Ordering::Acquire) {
             return Ok(());
@@ -128,6 +134,7 @@ impl Session {
         }
         Ok(())
     }
+
     pub(super) fn run(&self, callback: &Com) -> Result<()> {
         self.reload()?;
         let settings = self.settings()?;
@@ -145,6 +152,7 @@ impl Session {
             callback: &'a Com,
             session: &'a Session,
         }
+
         impl Drop for Subscription<'_> {
             fn drop(&mut self) {
                 self.session.stopping.store(true, Ordering::Release);
@@ -208,6 +216,7 @@ impl Session {
         }
         Ok(())
     }
+
     pub(super) fn cleanup(&self) {
         self.stopping.store(true, Ordering::Release);
         let targets = match self.targets.lock() {
@@ -220,8 +229,10 @@ impl Session {
         log("Stopped; DLL stays pinned until Explorer exits");
     }
 }
+
 impl MetricSink for Session {
     fn publish(&self, _text: &str) {}
+
     fn publish_readings(&self, readings: &[crate::metrics::MetricReading], _text: &str) {
         if let Ok(targets) = self.list() {
             for target in targets {

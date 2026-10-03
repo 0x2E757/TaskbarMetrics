@@ -6,6 +6,7 @@ pub struct LocalTime {
     pub second: u16,
     pub tenth: u16,
 }
+
 impl LocalTime {
     pub fn of(bucket: u64) -> Self {
         #[repr(C)]
@@ -20,11 +21,13 @@ impl LocalTime {
             second: u16,
             millis: u16,
         }
+
         #[repr(C)]
         struct FileTime {
             low: u32,
             high: u32,
         }
+
         #[link(name = "kernel32")]
         extern "system" {
             fn FileTimeToLocalFileTime(utc: *const FileTime, local: *mut FileTime) -> i32;

@@ -10,20 +10,24 @@ pub struct PngIcons {
     /// Where this build leaves the pixels for the script.
     pixels: PathBuf,
 }
+
 impl PngIcons {
     pub const SIZES: [u32; 3] = [96, 128, 256];
     /// All the PNG files together.
     const LIMIT: u64 = 10 * 1024;
     const FINGERPRINT: &'static str = "pixels.fnv";
+
     pub fn new(root: &Path, out: &Path) -> Self {
         Self {
             assets: root.join("assets").join("icon"),
             pixels: out.join("icon"),
         }
     }
+
     pub fn assets(&self) -> &Path {
         &self.assets
     }
+
     /// The PNG of every size in `SIZES`, or what to do to get valid ones.
     pub fn load(&self, pixels: impl Fn(u32) -> Vec<u32>) -> Result<Vec<(u32, Vec<u8>)>, String> {
         let fingerprint = self.leave_pixels(pixels)?;
@@ -60,6 +64,7 @@ impl PngIcons {
         }
         Ok(images)
     }
+
     /// Writes `<size>.bgra` (0xAARRGGBB, rows top-down) for the script and returns
     /// the fingerprint of all of them, which the script stores next to the PNGs.
     fn leave_pixels(&self, pixels: impl Fn(u32) -> Vec<u32>) -> Result<String, String> {
@@ -76,6 +81,7 @@ impl PngIcons {
             .map_err(|error| error.to_string())?;
         Ok(fingerprint)
     }
+
     /// Width and height from the IHDR chunk right after the PNG signature.
     fn dimensions(png: &[u8]) -> Option<(u32, u32)> {
         const SIGNATURE: [u8; 8] = [0x89, b'P', b'N', b'G', 0x0D, 0x0A, 0x1A, 0x0A];
@@ -89,10 +95,12 @@ impl PngIcons {
 
 /// FNV-1a, 64-bit: stable across Rust releases, unlike the std hasher.
 struct Fnv(u64);
+
 impl Fnv {
     fn new() -> Self {
         Self(0xcbf2_9ce4_8422_2325)
     }
+
     fn write(&mut self, bytes: &[u8]) {
         for byte in bytes {
             self.0 = (self.0 ^ *byte as u64).wrapping_mul(0x0100_0000_01b3);

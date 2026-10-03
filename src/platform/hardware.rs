@@ -1,4 +1,5 @@
 //! Read-only hardware descriptions for the main window's section headers.
+
 use super::pdh::PdhCounter;
 use super::{abi::*, com::Com};
 use std::ptr;
@@ -6,6 +7,7 @@ use std::ptr;
 /// `IOCTL_STORAGE_QUERY_PROPERTY` on a volume or physical drive, opened with zero
 /// access: it only reads device metadata and needs no rights.
 struct StorageQuery;
+
 impl StorageQuery {
     /// Standard query of `property` into `output`; the number of bytes returned.
     fn property(path: &str, property: u32, output: &mut [u32]) -> Option<u32> {
@@ -41,6 +43,7 @@ impl StorageQuery {
 /// «SSD» or «HDD»: whether a physical disk (`\\.\PhysicalDriveN`, the number of
 /// its `\PhysicalDisk` instance) incurs a seek penalty.
 pub struct DiskMedia;
+
 impl DiskMedia {
     pub fn of(number: u32) -> Option<&'static str> {
         // StorageDeviceSeekPenaltyProperty: Version, Size, IncursSeekPenalty.
@@ -57,6 +60,7 @@ impl DiskMedia {
 
 /// «NVMe»: the bus a drive letter's disk is attached to.
 pub struct DriveBus;
+
 impl DriveBus {
     /// `STORAGE_DEVICE_DESCRIPTOR.BusType` (StorageDeviceProperty).
     pub fn of(letter: &str) -> Option<&'static str> {
@@ -89,6 +93,7 @@ pub struct GpuAdapter {
     /// with its 512 MB carve-out, as not integrated.
     pub discrete: bool,
 }
+
 impl GpuAdapter {
     /// `(high, low)` LUID parts of an engine (`pid_N_luid_…`) or adapter instance name.
     pub fn luid(instance: &str) -> Option<(i32, u32)> {
@@ -97,6 +102,7 @@ impl GpuAdapter {
         let low = u32::from_str_radix(parts.next()?.strip_prefix("0x")?, 16).ok()?;
         Some((high, low))
     }
+
     /// Adapter with the given LUID from DXGI.
     pub fn find(luid: (i32, u32)) -> Option<Self> {
         const FACTORY: Guid = Guid::from_u128(0x770aae78_f26f_4dba_a829_253c83d1b387);
@@ -144,6 +150,7 @@ impl GpuAdapter {
         None
     }
 }
+
 #[repr(C)]
 struct AdapterDescription {
     description: [u16; 128],
@@ -158,6 +165,7 @@ struct AdapterDescription {
     luid_high: i32,
     flags: u32,
 }
+
 impl Default for AdapterDescription {
     fn default() -> Self {
         // SAFETY: plain integers and arrays; all-zero is a valid value.
@@ -169,12 +177,14 @@ impl Default for AdapterDescription {
 pub struct GpuMemory {
     counter: PdhCounter,
 }
+
 impl GpuMemory {
     pub fn new() -> Self {
         Self {
             counter: PdhCounter::new(r"\GPU Adapter Memory(*)\Dedicated Usage"),
         }
     }
+
     /// Bytes in use on the adapter with `luid`.
     pub fn used(&mut self, luid: (i32, u32)) -> Option<f64> {
         self.counter
@@ -196,6 +206,7 @@ pub struct Processor {
     pub cores: u32,
     pub threads: u32,
 }
+
 impl Processor {
     pub fn read() -> Option<Self> {
         Some(Self {
@@ -207,6 +218,7 @@ impl Processor {
             threads: unsafe { GetActiveProcessorCount(0xffff) },
         })
     }
+
     /// The name Task Manager shows, from the registry.
     fn name() -> Option<String> {
         const LOCAL_MACHINE: isize = 0x8000_0002u32 as i32 as isize;
@@ -232,6 +244,7 @@ impl Processor {
         let length = buffer.iter().position(|c| *c == 0).unwrap_or(buffer.len());
         Some(String::from_utf16_lossy(&buffer[..length]))
     }
+
     /// Drops marks, the clock and the «N-Core Processor» tail the counts already say:
     /// «Intel(R) Core(TM) i7-8700K CPU @ 3.70GHz» → «Intel Core i7-8700K».
     fn short(name: &str) -> String {
@@ -256,6 +269,7 @@ impl Processor {
         }
         words.join(" ")
     }
+
     /// Records of one `LOGICAL_PROCESSOR_RELATIONSHIP` kind.
     fn count(relation: u32) -> Option<u32> {
         let mut size = 0u32;
@@ -298,6 +312,7 @@ extern "system" {
         size: *mut u32,
     ) -> i32;
 }
+
 #[link(name = "kernel32")]
 extern "system" {
     fn GetActiveProcessorCount(group: u16) -> u32;
@@ -326,6 +341,7 @@ extern "system" {
         overlapped: *mut core::ffi::c_void,
     ) -> i32;
 }
+
 #[link(name = "dxgi")]
 extern "system" {
     fn CreateDXGIFactory1(iid: *const Guid, factory: *mut Raw) -> Hr;
@@ -334,6 +350,7 @@ extern "system" {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn luid_is_parsed_from_pdh_instance_names() {
         assert_eq!(
@@ -342,6 +359,7 @@ mod tests {
         );
         assert_eq!(GpuAdapter::luid("phys_0"), None);
     }
+
     #[test]
     fn processor_names_lose_marks_clock_and_core_tail() {
         for (raw, short) in [
@@ -373,6 +391,7 @@ mod tests {
             assert_eq!(Processor::short(raw), short);
         }
     }
+
     #[test]
     fn the_main_gpu_is_discrete_whenever_there_is_one() {
         use super::super::gpu_temperature::GpuAdapters;
@@ -386,6 +405,7 @@ mod tests {
                 .is_some_and(|adapter| adapter.discrete));
         }
     }
+
     #[test]
     fn this_machine_reports_cores_within_threads() {
         let processor = Processor::read().unwrap();

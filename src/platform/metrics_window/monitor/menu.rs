@@ -14,9 +14,11 @@ pub struct DeviceMenu {
     checked: Instant,
     watch: Option<(PathBuf, Instant)>,
 }
+
 impl DeviceMenu {
     const PERIOD: Duration = Duration::from_secs(10);
     const WATCH: Duration = Duration::from_secs(2);
+
     /// The machine's devices; `watch` is the recorder's watch list, if any.
     pub fn system(watch: Option<PathBuf>) -> Self {
         let mut catalog = DeviceCatalog::new();
@@ -29,6 +31,7 @@ impl DeviceMenu {
             watch: watch.map(|path| (path, Instant::now() - Self::WATCH)),
         }
     }
+
     pub fn fixed(ids: Vec<DeviceId>) -> Self {
         Self {
             devices: Self::menu(ids, None),
@@ -37,6 +40,7 @@ impl DeviceMenu {
             watch: None,
         }
     }
+
     /// Menu entries, numbered within their group: «GPU 1», «GPU 2», but «SSD»
     /// when it is the only one. `catalog` names the machine's disks by media.
     fn menu(ids: Vec<DeviceId>, catalog: Option<&DeviceCatalog>) -> Vec<Device> {
@@ -62,10 +66,12 @@ impl DeviceMenu {
         }
         devices
     }
+
     fn listed(catalog: &mut DeviceCatalog) -> Vec<Device> {
         let ids = catalog.devices();
         Self::menu(ids, Some(catalog))
     }
+
     /// Re-enumerates the machine's devices; true when the menu changed.
     pub fn refresh(&mut self) -> bool {
         if let Some((path, written)) = &mut self.watch {
@@ -89,6 +95,7 @@ impl DeviceMenu {
         }
         changed
     }
+
     /// The device a bare kind stands for: the machine's main device, or the first
     /// of its kind in a fixed menu.
     pub fn canonical(&self, id: &DeviceId) -> DeviceId {
@@ -104,6 +111,7 @@ impl DeviceMenu {
                 .map_or_else(|| id.clone(), |d| d.id.clone()),
         }
     }
+
     /// Position of `id` in the menu; a bare kind (`disk`, from a taskbar tile) is
     /// its main device.
     pub fn position(&self, id: &DeviceId) -> Option<usize> {

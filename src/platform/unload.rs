@@ -1,16 +1,19 @@
 //! Frees the program's files so an installer or a portable update can replace or
 //! remove them: Explorer keeps the DLL loaded until it exits, the window and the
 //! collectors hold their executables.
+
 use super::{
     abi::*, executables::Executables, launcher::Explorer, process_history::Elevation,
     shutdown::Shutdown,
 };
+
 use std::{
     path::Path,
     time::{Duration, Instant},
 };
 
 pub(crate) struct Unload;
+
 impl Unload {
     /// Closes the tray icon and the window, ends Explorer, which Windows starts again by itself
     /// (`AutoRestartShell`), and waits until the files in `directory` are free; the
@@ -24,6 +27,7 @@ impl Unload {
         }
         Self::wait_free(directory)
     }
+
     /// Ends the Explorer `pid` and waits for the one Windows starts in its place.
     pub fn restart_explorer(pid: u32) -> Result<()> {
         unsafe {
@@ -58,6 +62,7 @@ impl Unload {
         .map(|_| ())
         .map_err(|_| E_FAIL)
     }
+
     /// Every file but the running launcher opens for writing within 10 s.
     fn wait_free(directory: &Path) -> Result<()> {
         let deadline = Instant::now() + Duration::from_secs(10);

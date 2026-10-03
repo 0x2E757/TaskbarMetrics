@@ -1,5 +1,6 @@
 //! English is the source language. Every user-facing key has a Russian translation.
 //! This catalog is the only place in the repository with Russian text.
+
 use super::clock::LocalTime;
 use crate::platform::process_history::{memory::MemoryRows, store::Identity};
 
@@ -8,6 +9,7 @@ pub enum Language {
     English,
     Russian,
 }
+
 impl Language {
     /// Locale digits: RU groups thousands with U+202F, EN with commas; the fraction
     /// always follows a point.
@@ -35,15 +37,19 @@ impl Language {
         }
         result
     }
+
     pub fn percent(self, value: f64, precision: usize) -> String {
         format!("{}\u{A0}%", self.number(value, precision))
     }
+
     pub fn celsius(self, value: f64) -> String {
         format!("{} °C", self.number(value.round(), 0))
     }
+
     pub fn rate(self, value: f64, precision: usize) -> String {
         format!("{} MB/s", self.number(value, precision))
     }
+
     /// "3 d 4 h", "4 h 15 min", "15 min": the two largest units there are.
     pub fn uptime(self, uptime: std::time::Duration) -> String {
         let minutes = uptime.as_secs() / 60;
@@ -65,22 +71,27 @@ impl Language {
         }
         parts.join(" ")
     }
+
     /// `HH:MM:SS.d`.
     pub fn time(self, bucket: u64) -> String {
         format!("{}.{}", self.clock(bucket), LocalTime::of(bucket).tenth)
     }
+
     pub fn clock(self, bucket: u64) -> String {
         let time = LocalTime::of(bucket);
         format!("{:02}:{:02}:{:02}", time.hour, time.minute, time.second)
     }
+
     pub fn minute(self, bucket: u64) -> String {
         let time = LocalTime::of(bucket);
         format!("{:02}:{:02}", time.hour, time.minute)
     }
+
     /// `m:ss`, as in "0:42 of 5:00 collected".
     pub fn elapsed(self, seconds: u64) -> String {
         format!("{}:{:02}", seconds / 60, seconds % 60)
     }
+
     /// "4 min 26 s"; minutes are omitted below one minute.
     pub fn span(self, seconds: u64) -> String {
         let (minutes, seconds) = (seconds / 60, seconds % 60);
@@ -97,17 +108,21 @@ impl Language {
             format!("{minutes} {m} {seconds} {s}")
         }
     }
+
     pub fn ago(self, seconds: u64) -> String {
         self.text("{t} ago").replace("{t}", &self.span(seconds))
     }
+
     /// "8 cores".
     pub fn cores(self, count: u32) -> String {
         self.plural(count, ["core", "cores"], ["ядро", "ядра", "ядер"])
     }
+
     /// "16 threads".
     pub fn threads(self, count: u32) -> String {
         self.plural(count, ["thread", "threads"], ["поток", "потока", "потоков"])
     }
+
     /// "3 changes not applied to the taskbar".
     pub fn unapplied(self, count: u32) -> String {
         self.plural(
@@ -123,10 +138,12 @@ impl Language {
             ],
         )
     }
+
     /// "3 rules".
     pub fn rules(self, count: u32) -> String {
         self.plural(count, ["rule", "rules"], ["правило", "правила", "правил"])
     }
+
     /// The name of the language in itself, for the language menu.
     pub fn name(self) -> &'static str {
         match self {
@@ -134,6 +151,7 @@ impl Language {
             Self::Russian => "Русский",
         }
     }
+
     /// `@text@`, translated by `markup`, when the catalog has `text`; otherwise `text`
     /// as it is, such as a unit both languages write alike.
     pub fn marked(text: &str) -> String {
@@ -143,6 +161,7 @@ impl Language {
             text.to_owned()
         }
     }
+
     /// `english` is one and many; `russian` is one, few (2–4) and many.
     fn plural(self, count: u32, english: [&str; 2], russian: [&str; 3]) -> String {
         let form = if self == Self::English {
@@ -156,6 +175,7 @@ impl Language {
         };
         format!("{count} {form}")
     }
+
     /// Saved choice; demo screenshots may force one with `--language en|ru`.
     pub fn load() -> Self {
         let args: Vec<_> = std::env::args().collect();
@@ -177,12 +197,14 @@ impl Language {
             _ => Self::English,
         }
     }
+
     pub fn save(self) -> std::io::Result<()> {
         std::fs::write(
             crate::platform::data_directory::DataDirectory::file("taskbar-metrics.language")?,
             if self == Self::Russian { "ru" } else { "en" },
         )
     }
+
     pub fn text(self, key: &str) -> &str {
         if self == Self::English {
             return key;
@@ -193,6 +215,7 @@ impl Language {
             .map(|(_, ru)| *ru)
             .unwrap_or(key)
     }
+
     /// Name of a history row: memory rows carry an English name to translate.
     pub fn process(self, identity: &Identity) -> &str {
         if identity.pid == MemoryRows::PID {
@@ -201,6 +224,7 @@ impl Language {
             &identity.name
         }
     }
+
     pub fn markup(self, markup: &str) -> String {
         let mut result = markup.replace(
             "RequestedTheme=\"Default\"",
@@ -219,9 +243,11 @@ impl Language {
         result
     }
 }
+
 /// The language Windows suggests before one is chosen: Russian when it is the
 /// display language or one of the keyboard layouts.
 struct SystemLanguage;
+
 impl SystemLanguage {
     fn russian() -> bool {
         // SAFETY: a null list of size 0 only asks for the number of layouts.
@@ -233,6 +259,7 @@ impl SystemLanguage {
         // SAFETY: no arguments.
         Self::any_russian(unsafe { GetUserDefaultUILanguage() }, &layouts)
     }
+
     /// The low word of a layout handle is its language; the low ten bits of a
     /// language id are the primary language, 0x19 for Russian.
     fn any_russian(display: u16, layouts: &[isize]) -> bool {
@@ -241,10 +268,12 @@ impl SystemLanguage {
             .any(|language| language & 0x3FF == 0x19)
     }
 }
+
 #[link(name = "user32")]
 extern "system" {
     fn GetKeyboardLayoutList(count: i32, list: *mut isize) -> i32;
 }
+
 #[link(name = "kernel32")]
 extern "system" {
     fn GetUserDefaultUILanguage() -> u16;
@@ -653,6 +682,7 @@ const CATALOG: &[(&str, &str)] = &[
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn russian_is_suggested_by_the_display_language_or_a_keyboard_layout() {
         // en-US display; US and Russian (0x04190419) layouts.
@@ -666,6 +696,7 @@ mod tests {
             &[0x04090409, 0x04070407]
         ));
     }
+
     #[test]
     fn translation_keys_are_unique_and_complete() {
         let mut keys = std::collections::HashSet::new();
@@ -674,6 +705,7 @@ mod tests {
             assert!(keys.insert(en));
         }
     }
+
     #[test]
     fn numbers_follow_locale_grouping_and_decimal_marks() {
         assert_eq!(Language::Russian.number(3431.034, 2), "3\u{202F}431.03");
@@ -685,6 +717,7 @@ mod tests {
         assert_eq!(Language::English.ago(38), "38 s ago");
         assert_eq!(Language::Russian.elapsed(42), "0:42");
     }
+
     #[test]
     fn pending_changes_and_rules_use_plural_forms() {
         assert_eq!(
@@ -705,11 +738,13 @@ mod tests {
         );
         assert_eq!(Language::English.rules(3), "3 rules");
     }
+
     #[test]
     fn units_are_marked_only_when_they_read_differently() {
         assert_eq!(Language::marked("s"), "@s@");
         assert_eq!(Language::marked("px"), "px");
     }
+
     #[test]
     fn core_and_thread_counts_use_plural_forms() {
         assert_eq!(Language::Russian.cores(8), "8 ядер");

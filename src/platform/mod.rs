@@ -1,4 +1,5 @@
 //! Windows adapters. Unsafe ABI operations must stay in this module.
+
 pub(crate) mod abi;
 pub(crate) mod app_icon;
 pub(crate) mod autostart;

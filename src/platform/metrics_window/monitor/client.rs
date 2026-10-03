@@ -5,6 +5,7 @@ use crate::platform::{
         wire::Packet,
     },
 };
+
 use std::{
     collections::BTreeMap,
     sync::{
@@ -13,6 +14,7 @@ use std::{
     },
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
+
 #[derive(Default)]
 pub struct Snapshot {
     pub frames: BTreeMap<u64, Arc<Frame>>,
@@ -23,10 +25,12 @@ pub struct Snapshot {
     /// I/O of each process since the recorder started.
     pub io_totals: Arc<std::collections::HashMap<(u32, u64), IoBytes>>,
 }
+
 pub struct HistoryClient {
     pub state: Arc<Mutex<Snapshot>>,
     stop: Arc<AtomicBool>,
 }
+
 impl HistoryClient {
     pub fn new() -> Self {
         let state = Arc::new(Mutex::new(Snapshot::default()));
@@ -93,11 +97,13 @@ impl HistoryClient {
         Self { state, stop }
     }
 }
+
 impl Drop for HistoryClient {
     fn drop(&mut self) {
         self.stop.store(true, Ordering::Relaxed);
     }
 }
+
 #[link(name = "user32")]
 extern "system" {
     fn FindWindowW(class: *const u16, title: *const u16) -> Raw;

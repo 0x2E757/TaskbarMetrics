@@ -2,6 +2,7 @@ use super::{
     locale::Language,
     model::{Device, Resource},
 };
+
 use crate::platform::{
     devices::{DiskName, NetworkAdapter},
     hardware::{DriveBus, GpuAdapter, GpuMemory, Processor},
@@ -9,6 +10,7 @@ use crate::platform::{
     system_activity::{CpuFrequency, PageFile, SystemActivity},
     wifi::Wlan,
 };
+
 use std::{
     collections::HashMap,
     time::{Duration, Instant},
@@ -47,8 +49,10 @@ pub struct Devices {
     wlan: Option<Wlan>,
     facts: Facts,
 }
+
 impl Devices {
     const PERIOD: Duration = Duration::from_secs(10);
+
     pub fn new() -> Self {
         Self {
             checked: None,
@@ -64,6 +68,7 @@ impl Devices {
             facts: Facts::default(),
         }
     }
+
     /// `engine` is the PDH instance of the shown GPU's busiest engine, if known.
     pub fn refresh(&mut self, device: &Device, engine: Option<&str>) {
         let luid = engine.and_then(GpuAdapter::luid);
@@ -86,6 +91,7 @@ impl Devices {
         }
         self.sample(device);
     }
+
     /// Live values of the shown device's kind.
     fn sample(&mut self, device: &Device) {
         match device.resource {
@@ -103,9 +109,11 @@ impl Devices {
             Resource::Gpu | Resource::Disk => {}
         }
     }
+
     pub fn facts(&self) -> Facts {
         self.facts
     }
+
     /// Header subtitle of the CPU, GPU, disk and network pages.
     pub fn subtitle(&self, device: &Device, language: Language) -> String {
         match device.resource {
@@ -162,6 +170,7 @@ impl Devices {
             Resource::Ram => self.modules.clone(),
         }
     }
+
     /// "Drive C:" or "Drives C:, D:", as Explorer names drive letters; nothing for a
     /// disk without them.
     fn volumes(disk: &DiskName, language: Language) -> Option<String> {
@@ -172,6 +181,7 @@ impl Devices {
         };
         Some(language.text(label).replace("{v}", &disk.letters()))
     }
+
     /// Dedicated memory `(in use, total)` in bytes; usage is live only.
     pub fn gpu_memory(&self) -> Option<(Option<f64>, f64)> {
         let (_, gpu) = self.gpu.as_ref()?;
@@ -182,6 +192,7 @@ impl Devices {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn volumes_are_named_in_the_singular_or_plural() {
         let disk = |volumes: &[&str]| DiskName {

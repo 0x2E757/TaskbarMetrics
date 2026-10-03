@@ -9,24 +9,30 @@ trait Flag {
     /// Caption under the box, a key of the translation catalog.
     fn caption(&self, on: bool) -> &'static str;
 }
+
 impl Flag for Autostart {
     fn get(&self) -> bool {
         self.enabled()
     }
+
     fn set(&self, on: bool) -> std::io::Result<()> {
         Autostart::set(self, on)
     }
+
     fn caption(&self, _: bool) -> &'static str {
         "Taskbar tiles and the CPU temperature sensor"
     }
 }
+
 impl Flag for WindowMemory {
     fn get(&self) -> bool {
         self.resets()
     }
+
     fn set(&self, on: bool) -> std::io::Result<()> {
         self.set_resets(on)
     }
+
     fn caption(&self, on: bool) -> &'static str {
         if on {
             "The window opens in the middle of the main monitor at 1280 × 1024"
@@ -35,6 +41,7 @@ impl Flag for WindowMemory {
         }
     }
 }
+
 /// A check box bound to a flag, with the caption below it.
 struct FlagBox {
     root: Com,
@@ -44,6 +51,7 @@ struct FlagBox {
     shown: bool,
     language: Language,
 }
+
 impl FlagBox {
     fn new(
         root: &Com,
@@ -63,9 +71,11 @@ impl FlagBox {
         flag_box.caption(flag_box.flag.caption(flag_box.shown))?;
         Ok(flag_box)
     }
+
     fn caption(&self, text: &str) -> Result<()> {
         Ui::text(&self.root, self.status, self.language.text(text))
     }
+
     /// Stores a click; a failed write puts the box back and says why.
     fn refresh(&mut self, writable: bool) -> Result<()> {
         let on = Ui::is_checked(&self.check)?;
@@ -90,6 +100,7 @@ pub(super) struct StartupOptions {
     boxes: Vec<FlagBox>,
     writable: bool,
 }
+
 impl StartupOptions {
     pub fn new(root: &Com, language: Language) -> Result<Self> {
         let exe = std::env::current_exe().map_err(|_| E_FAIL)?;
@@ -112,6 +123,7 @@ impl StartupOptions {
             writable: super::persistent(),
         })
     }
+
     pub fn refresh(&mut self) -> Result<()> {
         for flag_box in &mut self.boxes {
             flag_box.refresh(self.writable)?;

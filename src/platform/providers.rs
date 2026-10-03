@@ -3,6 +3,7 @@ use super::{
     gpu_temperature::GpuAdapters,
     pdh::PdhCounter,
 };
+
 use crate::metrics::{MetricDescriptor, MetricProvider, MetricValue};
 use std::{cell::RefCell, rc::Rc};
 
@@ -12,6 +13,7 @@ pub struct DiskThroughputProvider {
     counter: PdhCounter,
     tag: String,
 }
+
 impl DiskThroughputProvider {
     pub fn new(id: &DeviceId, write: bool) -> Self {
         Self {
@@ -29,10 +31,12 @@ impl DiskThroughputProvider {
         }
     }
 }
+
 impl MetricProvider for DiskThroughputProvider {
     fn descriptor(&self) -> &MetricDescriptor {
         &self.descriptor
     }
+
     fn sample(&mut self) -> MetricValue {
         let tag = &self.tag;
         match self
@@ -52,6 +56,7 @@ pub struct ShareThroughputProvider {
     counter: PdhCounter,
     drive: Binding<NetworkDrive>,
 }
+
 impl ShareThroughputProvider {
     pub fn new(id: &DeviceId, write: bool) -> Self {
         Self {
@@ -69,10 +74,12 @@ impl ShareThroughputProvider {
         }
     }
 }
+
 impl MetricProvider for ShareThroughputProvider {
     fn descriptor(&self) -> &MetricDescriptor {
         &self.descriptor
     }
+
     fn sample(&mut self) -> MetricValue {
         let Some(drive) = self.drive.get(|id| NetworkDrive::of(id.tag.as_deref()?)) else {
             return MetricValue::Unavailable;
@@ -101,6 +108,7 @@ pub struct NetworkTraffic {
     /// them starts a new tick.
     read: [bool; 2],
 }
+
 impl NetworkTraffic {
     pub fn shared() -> Rc<RefCell<Self>> {
         Rc::new(RefCell::new(Self {
@@ -113,6 +121,7 @@ impl NetworkTraffic {
             read: [true; 2],
         }))
     }
+
     /// Bytes per second of `instance`: received for direction 0, sent for 1.
     fn sample(&mut self, direction: usize, instance: &str) -> MetricValue {
         // Both directions of a tick read within microseconds, ticks are at least
@@ -149,6 +158,7 @@ pub struct NetworkProvider {
     upload: bool,
     adapter: Binding<String>,
 }
+
 impl NetworkProvider {
     /// Both directions of one device share `traffic`.
     pub fn new(id: &DeviceId, upload: bool, traffic: Rc<RefCell<NetworkTraffic>>) -> Self {
@@ -164,10 +174,12 @@ impl NetworkProvider {
         }
     }
 }
+
 impl MetricProvider for NetworkProvider {
     fn descriptor(&self) -> &MetricDescriptor {
         &self.descriptor
     }
+
     fn sample(&mut self) -> MetricValue {
         let Some(instance) = self.adapter.get(|id| {
             NetworkAdapter::find(&NetworkAdapter::list(), id).map(NetworkAdapter::instance)
@@ -189,6 +201,7 @@ pub struct CpuProvider {
     descriptor: MetricDescriptor,
     counter: PdhCounter,
 }
+
 impl CpuProvider {
     pub fn new() -> Self {
         Self {
@@ -197,10 +210,12 @@ impl CpuProvider {
         }
     }
 }
+
 impl MetricProvider for CpuProvider {
     fn descriptor(&self) -> &MetricDescriptor {
         &self.descriptor
     }
+
     fn sample(&mut self) -> MetricValue {
         self.counter.scalar()
     }
@@ -212,6 +227,7 @@ pub struct GpuProvider {
     counter: PdhCounter,
     adapter: Binding<(i32, u32)>,
 }
+
 impl GpuProvider {
     pub fn new(id: &DeviceId) -> Self {
         Self {
@@ -221,10 +237,12 @@ impl GpuProvider {
         }
     }
 }
+
 impl MetricProvider for GpuProvider {
     fn descriptor(&self) -> &MetricDescriptor {
         &self.descriptor
     }
+
     fn sample(&mut self) -> MetricValue {
         match self
             .adapter
@@ -249,6 +267,7 @@ struct MemoryStatus {
     available_virtual: u64,
     extended: u64,
 }
+
 #[link(name = "kernel32")]
 extern "system" {
     fn GlobalMemoryStatusEx(status: *mut MemoryStatus) -> i32;
@@ -256,14 +275,17 @@ extern "system" {
 
 /// Physical memory usable by Windows, and the part in use, for the history.
 pub struct PhysicalMemory;
+
 impl PhysicalMemory {
     pub fn total_bytes() -> Option<u64> {
         Self::status().map(|status| status.total)
     }
+
     /// Bytes in use as the RAM tile counts them: total minus available.
     pub fn used_bytes() -> Option<u64> {
         Self::status().map(|status| status.total.saturating_sub(status.available))
     }
+
     fn status() -> Option<MemoryStatus> {
         let mut status = MemoryStatus {
             size: std::mem::size_of::<MemoryStatus>() as u32,
@@ -276,6 +298,7 @@ impl PhysicalMemory {
 pub struct RamProvider {
     descriptor: MetricDescriptor,
 }
+
 impl RamProvider {
     pub fn new() -> Self {
         Self {
@@ -283,10 +306,12 @@ impl RamProvider {
         }
     }
 }
+
 impl MetricProvider for RamProvider {
     fn descriptor(&self) -> &MetricDescriptor {
         &self.descriptor
     }
+
     fn sample(&mut self) -> MetricValue {
         let mut status = MemoryStatus {
             size: std::mem::size_of::<MemoryStatus>() as u32,

@@ -2,6 +2,7 @@ use super::{
     super::abi::*,
     store::{Frame, History},
 };
+
 use std::{
     io::{BufWriter, Read, Write},
     sync::{Arc, Mutex, Weak},
@@ -14,7 +15,9 @@ struct SecurityAttributes {
     descriptor: Raw,
     inherit: i32,
 }
+
 struct PipeSecurity(Raw);
+
 impl PipeSecurity {
     fn new() -> Result<Self> {
         unsafe {
@@ -57,6 +60,7 @@ impl PipeSecurity {
         }
     }
 }
+
 impl Drop for PipeSecurity {
     fn drop(&mut self) {
         unsafe {
@@ -64,6 +68,7 @@ impl Drop for PipeSecurity {
         }
     }
 }
+
 impl HistoryServer {
     pub fn stream(pid: u32, history: Arc<Mutex<History>>) {
         std::thread::spawn(move || {
@@ -150,9 +155,11 @@ impl HistoryServer {
             }
         });
     }
+
     pub fn path(pid: u32) -> String {
         format!(r"\\.\pipe\TaskbarMetrics.History.{pid}")
     }
+
     pub fn spawn(pid: u32, history: Arc<Mutex<History>>) {
         std::thread::spawn(move || {
             use std::os::windows::io::FromRawHandle;
@@ -284,6 +291,7 @@ impl HistoryServer {
             }
         });
     }
+
     pub fn dump(pid: u32, path: &std::path::Path) -> std::io::Result<()> {
         let mut input = std::fs::File::open(Self::path(pid))?;
         let mut output = std::fs::File::create(path)?;
@@ -299,6 +307,7 @@ impl HistoryServer {
         Ok(())
     }
 }
+
 #[link(name = "kernel32")]
 extern "system" {
     fn LocalFree(memory: Raw) -> Raw;
@@ -316,6 +325,7 @@ extern "system" {
     fn DisconnectNamedPipe(pipe: Raw) -> i32;
     fn FlushFileBuffers(pipe: Raw) -> i32;
 }
+
 #[link(name = "advapi32")]
 extern "system" {
     fn OpenProcessToken(process: Raw, access: u32, token: *mut Raw) -> i32;

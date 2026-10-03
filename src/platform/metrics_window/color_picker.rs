@@ -27,6 +27,7 @@ pub(super) struct Hsv {
     pub s: f64,
     pub v: f64,
 }
+
 impl Hsv {
     pub fn of(rgb: u32) -> Self {
         let [r, g, b] = [16, 8, 0].map(|shift| ((rgb >> shift) & 0xFF) as f64 / 255.0);
@@ -47,6 +48,7 @@ impl Hsv {
             v: max,
         }
     }
+
     /// `0x00RRGGBB`.
     pub fn rgb(self) -> u32 {
         let c = self.v * self.s;
@@ -73,6 +75,7 @@ enum Part {
     Hue,
     Alpha,
 }
+
 enum PickerEvent {
     Open(usize),
     Drag(Part, f64, f64),
@@ -80,6 +83,7 @@ enum PickerEvent {
     Done,
     Cancel,
 }
+
 /// Target field and the color being edited.
 struct Editing {
     target: usize,
@@ -88,6 +92,7 @@ struct Editing {
     hex: String,
     percent: String,
 }
+
 impl Editing {
     fn argb(&self) -> u32 {
         (u32::from(self.alpha) << 24) | self.hsv.rgb()
@@ -104,6 +109,7 @@ pub(super) struct ColorPicker {
     _subscriptions: Vec<Subscription>,
     editing: Option<Editing>,
 }
+
 impl ColorPicker {
     fn swatch(size: u32, brush: &str, color: &str) -> String {
         format!(
@@ -111,6 +117,7 @@ impl ColorPicker {
             Self::checker(size, size)
         )
     }
+
     /// 4 px checkerboard behind translucent colors.
     fn checker(width: u32, height: u32) -> String {
         let mut data = String::new();
@@ -123,11 +130,13 @@ impl ColorPicker {
         }
         data
     }
+
     fn thumb(name: &str) -> String {
         format!(
             r##"<Canvas IsHitTestVisible="False"><Grid Width="20" Height="20" Canvas.Top="-4"><Grid.RenderTransform><TranslateTransform x:Name="{name}Thumb"/></Grid.RenderTransform><Ellipse Width="22" Height="22" Margin="-1" Stroke="#59000000" StrokeThickness="1"/><Ellipse Stroke="#FFFFFFFF" StrokeThickness="2"><Ellipse.Fill><SolidColorBrush x:Name="{name}Fill"/></Ellipse.Fill></Ellipse></Grid></Canvas>"##
         )
     }
+
     /// Attached flyout for the colors table. Uses `$token$` colors.
     pub fn markup() -> String {
         let presets: String = PRESETS
@@ -183,6 +192,7 @@ impl ColorPicker {
             now = Self::swatch(30, "PickerNow", "#00000000"),
         )
     }
+
     /// `targets`: swatch button names with the title shown for each ("Temperature line · dark theme").
     pub fn new(root: &Com, targets: Vec<(String, String)>) -> Result<Self> {
         let events = Rc::new(RefCell::new(Vec::new()));
@@ -257,15 +267,18 @@ impl ColorPicker {
             editing: None,
         })
     }
+
     fn find(&self, name: &str) -> Result<Com> {
         Playground::find(&self.root, name)
     }
+
     fn color(object: &Com, argb: u32) -> Result<()> {
         unsafe {
             let set: unsafe extern "system" fn(Raw, [u8; 4]) -> Hr = object.slot(7);
             check(set(object.raw(), argb.to_be_bytes()))
         }
     }
+
     fn translate(&self, name: &str, x: f64, y: f64) -> Result<()> {
         let transform = self.find(name)?.query(&TRANSLATE)?;
         unsafe {
@@ -275,9 +288,11 @@ impl ColorPicker {
             check(set(transform.raw(), y))
         }
     }
+
     fn text(&self, name: &str) -> Result<String> {
         self.find(name)?.query(&TEXTBOX)?.string(6)
     }
+
     /// Moves markers, recolors bars and rewrites the fields for the edited color.
     fn render(&mut self) -> Result<()> {
         let Some(editing) = &self.editing else {
@@ -325,6 +340,7 @@ impl ColorPicker {
         }
         Ok(())
     }
+
     fn open(&mut self, target: usize, color: u32) -> Result<()> {
         let (button, title) = self.targets[target].clone();
         self.find("PickerTitle")?
@@ -345,6 +361,7 @@ impl ColorPicker {
             check(show(self.flyout.raw(), button.raw()))
         }
     }
+
     fn hide(&mut self) -> Result<()> {
         self.editing = None;
         unsafe {
@@ -352,6 +369,7 @@ impl ColorPicker {
             check(hide(self.flyout.raw()))
         }
     }
+
     /// Handles picker input. `current(i)` is the color of target `i`; returns the
     /// target and color confirmed with "Done".
     pub fn refresh(&mut self, current: impl Fn(usize) -> u32) -> Result<Option<(usize, u32)>> {
@@ -417,6 +435,7 @@ impl ColorPicker {
         }
         Ok(confirmed)
     }
+
     /// Opens the picker for `target`, types a HEX value and confirms it.
     pub fn verify(&mut self, target: usize, color: u32) -> Result<Option<(usize, u32)>> {
         self.events.borrow_mut().push(PickerEvent::Open(target));
@@ -437,6 +456,7 @@ impl ColorPicker {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn hsv_round_trips_colors_of_the_artboard() {
         for rgb in [0xFF4B4B, 0x3296E1, 0x000000, 0xFFFFFF, 0x45D0B5, 0x964B32] {

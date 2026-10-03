@@ -2,10 +2,12 @@
 //! portable one and a build, share the named objects of their Explorer, so one runs
 //! at a time. The copy started last takes over: Explorer cannot unload the DLL of
 //! another copy, so it restarts without it.
+
 use super::{
     abi::*, executables::Executables, launcher::Explorer, shutdown::Shutdown,
     temperature::SensorCollector, unload::Unload,
 };
+
 use std::path::Path;
 
 /// What the copy that gave way ran, for the one that takes over.
@@ -13,6 +15,7 @@ pub(crate) struct Handover {
     /// The CPU temperature collector ran.
     pub sensor: bool,
 }
+
 impl Handover {
     /// Closes another copy whose DLL the current Explorer holds and restarts
     /// Explorer; `Some` when it did, and the new taskbar may still be starting.
@@ -37,6 +40,7 @@ impl Handover {
             }
         }
     }
+
     /// The same file; a missing one, such as a removed copy, is another.
     fn same(left: &Path, right: &Path) -> bool {
         match (left.canonicalize(), right.canonicalize()) {
@@ -51,6 +55,7 @@ impl Handover {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn paths_compare_as_the_files_they_name() {
         let executable = std::env::current_exe().unwrap();

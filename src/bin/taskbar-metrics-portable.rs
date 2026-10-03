@@ -1,6 +1,7 @@
 //! TaskbarMetrics-Portable.exe: the packaged program in one file. Built by
 //! tools\release.ps1 with `--features portable` and TASKBAR_METRICS_PAYLOAD set
 //! to the package folder.
+
 use taskbar_metrics_host::platform::portable::{Payload, PortableCopy};
 
 macro_rules! payload {

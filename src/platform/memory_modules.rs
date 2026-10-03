@@ -1,4 +1,5 @@
 //! Installed memory modules, from the firmware's SMBIOS tables.
+
 use std::ptr;
 
 /// One populated memory slot (SMBIOS Memory Device, type 17).
@@ -10,6 +11,7 @@ pub struct MemoryModule {
     /// Configured speed in MT/s, else the module's rated one.
     pub speed: Option<u32>,
 }
+
 impl MemoryModule {
     /// «16 GB DDR5-6000».
     fn label(&self) -> String {
@@ -27,6 +29,7 @@ impl MemoryModule {
 }
 
 pub struct MemoryModules;
+
 impl MemoryModules {
     /// The modules the firmware lists; empty when it lists none. Reading the raw
     /// SMBIOS table needs no rights.
@@ -46,6 +49,7 @@ impl MemoryModules {
             .map(Self::parse)
             .unwrap_or_default()
     }
+
     /// «2 × 16 GB DDR5-6000»: equal modules counted, different ones joined by « + ».
     /// Devices with neither a type nor a speed are not modules: a virtual machine
     /// lists its memory in power-of-two pieces (8 GB + 2 GB + … + 32 MB), so their
@@ -74,6 +78,7 @@ impl MemoryModules {
             .collect::<Vec<_>>()
             .join(" + ")
     }
+
     /// «12 GB», or «11.9 GB» for a size that is not whole gigabytes.
     fn total(megabytes: u64) -> String {
         if megabytes.is_multiple_of(1024) {
@@ -82,6 +87,7 @@ impl MemoryModules {
             format!("{:.1} GB", megabytes as f64 / 1024.0)
         }
     }
+
     /// Memory devices of a raw SMBIOS table: structures of a formatted area and
     /// strings ending with two NULs, up to the end-of-table structure (127).
     fn parse(table: &[u8]) -> Vec<MemoryModule> {
@@ -108,6 +114,7 @@ impl MemoryModules {
         }
         modules
     }
+
     /// A populated slot of a Memory Device structure.
     fn module(device: &[u8]) -> Option<MemoryModule> {
         let word = |offset: usize| {
@@ -159,6 +166,7 @@ extern "system" {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     /// A Memory Device structure of SMBIOS 3.x (0x28 bytes) and its strings.
     fn device(size: u16, kind: u8, speed: u16, configured: u16) -> Vec<u8> {
         let mut device = vec![0u8; 0x28];
@@ -171,6 +179,7 @@ mod tests {
         device.extend(b"DIMMA2\0Unknown\0\0");
         device
     }
+
     #[test]
     fn memory_devices_are_read_from_the_table_and_counted() {
         let mut table = vec![0u8, 4, 0, 0, 0, 0];
@@ -195,6 +204,7 @@ mod tests {
         assert_eq!(MemoryModules::summary(&mixed), "8 GB DDR4-3200 + 4 GB");
         assert_eq!(MemoryModules::summary(&[]), "");
     }
+
     #[test]
     fn virtual_memory_pieces_show_their_total() {
         let piece = |megabytes| MemoryModule {
@@ -209,6 +219,7 @@ mod tests {
         assert_eq!(MemoryModules::summary(&hyper_v), "11.9 GB");
         assert_eq!(MemoryModules::summary(&[piece(8192), piece(4096)]), "12 GB");
     }
+
     #[test]
     fn large_modules_use_the_extended_size() {
         let mut large = device(0x7FFF, 0x22, 5600, 0);

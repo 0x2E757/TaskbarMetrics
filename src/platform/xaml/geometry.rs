@@ -1,6 +1,7 @@
 use super::interop::Rect;
 use super::*;
 use std::ptr;
+
 /// Screen ranges taken by taskbar buttons and the tray, read from the visual tree of
 /// one taskbar on every update. The tree helper and the root are resolved once, and
 /// names are compared as UTF-16 without allocating: the walk visits hundreds of nodes.
@@ -9,6 +10,7 @@ pub(super) struct TaskbarGeometry {
     helper: Com,
     root: Com,
 }
+
 impl TaskbarGeometry {
     pub(super) fn new(root: &Com) -> Result<Self> {
         Ok(Self {
@@ -16,6 +18,7 @@ impl TaskbarGeometry {
             root: root.query(&UI_ELEMENT)?,
         })
     }
+
     pub(super) fn read(&self, root: &Com) -> Result<Vec<OccupiedRange>> {
         let mut walk = Walk {
             geometry: self,
@@ -36,6 +39,7 @@ fn starts_with(units: &[u16], text: &str) -> bool {
     let mut rest = units.iter().copied();
     text.encode_utf16().all(|unit| rest.next() == Some(unit))
 }
+
 /// `text` occurs anywhere in the UTF-16 `units`.
 fn contains(units: &[u16], text: &str) -> bool {
     (0..units.len()).any(|start| starts_with(&units[start..], text))
@@ -54,6 +58,7 @@ struct Walk<'a> {
     /// Inside the weather's container, where only its button counts.
     weather: bool,
 }
+
 impl Walk<'_> {
     fn visit(&mut self, object: &Com, depth: usize) -> Result<()> {
         if depth > 32 || self.remaining == 0 {
@@ -108,6 +113,7 @@ impl Walk<'_> {
         }
         self.children(object, depth)
     }
+
     /// The range `element` takes in the root's coordinates, when it has a size;
     /// `snug` for the weather, which the tiles follow at their own spacing.
     fn push(&mut self, framework: Com, element: &Com, snug: bool) -> Result<()> {
@@ -145,6 +151,7 @@ impl Walk<'_> {
         });
         Ok(())
     }
+
     fn children(&mut self, object: &Com, depth: usize) -> Result<()> {
         let helper = &self.geometry.helper;
         let dependency = object.query(&DEPENDENCY_OBJECT)?;
@@ -171,6 +178,7 @@ impl Walk<'_> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn class_names_match_as_utf16_without_allocating() {
         let class: Vec<u16> = "Taskbar.TaskListButton".encode_utf16().collect();

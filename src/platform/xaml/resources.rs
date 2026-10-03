@@ -18,10 +18,12 @@ const BRUSH_KEYS: [&str; 9] = [
 ];
 
 struct ResourceMap(Com);
+
 impl ResourceMap {
     fn new(object: &Com) -> Result<Self> {
         Ok(Self(object.query(&MAP)?))
     }
+
     fn key(name: &str) -> Result<Com> {
         let factory = factory("Windows.Foundation.PropertyValue", &PROPERTY_VALUE)?;
         let name = HString::new(name)?;
@@ -32,6 +34,7 @@ impl ResourceMap {
             Com::owned(value)
         }
     }
+
     fn lookup(&self, name: &str) -> Result<Option<Com>> {
         let key = Self::key(name)?;
         let mut found = 0u8;
@@ -51,6 +54,7 @@ impl ResourceMap {
             }
         }
     }
+
     fn insert(&self, name: &str, value: &Com) -> Result<()> {
         let key = Self::key(name)?;
         let value = value.query(&INSPECTABLE)?;
@@ -65,6 +69,7 @@ impl ResourceMap {
 /// ResourceDictionary has a single owner in UWP. Copy its structure instead of
 /// reparenting the clock's dictionary. Brush instances are safely shareable.
 pub(super) struct ClockResourceCopier;
+
 impl ClockResourceCopier {
     pub(super) fn copy(source: &Com) -> Result<Com> {
         Self::copy_at(source, 0)

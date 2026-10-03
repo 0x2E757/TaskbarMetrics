@@ -1,9 +1,11 @@
 //! "Restart all services": the history recorder and the CPU temperature collector
 //! start again. The DLL in Explorer stays as it is; only when it is missing or
 //! stopped does the launcher attach it, which starts the recorder too.
+
 use crate::platform::{
     abi::*, executables::Executables, process_history::ProcessHistory, temperature::SensorCollector,
 };
+
 use std::{
     os::windows::process::CommandExt,
     path::PathBuf,
@@ -16,6 +18,7 @@ pub(super) struct ServicesRestart {
     /// The Explorer whose services start again.
     pub pid: u32,
 }
+
 impl ServicesRestart {
     /// The collectors may take this long to see the signal and exit.
     const RECORDER_EXIT: Duration = Duration::from_secs(5);
@@ -61,12 +64,14 @@ impl ServicesRestart {
             }
         }
     }
+
     /// The DLL is loaded in this Explorer and its tiles are not stopped.
     fn tiles_running(&self) -> bool {
         Handle::new(unsafe { OpenEventW(0x100000, 0, event_name("stop", self.pid).as_ptr()) })
             .is_ok()
             && !signaled("stop", self.pid)
     }
+
     /// The launcher attaches the DLL, or wakes a stopped one, and starts the recorder.
     fn attach(&self) {
         let status = Command::new(&self.executable)
@@ -79,6 +84,7 @@ impl ServicesRestart {
             log(&format!("Watcher: launcher not started: {error}"));
         }
     }
+
     fn wait(limit: Duration, done: impl Fn() -> bool) {
         let deadline = Instant::now() + limit;
         while !done() && Instant::now() < deadline {

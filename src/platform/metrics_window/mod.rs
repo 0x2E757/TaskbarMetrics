@@ -1,11 +1,14 @@
 //! The metrics window, plus the standalone tile editor behind `--editor`.
 //! No code runs in Explorer.
+
 use super::{abi::*, com::*};
 use std::ptr;
+
 mod color_picker;
 mod colors;
 mod monitor;
 pub(crate) use monitor::Language;
+
 mod monitoring;
 mod playground;
 mod window;
@@ -15,6 +18,7 @@ use window::NativeWindow;
 const CLOSABLE: Guid = Guid::from_u128(0x30d5a829_7fa4_4026_83bb_d75bae4ea99e);
 
 pub struct MetricsWindow;
+
 impl MetricsWindow {
     pub fn run() -> Result<()> {
         if !opens_editor() {
@@ -79,6 +83,7 @@ fn opens_editor() -> bool {
 struct SystemTheme {
     dark: bool,
 }
+
 impl SystemTheme {
     fn read() -> Result<Self> {
         let settings = activate(
@@ -95,6 +100,7 @@ impl SystemTheme {
             dark: u32::from(color[1]) + u32::from(color[2]) + u32::from(color[3]) < 384,
         })
     }
+
     fn markup(&self, markup: &str) -> String {
         markup
             .replace(
@@ -117,6 +123,7 @@ impl SystemTheme {
 }
 
 struct StaApartment;
+
 impl StaApartment {
     fn new() -> Result<Self> {
         unsafe {
@@ -125,6 +132,7 @@ impl StaApartment {
         Ok(Self)
     }
 }
+
 impl Drop for StaApartment {
     fn drop(&mut self) {
         unsafe {
@@ -134,6 +142,7 @@ impl Drop for StaApartment {
 }
 
 struct XamlLifetime(Com);
+
 impl Drop for XamlLifetime {
     fn drop(&mut self) {
         if let Ok(closable) = self.0.query(&CLOSABLE) {
@@ -149,6 +158,7 @@ struct XamlIsland {
     source: XamlLifetime,
     native: Com,
 }
+
 impl XamlIsland {
     fn new(window: &NativeWindow) -> Result<Self> {
         let source = XamlLifetime(activate(

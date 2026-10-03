@@ -8,6 +8,7 @@ use crate::{
         pixel_rows::PixelRows,
     },
 };
+
 use std::ptr;
 
 const CONTROL: Guid = Guid::from_u128(0xa8912263_2951_4f58_a9c5_5a134eaa7f07);
@@ -30,6 +31,7 @@ pub(super) struct MetricsButton {
     /// Tiles on view, from the first in their order.
     shown: usize,
 }
+
 impl MetricsButton {
     pub(super) fn preview(style: &TileStyle, dark: bool) -> Result<Self> {
         let palette = if dark { style.dark } else { style.light };
@@ -93,16 +95,19 @@ impl MetricsButton {
             marker: None,
         })
     }
+
     pub(super) fn preview_layout(&mut self) -> Result<()> {
         for tile in &self.tiles {
             tile.update_fades()?;
         }
         Ok(())
     }
+
     pub(super) fn preview_alert_opacity(&self) -> Result<f64> {
         let background = Markup::find(&self.tiles[0].root, "AlertBackground")?;
         XamlElement(background.query(&UI_ELEMENT)?).number(9)
     }
+
     /// Validate markup and ABI in a disposable XAML host before touching Explorer.
     pub(crate) fn verify() -> Result<()> {
         use crate::metrics::MetricDescriptor;
@@ -159,6 +164,7 @@ impl MetricsButton {
         Self::verify_number_cadence()?;
         Self::verify_reorder()
     }
+
     /// Drags the first preview tile to the end: pointer handlers attach, the
     /// strip reorders its children and the new order is saved.
     fn verify_reorder() -> Result<()> {
@@ -188,6 +194,7 @@ impl MetricsButton {
         }
         Ok(())
     }
+
     fn verify_number_cadence() -> Result<()> {
         use crate::metrics::MetricDescriptor;
         let mut preview = Self::preview(&TileStyle::default(), false)?;
@@ -214,6 +221,7 @@ impl MetricsButton {
         }
         Ok(())
     }
+
     /// `save` receives the tile ids after the user drags them into a new order.
     pub(super) fn new(
         panel: &Com,
@@ -248,6 +256,7 @@ impl MetricsButton {
             marker: Some(marker),
         })
     }
+
     fn reorder(
         root: &Com,
         tiles: &[MetricTile],
@@ -275,13 +284,16 @@ impl MetricsButton {
             save,
         )
     }
+
     /// Tile ids in their order on the taskbar.
     pub(super) fn ids(&self) -> Option<Vec<String>> {
         self.reorder.as_ref().map(|reorder| reorder.ids())
     }
+
     pub(super) fn width(&self) -> f64 {
         self.width
     }
+
     /// Tiles in their order on the taskbar, which a drag may have changed.
     fn ordered(&self) -> Vec<&MetricTile> {
         match self.ids() {
@@ -292,10 +304,12 @@ impl MetricsButton {
             None => self.tiles.iter().collect(),
         }
     }
+
     /// Tile widths in their order on the taskbar.
     pub(super) fn widths(&self) -> Vec<f64> {
         self.ordered().iter().map(|tile| tile.width).collect()
     }
+
     /// Shows the first `shown` tiles in their order; the warning after them names
     /// the rest, which keep recording their history.
     pub(super) fn show(&mut self, shown: usize) -> Result<()> {
@@ -326,6 +340,7 @@ impl MetricsButton {
         self.shown = shown;
         Ok(())
     }
+
     pub(super) fn restore_history(&mut self, previous: &Self) {
         for tile in &mut self.tiles {
             if let Some(old) = previous.tiles.iter().find(|old| old.id == tile.id) {
@@ -338,12 +353,15 @@ impl MetricsButton {
             }
         }
     }
+
     pub(super) fn element(&self) -> Result<Com> {
         self.root.query(&UI_ELEMENT)
     }
+
     pub(super) fn framework(&self) -> Result<XamlElement> {
         Ok(XamlElement(self.root.query(&FRAMEWORK)?))
     }
+
     pub(super) fn update(&mut self, readings: &[MetricReading]) -> Result<()> {
         let now = std::time::Instant::now();
         let numbers = self
@@ -357,6 +375,7 @@ impl MetricsButton {
         }
         Ok(())
     }
+
     pub(super) fn visible(&self, visible: bool) -> Result<()> {
         let element = self.element()?;
         unsafe {
@@ -368,6 +387,7 @@ impl MetricsButton {
 }
 
 pub(super) struct Markup;
+
 impl Markup {
     /// `GPU2` (`gpu@1`: numbers count from 1), `DISK3`, `D:`, `WI‑FI` for a device,
     /// `DISK` for the main device of a kind.
@@ -386,8 +406,10 @@ impl Markup {
             (None, None) => id.to_uppercase(),
         }
     }
+
     /// Dashes of the temperature line: 3 px with 2 px gaps.
     const DASH: [f64; 2] = [3.0, 2.0];
+
     fn temperature_dashes(id: &str, style: &TileStyle) -> String {
         if !(style.dashed_temperature && matches!(id, "cpu" | "gpu")) {
             return String::new();
@@ -400,6 +422,7 @@ impl Markup {
             Self::DASH[1] / stroke
         )
     }
+
     fn styled(id: &str, style: &TileStyle) -> String {
         Palette::apply_defaults(&Self::template(id), style.fade_opacity, id)
             .replace(
@@ -462,6 +485,7 @@ impl Markup {
                 &format!("{:02X}", (style.fade_opacity * 2.55).round() as u8),
             )
     }
+
     fn template(id: &str) -> String {
         include_str!("metric_tile.xaml")
             .replace(
@@ -497,6 +521,7 @@ impl Markup {
                 },
             )
     }
+
     fn prefix(id: &str) -> &'static str {
         // Do not create a collapsed first child: StackPanel spacing must not
         // indent percentage values relative to the header.
@@ -506,6 +531,7 @@ impl Markup {
             ""
         }
     }
+
     pub(super) fn load(markup: &str) -> Result<Com> {
         let reader = factory(
             "Windows.UI.Xaml.Markup.XamlReader",
@@ -519,6 +545,7 @@ impl Markup {
             Com::owned(raw)
         }
     }
+
     pub(super) fn find(root: &Com, name: &str) -> Result<Com> {
         let frame = root.query(&FRAMEWORK)?;
         let name = HString::new(name)?;
@@ -560,6 +587,7 @@ struct MetricTile {
     fade_bounds: [(f32, f32); 3],
     alert: super::alert::AlertVisual,
 }
+
 impl MetricTile {
     fn new(
         panel: &Com,
@@ -664,6 +692,7 @@ impl MetricTile {
             fade_bounds: [(0.0, width as f32); 3],
         })
     }
+
     /// The reading `base` of `device`, matched without building its id.
     fn reading<'a>(
         readings: &'a [MetricReading],
@@ -676,6 +705,7 @@ impl MetricTile {
             .map(|r| &r.value)
             .unwrap_or(&MetricValue::Unavailable)
     }
+
     fn number(value: &MetricValue, rate: bool) -> String {
         match value {
             MetricValue::Available(n) if rate => {
@@ -692,6 +722,7 @@ impl MetricTile {
             _ => String::new(),
         }
     }
+
     fn display_value(&self, history: &MetricHistory, current: &MetricValue) -> MetricValue {
         if self.average_numbers {
             history.mean_last_two(current)
@@ -699,6 +730,7 @@ impl MetricTile {
             current.clone()
         }
     }
+
     /// The tile's main reading and its secondary series: upload or write of a rate
     /// tile, temperature of a CPU or GPU tile.
     fn series<'a>(
@@ -718,6 +750,7 @@ impl MetricTile {
             secondary.map(|base| Self::reading(readings, &self.device, base)),
         )
     }
+
     /// Adds `readings` to the chart histories without touching the view.
     fn record(&mut self, readings: &[MetricReading]) {
         let (main, secondary) = self.series(readings);
@@ -733,10 +766,12 @@ impl MetricTile {
             }
         }
     }
+
     fn update(&mut self, readings: &[MetricReading], numbers: bool) -> Result<()> {
         self.record(readings);
         self.render(readings, numbers)
     }
+
     /// Shows the histories and the latest `readings`.
     fn render(&mut self, readings: &[MetricReading], numbers: bool) -> Result<()> {
         let kind = self.device.kind.clone();
@@ -840,6 +875,7 @@ impl MetricTile {
         self.alert.update(&self.style.alerts, &kind, alert_value)?;
         self.update_fades()
     }
+
     fn update_fades(&self) -> Result<()> {
         let edge = XamlElement(self.text_group.clone()).number(13)? + 6.0;
         let start_px = edge + self.style.fade_offset;
@@ -861,13 +897,16 @@ impl MetricTile {
         }
         Ok(())
     }
+
     /// The chart starts `graph_left` px in and runs to the right edge.
     fn chart_left(width: f64, style: &TileStyle) -> f32 {
         style.graph_left.min(width - 1.0) as f32
     }
+
     fn chart_width(width: f64, style: &TileStyle) -> f32 {
         width as f32 - Self::chart_left(width, style)
     }
+
     fn position_points(&self, mut points: Vec<ChartPoint>) -> Vec<ChartPoint> {
         let left = Self::chart_left(self.width, &self.style);
         for point in &mut points {
@@ -875,17 +914,20 @@ impl MetricTile {
         }
         points
     }
+
     fn bounds(points: &[ChartPoint]) -> (f32, f32) {
         match (points.first(), points.last()) {
             (Some(first), Some(last)) => (first.x, last.x),
             _ => (0.0, 1.0),
         }
     }
+
     fn secondary_points(&mut self, points: Vec<ChartPoint>) -> Result<()> {
         let points = self.position_points(points);
         self.fade_bounds[2] = Self::bounds(&points);
         Self::points(&self.upload, &points)
     }
+
     fn points(vector: &Com, points: &[ChartPoint]) -> Result<()> {
         unsafe {
             let replace: unsafe extern "system" fn(Raw, u32, *const ChartPoint) -> Hr =
@@ -898,6 +940,7 @@ impl MetricTile {
 /// What a tile kind shows: two rates in MB/s, network down/up or disk read/write,
 /// or one percentage, with the temperature on CPU and GPU tiles.
 struct TileKind;
+
 impl TileKind {
     /// Readings of the two rates, the main one first.
     fn rates(kind: &str) -> Option<[&'static str; 2]> {
@@ -907,6 +950,7 @@ impl TileKind {
             _ => None,
         }
     }
+
     /// Width beyond the style's: two rates need room, RAM shows one short number.
     fn extra_width(kind: &str) -> f64 {
         match kind {
@@ -918,6 +962,7 @@ impl TileKind {
 }
 
 struct PreviewData;
+
 impl PreviewData {
     fn readings(step: usize, samples: usize, style: &TileStyle) -> Vec<MetricReading> {
         use crate::metrics::MetricDescriptor;
@@ -963,6 +1008,7 @@ impl PreviewData {
 }
 
 struct ClockResources;
+
 impl ClockResources {
     fn inherit(panel: &Com, button: &Com) -> Result<()> {
         let tree = VisualTree::new()?;
@@ -982,6 +1028,7 @@ impl ClockResources {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn tiles_title_devices_by_tag_and_main_devices_by_kind() {
         assert_eq!(Markup::label("disk"), "DISK");

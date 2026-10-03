@@ -1,6 +1,7 @@
 //! Device instances behind each resource: several GPUs, disks and network adapters.
 //! A device id is `kind` or `kind@tag` (`disk@C:`, `net@Wi‑Fi`, `gpu@1`). A bare kind
 //! names the main device of that kind, so existing configurations keep working.
+
 use super::{gpu_temperature::GpuAdapters, pdh::PdhCounter};
 use std::{
     collections::HashMap,
@@ -15,8 +16,10 @@ pub struct DeviceId {
     pub kind: String,
     pub tag: Option<String>,
 }
+
 impl DeviceId {
     pub const KINDS: [&'static str; 5] = ["cpu", "gpu", "ram", "disk", "net"];
+
     /// `kind` or `kind@tag`; tags never contain the separators of the config lists.
     pub fn parse(text: &str) -> Option<Self> {
         let (kind, tag) = match text.split_once('@') {
@@ -29,12 +32,14 @@ impl DeviceId {
             tag: tag.map(Into::into),
         })
     }
+
     pub fn new(kind: &str, tag: Option<String>) -> Self {
         Self {
             kind: kind.into(),
             tag,
         }
     }
+
     /// Id of one of the device's readings: `disk_read` → `disk_read@C:`.
     pub fn reading(&self, base: &str) -> String {
         match &self.tag {
@@ -42,6 +47,7 @@ impl DeviceId {
             None => base.into(),
         }
     }
+
     /// `id` equals `reading(base)`, compared without allocating.
     pub fn is_reading(&self, id: &str, base: &str) -> bool {
         match (&self.tag, id.strip_prefix(base)) {
@@ -50,22 +56,27 @@ impl DeviceId {
             (_, None) => false,
         }
     }
+
     /// The number a numbered device (`gpu@0`, `disk@2`) is shown with: people count
     /// from 1, while tags keep Windows' numbers, which count from 0.
     pub fn ordinal(&self) -> Option<u32> {
         Some(self.tag.as_deref()?.parse::<u32>().ok()? + 1)
     }
+
     /// `id` equals `to_string()`, compared without allocating.
     pub fn is(&self, id: &str) -> bool {
         self.is_reading(id, &self.kind)
     }
+
     /// List separator, id separator, config comment start and line breaks.
     const RESERVED: [char; 5] = [',', '@', '#', '\n', '\r'];
+
     /// Replaces characters that cannot appear in a tag.
     fn tag_of(text: &str) -> String {
         text.replace(Self::RESERVED, " ").trim().to_owned()
     }
 }
+
 impl std::fmt::Display for DeviceId {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self.tag {
@@ -78,6 +89,7 @@ impl std::fmt::Display for DeviceId {
 /// `\PhysicalDisk(*)` instances are named `0 C: D:`; a disk is tagged by its first
 /// drive letter, or by its number when it has no volumes.
 pub(crate) struct DiskInstance;
+
 impl DiskInstance {
     pub fn tag(instance: &str) -> Option<String> {
         let mut parts = instance.split_whitespace();
@@ -89,14 +101,17 @@ impl DiskInstance {
                 .to_owned(),
         )
     }
+
     /// Disk number of an instance (`0 C:` → 0), as in kernel disk I/O events.
     pub fn number(instance: &str) -> Option<u32> {
         instance.split_whitespace().next()?.parse().ok()
     }
+
     pub fn matches(instance: &str, tag: &str) -> bool {
         let mut parts = instance.split_whitespace();
         parts.next() == Some(tag) || parts.any(|p| p.eq_ignore_ascii_case(tag))
     }
+
     /// The disk holding Windows.
     pub fn main_tag() -> String {
         std::env::var("SystemDrive").unwrap_or_else(|_| "C:".into())
@@ -112,9 +127,11 @@ pub(crate) struct NetworkDrive {
     /// `\\server\share`, perhaps with a folder of the share after it.
     pub remote: String,
 }
+
 impl NetworkDrive {
     /// What names a network drive in the menu, like «SSD» names a local one.
     pub const MEDIA: &'static str = "Network drive";
+
     /// Mapped drive letters, from A: to Z:.
     pub fn list() -> Vec<Self> {
         // SAFETY: plain queries without buffers.
@@ -124,6 +141,7 @@ impl NetworkDrive {
             .filter_map(|bit| Self::of(&format!("{}:", char::from(b'A' + bit))))
             .collect()
     }
+
     /// The share mapped to `letter`, or None for a local or unused one.
     pub fn of(letter: &str) -> Option<Self> {
         if letter.len() != 2 || !letter.ends_with(':') {
@@ -145,6 +163,7 @@ impl NetworkDrive {
                 remote,
             })
     }
+
     /// The share of a letter mapped in this logon session.
     fn connection(letter: &str) -> Option<String> {
         let name: Vec<u16> = format!("{letter}\0").encode_utf16().collect();
@@ -156,6 +175,7 @@ impl NetworkDrive {
             .then(|| text(&buffer))
             .filter(|r| !r.is_empty())
     }
+
     /// A mapping that reconnects at sign-in, as the user's profile remembers it. The
     /// elevated recorder runs in a logon session of its own, which does not see the
     /// letters mapped in the user's one, so it reads them here.
@@ -184,6 +204,7 @@ impl NetworkDrive {
             remote,
         })
     }
+
     /// Whether the `\SMB Client Shares(*)` instance `\server\share` carries this
     /// drive: the server and share match, ignoring case and a domain after the server.
     pub fn matches(&self, instance: &str) -> bool {
@@ -221,10 +242,12 @@ pub(crate) struct NetworkAdapter {
     /// Local unicast addresses: kernel network events name them, not the adapter.
     pub addresses: Vec<IpAddr>,
 }
+
 impl NetworkAdapter {
     pub fn tag(&self) -> String {
         DeviceId::tag_of(&self.name)
     }
+
     /// `\Network Interface(*)` instance: the description with the characters PDH
     /// reserves for instance syntax replaced.
     pub fn instance(&self) -> String {
@@ -238,6 +261,7 @@ impl NetworkAdapter {
             })
             .collect()
     }
+
     /// The adapter with a default gateway: the one carrying the internet traffic.
     pub fn main(adapters: &[Self]) -> Option<&Self> {
         adapters
@@ -245,6 +269,7 @@ impl NetworkAdapter {
             .find(|a| a.gateway)
             .or_else(|| adapters.first())
     }
+
     /// Tile header of the adapter tagged `tag`: its link, numbered among the adapters
     /// of that link as the menu numbers them («WI‑FI», «ETHERNET2»); None when the
     /// adapter is not up.
@@ -258,12 +283,14 @@ impl NetworkAdapter {
             None => link,
         })
     }
+
     pub fn find<'a>(adapters: &'a [Self], id: &DeviceId) -> Option<&'a Self> {
         match &id.tag {
             Some(tag) => adapters.iter().find(|a| &a.tag() == tag),
             None => Self::main(adapters),
         }
     }
+
     /// Ethernet, Wi‑Fi and WWAN adapters that are up and backed by hardware, so
     /// Hyper‑V, VPN and other virtual adapters stay out of the list.
     pub fn list() -> Vec<Self> {
@@ -327,6 +354,7 @@ impl NetworkAdapter {
         }
         adapters
     }
+
     /// IP_ADAPTER_UNICAST_ADDRESS (x64): Next +8, Address.lpSockaddr +16; the sockaddr
     /// holds the family at +0, an IPv4 address at +4 or an IPv6 address at +8.
     fn addresses(mut unicast: *const u8) -> Vec<IpAddr> {
@@ -347,6 +375,7 @@ impl NetworkAdapter {
         }
         addresses
     }
+
     /// `MIB_IF_ROW2.InterfaceAndOperStatusFlags.HardwareInterface`.
     fn hardware(index: u32) -> bool {
         // MIB_IF_ROW2 is 1352 bytes: InterfaceIndex at +8, the flag bits at +1152.
@@ -358,6 +387,7 @@ impl NetworkAdapter {
                 && *row.as_ptr().cast::<u8>().add(1152) & 1 != 0
         }
     }
+
     fn text(pointer: *const u16) -> String {
         if pointer.is_null() {
             return String::new();
@@ -377,6 +407,7 @@ pub struct IoDevices {
     disks: HashMap<u32, Arc<str>>,
     addresses: HashMap<IpAddr, Arc<str>>,
 }
+
 impl IoDevices {
     /// `disks` is a wildcard `\PhysicalDisk(*)` counter owned by the caller.
     pub(crate) fn current(disks: &mut PdhCounter) -> Self {
@@ -404,9 +435,11 @@ impl IoDevices {
             .collect();
         Self { disks, addresses }
     }
+
     pub fn disk(&self, number: u32) -> Option<&Arc<str>> {
         self.disks.get(&number)
     }
+
     /// The adapter owning either end of a connection; loopback traffic has none.
     pub fn adapter(&self, local: &IpAddr, remote: &IpAddr) -> Option<&Arc<str>> {
         self.addresses
@@ -424,6 +457,7 @@ pub struct DiskName {
     /// `\\server\share` of a network drive.
     pub remote: Option<String>,
 }
+
 impl DiskName {
     /// «C:, D:»: the disk's volumes; empty without any. No root backslash: in
     /// Segoe UI it hangs below the line, next to a colon on it.
@@ -435,6 +469,7 @@ impl DiskName {
 /// Shown numbers of devices by group (GPUs, SSDs, HDDs): from 1 in the given order,
 /// counted separately for each group; the only device of its group has none.
 pub struct Ordinals;
+
 impl Ordinals {
     pub fn of<G: Eq + std::hash::Hash>(groups: &[G]) -> Vec<Option<u32>> {
         let mut sizes: HashMap<&G, u32> = HashMap::new();
@@ -463,11 +498,13 @@ pub struct DeviceCatalog {
     /// Link of each network adapter by tag, as of the last `devices`: «Wi‑Fi», «Ethernet».
     links: HashMap<String, &'static str>,
 }
+
 impl Default for DeviceCatalog {
     fn default() -> Self {
         Self::new()
     }
 }
+
 impl DeviceCatalog {
     pub fn new() -> Self {
         let mut disks = PdhCounter::new(r"\PhysicalDisk(*)\Current Disk Queue Length");
@@ -480,14 +517,17 @@ impl DeviceCatalog {
             links: HashMap::new(),
         }
     }
+
     /// Link of a network adapter listed by the last `devices`.
     pub fn link(&self, tag: &str) -> Option<&'static str> {
         self.links.get(tag).copied()
     }
+
     /// Media and volumes of a disk listed by the last `devices`.
     pub fn disk(&self, tag: &str) -> Option<&DiskName> {
         self.names.get(tag)
     }
+
     fn name(&mut self, instance: &str) -> DiskName {
         let media = DiskInstance::number(instance).and_then(|number| {
             *self
@@ -505,6 +545,7 @@ impl DeviceCatalog {
             remote: None,
         }
     }
+
     /// CPU, GPUs, memory, disks and network adapters, in the order of the menu.
     pub fn devices(&mut self) -> Vec<DeviceId> {
         let mut devices = vec![DeviceId::new("cpu", None)];
@@ -552,6 +593,7 @@ impl DeviceCatalog {
         devices.extend(adapters.iter().map(|a| DeviceId::new("net", Some(a.tag()))));
         devices
     }
+
     /// The device a bare kind stands for: system disk, internet adapter, discrete GPU.
     pub fn canonical(id: &DeviceId) -> DeviceId {
         if id.tag.is_some() {
@@ -570,14 +612,17 @@ impl DeviceCatalog {
 /// Devices an open main window shows: the recorder collects them while the list
 /// is fresh, so their history starts when the window opens.
 pub struct WatchList;
+
 impl WatchList {
     const FRESH: Duration = Duration::from_secs(5);
+
     pub fn write(path: &std::path::Path, devices: &[DeviceId]) -> std::io::Result<()> {
         let text: String = devices.iter().map(|d| format!("{d}\n")).collect();
         let temporary = path.with_extension("watch.tmp");
         std::fs::write(&temporary, text)?;
         std::fs::rename(temporary, path)
     }
+
     pub fn read(path: &std::path::Path) -> Vec<DeviceId> {
         let fresh = std::fs::metadata(path)
             .and_then(|m| m.modified())
@@ -603,6 +648,7 @@ pub(crate) struct Binding<T> {
     value: Option<T>,
     next: Instant,
 }
+
 impl<T: Clone> Binding<T> {
     pub fn new(id: DeviceId) -> Self {
         Self {
@@ -611,6 +657,7 @@ impl<T: Clone> Binding<T> {
             next: Instant::now(),
         }
     }
+
     pub fn get(&mut self, resolve: impl FnOnce(&DeviceId) -> Option<T>) -> Option<T> {
         if Instant::now() >= self.next {
             self.next = Instant::now() + Duration::from_secs(30);
@@ -625,10 +672,12 @@ extern "system" {
     fn GetLogicalDrives() -> u32;
     fn GetDriveTypeW(root: *const u16) -> u32;
 }
+
 #[link(name = "mpr")]
 extern "system" {
     fn WNetGetConnectionW(local: *const u16, remote: *mut u16, length: *mut u32) -> u32;
 }
+
 #[link(name = "advapi32")]
 extern "system" {
     fn RegGetValueW(
@@ -641,6 +690,7 @@ extern "system" {
         size: *mut u32,
     ) -> i32;
 }
+
 #[link(name = "iphlpapi")]
 extern "system" {
     fn GetAdaptersAddresses(
@@ -656,6 +706,7 @@ extern "system" {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn ids_parse_with_optional_tags_and_name_readings() {
         let disk = DeviceId::parse("disk@D:").unwrap();
@@ -685,6 +736,7 @@ mod tests {
             assert_eq!(cpu.is(id), cpu.to_string() == id);
         }
     }
+
     #[test]
     fn disks_are_tagged_by_first_letter_or_number() {
         assert_eq!(DiskInstance::tag("0 C: D:").as_deref(), Some("C:"));
@@ -694,6 +746,7 @@ mod tests {
         assert!(DiskInstance::matches("2", "2"));
         assert!(!DiskInstance::matches("12 F:", "1"));
     }
+
     #[test]
     fn adapters_map_to_pdh_instances_and_the_gateway_one_is_main() {
         let adapter = |name: &str, description: &str, gateway| NetworkAdapter {
@@ -732,6 +785,7 @@ mod tests {
             "Intel(R) Ethernet #2"
         );
     }
+
     #[test]
     fn disks_list_all_their_volumes() {
         let mut catalog = DeviceCatalog::new();
@@ -739,6 +793,7 @@ mod tests {
         assert_eq!(name(&mut catalog, "1 D: E:"), "D:, E:");
         assert_eq!(name(&mut catalog, "2"), "");
     }
+
     #[test]
     fn devices_are_numbered_within_their_group_unless_alone() {
         assert_eq!(
@@ -750,6 +805,7 @@ mod tests {
             [Some(1), None, Some(2)]
         );
     }
+
     #[test]
     fn io_events_map_to_disks_and_to_the_adapter_of_either_address() {
         let wifi: Arc<str> = "net@Wi‑Fi".into();
@@ -766,6 +822,7 @@ mod tests {
         assert_eq!(devices.adapter(&loopback, &loopback), None);
         assert_eq!(DiskInstance::number("1 D: E:"), Some(1));
     }
+
     #[test]
     fn network_drives_match_their_share_instance() {
         let drive = |remote: &str| NetworkDrive {
@@ -785,6 +842,7 @@ mod tests {
         assert_eq!(NetworkDrive::of("Z"), None);
         assert_eq!(NetworkDrive::of("ZZ:"), None);
     }
+
     #[test]
     fn watch_list_is_ignored_once_stale() {
         let dir = std::env::temp_dir().join(format!("tm-watch-{}", std::process::id()));

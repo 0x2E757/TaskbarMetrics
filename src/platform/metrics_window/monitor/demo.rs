@@ -1,5 +1,6 @@
 //! Deterministic synthetic history that reproduces the design artboards
 //! (`--demo <scenario>`); also used by `--verify-monitor`.
+
 use super::{chart::WINDOW, model::MIB};
 use crate::{
     metrics::GpuEngineUsage,
@@ -11,6 +12,7 @@ use crate::{
         },
     },
 };
+
 use std::{collections::HashMap, sync::Arc};
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -28,6 +30,7 @@ pub enum Scenario {
     /// The settings section.
     Settings,
 }
+
 impl Scenario {
     pub fn parse(name: &str) -> Option<Self> {
         Some(match name {
@@ -50,6 +53,7 @@ struct Process {
     memory: f64,
     io: [f64; 4],
 }
+
 const PROCESSES: &[Process] = &[
     Process {
         pid: 27564,
@@ -189,6 +193,7 @@ const MEMORY: SystemMemory = SystemMemory {
     modified: 120 << 20,
     file_cache: 740 << 20,
 };
+
 /// The identity a demo process has in every scenario.
 pub fn identity(name: &str) -> Arc<Identity> {
     let pid = PROCESSES
@@ -201,6 +206,7 @@ pub fn identity(name: &str) -> Arc<Identity> {
         name: name.into(),
     })
 }
+
 /// Two of each device kind that can repeat, as in a desktop with two GPUs,
 /// two disks and wired plus wireless network.
 pub fn devices() -> Vec<DeviceId> {
@@ -218,6 +224,7 @@ pub fn devices() -> Vec<DeviceId> {
     .filter_map(DeviceId::parse)
     .collect()
 }
+
 /// Pins of each scenario, by process name.
 pub fn pins(scenario: Scenario, resource: super::model::Resource) -> &'static [&'static str] {
     use super::model::Resource;
@@ -233,6 +240,7 @@ pub fn pins(scenario: Scenario, resource: super::model::Resource) -> &'static [&
 
 /// Linear congruential noise: stable between runs, so screenshots are comparable.
 struct Noise(u64);
+
 impl Noise {
     fn next(&mut self) -> f64 {
         self.0 = self
@@ -244,6 +252,7 @@ impl Noise {
 }
 
 pub struct DemoHistory;
+
 impl DemoHistory {
     /// I/O since a recorder start an hour ago: twelve times that of the 5 minutes.
     pub fn io_totals(frames: &[Arc<Frame>]) -> HashMap<(u32, u64), IoBytes> {
@@ -264,6 +273,7 @@ impl DemoHistory {
         }
         totals
     }
+
     pub fn frames(scenario: Scenario, end: u64) -> Vec<Arc<Frame>> {
         let mut noise = Noise(7);
         let count = if scenario == Scenario::Empty {
@@ -432,6 +442,7 @@ impl DemoHistory {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn scenarios_cover_gaps_short_history_and_disabled_monitoring() {
         let gpu = DemoHistory::frames(Scenario::Gpu, 10_000);

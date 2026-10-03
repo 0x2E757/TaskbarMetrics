@@ -9,6 +9,7 @@ pub enum WindowLayout {
     /// < 760: navigation hidden behind a menu button in the header.
     Minimal,
 }
+
 impl WindowLayout {
     pub fn of(width: f64) -> Self {
         if width >= 1100.0 {
@@ -19,13 +20,16 @@ impl WindowLayout {
             Self::Minimal
         }
     }
+
     pub fn compact(self) -> bool {
         self != Self::Full
     }
+
     /// Navigation shows icons without titles, so its buttons need tooltips.
     pub fn icon_only(self) -> bool {
         self == Self::Compact
     }
+
     fn values(self) -> [(&'static str, &'static str); 13] {
         let pick = |full, compact, minimal| match self {
             Self::Full => full,
@@ -54,6 +58,7 @@ impl WindowLayout {
             ),
         ]
     }
+
     pub fn markup(self, template: &str) -> String {
         self.values()
             .into_iter()
@@ -66,6 +71,7 @@ impl WindowLayout {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn breakpoints_and_placeholders_follow_the_kit() {
         assert_eq!(WindowLayout::of(1280.0), WindowLayout::Full);

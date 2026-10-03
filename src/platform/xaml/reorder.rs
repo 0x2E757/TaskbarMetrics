@@ -1,5 +1,6 @@
 //! Tray-style reordering of taskbar tiles: press a tile and drag it past a
 //! small threshold; the neighbours slide aside and releasing drops it there.
+
 use super::{events::Subscription, *};
 use std::rc::Rc;
 
@@ -12,6 +13,7 @@ const PROPERTY_VALUE: Guid = Guid::from_u128(0x629bdbc8_d932_4ff4_96b9_8d96c5c1e
 const DOUBLE_REFERENCE: Guid = Guid::from_u128(0x2f2d6c29_5473_5f3e_92e7_96572bb990e2);
 /// Pointer travel before a press becomes a drag, as SM_CXDRAG.
 const THRESHOLD: f64 = 4.0;
+
 /// Receives the tile ids after a drop changed their order.
 pub(super) type SaveOrder = Rc<dyn Fn(&[String])>;
 
@@ -23,6 +25,7 @@ struct Strip {
     /// Tiles on view, from the first; the rest are left out for lack of room.
     shown: usize,
 }
+
 impl Strip {
     fn left(&self, index: usize) -> f64 {
         self.widths[..index]
@@ -30,19 +33,23 @@ impl Strip {
             .map(|width| width + self.gap)
             .sum()
     }
+
     fn center(&self, index: usize) -> f64 {
         self.left(index) + self.widths[index] / 2.0
     }
+
     /// The tile under `x`; gaps belong to no tile.
     fn hit(&self, x: f64) -> Option<usize> {
         (0..self.shown).find(|&i| (self.left(i)..self.left(i) + self.widths[i]).contains(&x))
     }
+
     /// Keeps the dragged tile inside the strip.
     fn clamp(&self, from: usize, offset: f64) -> f64 {
         let last = self.shown - 1;
         let end = self.left(last) + self.widths[last];
         offset.clamp(-self.left(from), end - self.left(from) - self.widths[from])
     }
+
     /// The slot the dragged tile takes: past every neighbour whose centre its
     /// leading edge crossed, so a wide tile can pass a narrow one at the ends.
     fn target(&self, from: usize, offset: f64) -> usize {
@@ -54,6 +61,7 @@ impl Strip {
         let before = (0..from).filter(|&i| left < self.center(i)).count();
         from + after - before
     }
+
     /// How far tile `index` steps aside while `from` hovers over slot `to`.
     fn shift(&self, from: usize, to: usize, index: usize) -> f64 {
         let step = self.widths[from] + self.gap;
@@ -65,6 +73,7 @@ impl Strip {
             0.0
         }
     }
+
     fn moved(&self, from: usize, to: usize) -> Self {
         let mut widths = self.widths.clone();
         let width = widths.remove(from);
@@ -74,6 +83,7 @@ impl Strip {
             ..self.clone()
         }
     }
+
     /// The dragged tile's new slot relative to its old one.
     fn landing(&self, from: usize, to: usize) -> f64 {
         self.moved(from, to).left(to) - self.left(from)
@@ -87,6 +97,7 @@ pub(super) struct Slide {
     storyboard: Com,
     animation: Com,
 }
+
 impl Slide {
     /// `shift` is the tile's TranslateTransform, `storyboard` animates its X.
     pub fn new(element: &Com, shift: &Com, storyboard: &Com) -> Result<Self> {
@@ -105,14 +116,17 @@ impl Slide {
             animation,
         })
     }
+
     fn offset(&self) -> Result<f64> {
         XamlElement(self.shift.clone()).number(6)
     }
+
     /// Jumps to `x`, dropping any running or held animation.
     fn set(&self, x: f64) -> Result<()> {
         self.call(8)?;
         XamlElement(self.shift.clone()).set_number(7, x)
     }
+
     /// Eases from wherever the tile is now to `x`.
     fn glide(&self, x: f64) -> Result<()> {
         self.set(self.offset()?)?;
@@ -127,6 +141,7 @@ impl Slide {
         }
         self.call(9)
     }
+
     /// Draws the dragged tile above the neighbours it passes.
     fn raise(&self, raised: bool) -> Result<()> {
         unsafe {
@@ -135,6 +150,7 @@ impl Slide {
             check(set(canvas.raw(), self.element.raw(), i32::from(raised)))
         }
     }
+
     /// Storyboard Stop (8) and Begin (9).
     fn call(&self, slot: usize) -> Result<()> {
         unsafe {
@@ -157,6 +173,7 @@ enum Gesture {
         target: usize,
     },
 }
+
 #[derive(PartialEq)]
 enum Step {
     Ignored,
@@ -173,6 +190,7 @@ struct Order {
     children: Com,
     save: SaveOrder,
 }
+
 impl Order {
     fn press(&mut self, x: f64) {
         self.gesture = match self.strip.hit(x) {
@@ -180,6 +198,7 @@ impl Order {
             None => Gesture::Idle,
         };
     }
+
     fn drag(&mut self, x: f64) -> Result<Step> {
         let step = match self.gesture {
             Gesture::Idle => return Ok(Step::Ignored),
@@ -220,6 +239,7 @@ impl Order {
         }
         Ok(step)
     }
+
     /// Drops the dragged tile into its slot; true when a drag ended.
     fn release(&mut self) -> Result<bool> {
         let Gesture::Dragging {
@@ -257,6 +277,7 @@ impl Order {
         (self.save)(&self.ids);
         Ok(true)
     }
+
     fn cancel(&mut self) -> Result<()> {
         if let Gesture::Dragging { .. } = std::mem::replace(&mut self.gesture, Gesture::Idle) {
             for slide in &self.slides {
@@ -274,6 +295,7 @@ pub(super) struct TileReorder {
     order: Rc<RefCell<Order>>,
     _events: Vec<Subscription>,
 }
+
 impl TileReorder {
     /// `dragging` is raised while a drag lasts, so tiles can skip their click.
     pub fn new(
@@ -382,6 +404,7 @@ impl TileReorder {
             _events: events,
         })
     }
+
     /// Drags the first tile past the last one without a pointer, for
     /// `--verify-tiles`; returns the order after the drop.
     pub fn rehearse(&self) -> Result<Vec<String>> {
@@ -393,6 +416,7 @@ impl TileReorder {
         order.release()?;
         Ok(order.ids.clone())
     }
+
     /// Only the first `shown` tiles are on view: a drag stays among them, and one
     /// in progress is put back.
     pub fn show(&self, shown: usize) -> Result<()> {
@@ -401,6 +425,7 @@ impl TileReorder {
         order.strip.shown = shown;
         Ok(())
     }
+
     /// Tile ids in their current order on the taskbar.
     pub fn ids(&self) -> Vec<String> {
         self.order.borrow().ids.clone()
@@ -410,6 +435,7 @@ impl TileReorder {
 #[cfg(test)]
 mod tests {
     use super::Strip;
+
     fn strip() -> Strip {
         // cpu 104, ram 84, net 112 with a 12 px gap: slots at 0, 116, 212.
         Strip {
@@ -418,6 +444,7 @@ mod tests {
             shown: 3,
         }
     }
+
     #[test]
     fn hits_tiles_but_not_gaps() {
         let s = strip();
@@ -427,6 +454,7 @@ mod tests {
         assert_eq!(s.hit(323.0), Some(2));
         assert_eq!(s.hit(324.0), None);
     }
+
     #[test]
     fn tiles_left_out_take_no_part_in_a_drag() {
         let s = Strip {
@@ -438,6 +466,7 @@ mod tests {
         assert_eq!(s.target(0, 96.0), 1);
         assert_eq!(s.moved(0, 1).shown, 2);
     }
+
     #[test]
     fn keeps_the_dragged_tile_inside_the_strip() {
         let s = strip();
@@ -445,6 +474,7 @@ mod tests {
         assert_eq!(s.clamp(0, 500.0), 220.0);
         assert_eq!(s.clamp(2, -500.0), -212.0);
     }
+
     #[test]
     fn crossing_a_neighbours_centre_takes_its_slot() {
         let s = strip();
@@ -458,6 +488,7 @@ mod tests {
         assert_eq!(s.target(2, -55.0), 1);
         assert_eq!(s.target(2, -161.0), 0);
     }
+
     #[test]
     fn every_slot_is_reachable_within_the_strip() {
         let s = strip();
@@ -466,6 +497,7 @@ mod tests {
             assert_eq!(s.target(from, s.clamp(from, 1e3)), 2);
         }
     }
+
     #[test]
     fn neighbours_step_aside_by_the_dragged_width() {
         let s = strip();
@@ -479,6 +511,7 @@ mod tests {
         );
         assert_eq!(s.shift(1, 1, 0), 0.0);
     }
+
     #[test]
     fn landing_matches_the_reordered_layout() {
         let s = strip();

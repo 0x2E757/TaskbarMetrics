@@ -2,6 +2,7 @@
 //! be a file for Explorer to load it, so the files go to the `bin` folder of the
 //! data directory, where they stay put for the Run value; a newer portable
 //! executable replaces them, freeing those in use first.
+
 use super::{data_directory::DataDirectory, executables::Executables, unload::Unload};
 use std::{
     path::{Path, PathBuf},
@@ -15,6 +16,7 @@ pub type Payload = [(&'static str, &'static [u8])];
 pub struct PortableCopy {
     directory: PathBuf,
 }
+
 impl PortableCopy {
     /// Puts the files in place, then runs the launcher with the same arguments
     /// and returns its exit code.
@@ -37,6 +39,7 @@ impl PortableCopy {
         };
         copy.launch(restarted)
     }
+
     /// Writes the files that differ; true when Explorer had to restart to free them.
     fn update(&self, payload: &Payload) -> std::io::Result<bool> {
         let stale: Vec<_> = payload
@@ -58,6 +61,7 @@ impl PortableCopy {
         }
         Ok(true)
     }
+
     fn write(&self, (name, bytes): &(&str, &[u8])) -> std::io::Result<()> {
         let path = self.directory.join(name);
         if let Some(parent) = path.parent() {
@@ -65,6 +69,7 @@ impl PortableCopy {
         }
         std::fs::write(path, bytes)
     }
+
     /// Right after a restart the taskbar may not be ready: a failed attach is
     /// retried for half a minute.
     fn launch(&self, restarted: bool) -> i32 {
@@ -85,6 +90,7 @@ impl PortableCopy {
         }
         code
     }
+
     fn status(launcher: &Path, arguments: &[std::ffi::OsString]) -> i32 {
         match Command::new(launcher).args(arguments).status() {
             Ok(status) => status.code().unwrap_or(1),

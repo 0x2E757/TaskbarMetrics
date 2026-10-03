@@ -1,9 +1,11 @@
 //! SeDebugPrivilege in the recorder's own token.
+
 use crate::platform::abi::*;
 
 /// Lets the elevated recorder open the processes of services and other accounts,
 /// such as a virtual machine's, to list their working sets. Their memory is not read.
 pub(super) struct DebugPrivilege;
+
 impl DebugPrivilege {
     /// True when the privilege is now enabled; a token without it, as unelevated
     /// ones are, cannot enable it.
@@ -45,12 +47,14 @@ impl DebugPrivilege {
         }
     }
 }
+
 #[repr(C)]
 #[derive(Default)]
 struct Luid {
     low: u32,
     high: i32,
 }
+
 /// TOKEN_PRIVILEGES with one LUID_AND_ATTRIBUTES.
 #[repr(C)]
 struct TokenPrivileges {
@@ -58,6 +62,7 @@ struct TokenPrivileges {
     luid: Luid,
     attributes: u32,
 }
+
 #[link(name = "advapi32")]
 extern "system" {
     fn OpenProcessToken(process: Raw, access: u32, token: *mut Raw) -> i32;

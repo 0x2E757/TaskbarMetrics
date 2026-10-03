@@ -11,6 +11,7 @@ struct IconShape {
     half_stroke: f64,
     pulse: [(f64, f64); 7],
 }
+
 impl IconShape {
     /// The pulse in 16-unit space; half its stroke gives round caps and joins.
     const PULSE: [(f64, f64); 7] = [
@@ -27,6 +28,7 @@ impl IconShape {
     const THINNING: f64 = 0.75;
     /// Width at both ends of the pulse, as a share of its full width.
     const END: f64 = 1.0 / 3.0;
+
     fn new(size: u32) -> Self {
         let size = size as f64;
         let scale = size / 16.0;
@@ -40,12 +42,14 @@ impl IconShape {
             pulse: Self::PULSE.map(|(x, y)| (snap(x * scale), snap(y * scale))),
         }
     }
+
     /// Distance from `point` to the segment `a`–`b`, and where along it the nearest point is.
     fn distance((x, y): (f64, f64), (ax, ay): (f64, f64), (bx, by): (f64, f64)) -> (f64, f64) {
         let (dx, dy) = (bx - ax, by - ay);
         let t = (((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy)).clamp(0.0, 1.0);
         ((x - ax - t * dx).hypot(y - ay - t * dy), t)
     }
+
     /// Half width at `t` along segment `index`: the first and the last runs taper
     /// from full width to `END` at the outer ends.
     fn half_width(&self, index: usize, t: f64) -> f64 {
@@ -57,6 +61,7 @@ impl IconShape {
                 _ => 1.0,
             }
     }
+
     /// Whether the pixel-space point is on the tile and on the pulse.
     fn coverage(&self, x: f64, y: f64) -> (bool, bool) {
         let middle = self.size / 2.0;
@@ -76,6 +81,7 @@ impl IconShape {
 }
 
 pub struct AppIcon;
+
 impl AppIcon {
     /// `size`×`size` pixels, rows top-down, as 0xAARRGGBB with straight alpha.
     pub fn pixels(size: u32) -> Vec<u32> {
@@ -113,6 +119,7 @@ impl AppIcon {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     /// Share of the pixel covered by the tile (`tile`) or the pulse.
     fn share(shape: &IconShape, px: u32, py: u32, tile: bool) -> f64 {
         let hits = (0..64)
@@ -129,6 +136,7 @@ mod tests {
             .count();
         hits as f64 / 64.0
     }
+
     #[test]
     fn tile_edges_cover_whole_pixels_and_the_pulse_tapers_to_its_ends() {
         for size in [16, 20, 24, 30, 32, 36, 40, 48, 64, 96, 128, 256] {
@@ -152,6 +160,7 @@ mod tests {
             }
         }
     }
+
     #[test]
     fn pixels_fill_the_square_and_leave_the_corners_clear() {
         let pixels = AppIcon::pixels(24);

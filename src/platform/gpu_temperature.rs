@@ -1,4 +1,5 @@
 //! Windows WDDM telemetry, using the ABI from SDK d3dkmthk.h.
+
 use crate::metrics::{MetricDescriptor, MetricProvider, MetricValue};
 use std::{
     ffi::c_void,
@@ -14,11 +15,13 @@ struct AdapterInfo {
     sources: u32,
     precise_regions: i32,
 }
+
 #[repr(C)]
 struct Enumeration {
     count: u32,
     adapters: *mut AdapterInfo,
 }
+
 #[repr(C)]
 struct Query {
     handle: u32,
@@ -26,6 +29,7 @@ struct Query {
     data: *mut c_void,
     size: u32,
 }
+
 #[repr(C)]
 #[derive(Default)]
 struct Performance {
@@ -47,6 +51,7 @@ struct Adapter {
     /// `(HighPart, LowPart)`, as in PDH instance names.
     luid: (i32, u32),
 }
+
 impl Adapter {
     fn query<T>(&self, kind: u32, data: &mut T) -> bool {
         let query = Query {
@@ -57,6 +62,7 @@ impl Adapter {
         };
         unsafe { D3DKMTQueryAdapterInfo(&query) >= 0 }
     }
+
     fn temperatures(&self) -> impl Iterator<Item = f64> + '_ {
         (0..self.physical_count).filter_map(|physical_index| {
             let mut data = Performance {
@@ -69,6 +75,7 @@ impl Adapter {
         })
     }
 }
+
 impl Drop for Adapter {
     fn drop(&mut self) {
         unsafe {
@@ -76,7 +83,9 @@ impl Drop for Adapter {
         }
     }
 }
+
 struct AdapterCatalog;
+
 impl AdapterCatalog {
     fn enumerate() -> Vec<Adapter> {
         // Bounded allocation also handles topology changes between queries.
@@ -109,13 +118,16 @@ impl AdapterCatalog {
         adapters
     }
 }
+
 /// `D3DKMT_ADAPTERTYPE` (`KMTQAITYPE_ADAPTERTYPE`) bits.
 struct AdapterKind;
+
 impl AdapterKind {
     const RENDER: u32 = 0x1;
     const SOFTWARE: u32 = 0x4;
     const INDIRECT_DISPLAY: u32 = 0x40;
     const COMPUTE_ONLY: u32 = 0x800;
+
     /// A GPU of its own: it renders, and is neither the software rasterizer, an
     /// indirect display (virtual monitors, remote desktop, USB docks) nor an NPU.
     /// The others have no `GPU Engine` instances, so their pages stayed empty.
@@ -124,7 +136,9 @@ impl AdapterKind {
             && kind & (Self::SOFTWARE | Self::INDIRECT_DISPLAY | Self::COMPUTE_ONLY) == 0
     }
 }
+
 struct Temperature;
+
 impl Temperature {
     fn decode(deci_celsius: u32) -> Option<f64> {
         // Zero is commonly returned by drivers without a temperature sensor.
@@ -136,11 +150,13 @@ impl Temperature {
 
 /// Hardware GPUs in WDDM order; a GPU device is tagged by its index in this list.
 pub(crate) struct GpuAdapters;
+
 impl GpuAdapters {
     /// LUIDs of the hardware adapters.
     pub fn list() -> Vec<(i32, u32)> {
         AdapterCatalog::enumerate().iter().map(|a| a.luid).collect()
     }
+
     /// Index named by a GPU device tag; a bare `gpu` is the main adapter.
     pub fn index(id: &super::devices::DeviceId) -> Option<usize> {
         match id.tag.as_deref() {
@@ -148,6 +164,7 @@ impl GpuAdapters {
             None => Some(Self::main()),
         }
     }
+
     /// A discrete GPU before an integrated one, which WDDM often lists first;
     /// among equals, the one with the most dedicated memory.
     pub fn main() -> usize {
@@ -173,6 +190,7 @@ pub(crate) struct GpuTemperatureProvider {
     adapter: Option<Adapter>,
     refresh: Instant,
 }
+
 impl GpuTemperatureProvider {
     pub fn new(id: &super::devices::DeviceId) -> Self {
         Self {
@@ -183,10 +201,12 @@ impl GpuTemperatureProvider {
         }
     }
 }
+
 impl MetricProvider for GpuTemperatureProvider {
     fn descriptor(&self) -> &MetricDescriptor {
         &self.descriptor
     }
+
     fn sample(&mut self) -> MetricValue {
         if Instant::now() >= self.refresh {
             self.adapter = self
@@ -201,15 +221,18 @@ impl MetricProvider for GpuTemperatureProvider {
             .map_or(MetricValue::Unavailable, MetricValue::Available)
     }
 }
+
 #[link(name = "gdi32")]
 extern "system" {
     fn D3DKMTEnumAdapters2(data: *mut Enumeration) -> i32;
     fn D3DKMTQueryAdapterInfo(query: *const Query) -> i32;
     fn D3DKMTCloseAdapter(handle: *const u32) -> i32;
 }
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn sdk_layouts_and_temperature_units() {
         assert_eq!(size_of::<AdapterInfo>(), 20);

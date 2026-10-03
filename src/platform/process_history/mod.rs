@@ -1,4 +1,5 @@
 //! Optional out-of-process recorder. UI polling never waits for this collector.
+
 mod collector;
 mod debug_privilege;
 mod ipc;
@@ -16,6 +17,7 @@ use std::{
 };
 
 pub struct ProcessHistory;
+
 impl ProcessHistory {
     /// Starts the recorder for this Explorer. Process monitoring needs elevation for
     /// ETW (`elevated`, one UAC prompt); totals alone run without it. An elevated
@@ -43,6 +45,7 @@ impl ProcessHistory {
         {
             return Ok(());
         }
+
         use std::os::windows::ffi::OsStrExt;
         let path: Vec<_> = executable
             .as_os_str()
@@ -67,10 +70,12 @@ impl ProcessHistory {
             Ok(())
         }
     }
+
     /// The recorder for this Explorer holds its mutex.
     pub(crate) fn running(pid: u32) -> bool {
         Handle::new(unsafe { OpenMutexW(0x100000, 0, event_name("history", pid).as_ptr()) }).is_ok()
     }
+
     pub fn run() -> std::result::Result<(), String> {
         let args: Vec<_> = std::env::args().skip(1).collect();
         if args.len() == 3 && args[0] == "--dump" {
@@ -252,6 +257,7 @@ impl ProcessHistory {
         }
         Ok(())
     }
+
     /// Holds the per-Explorer recorder mutex. An elevated recorder asks a running
     /// unelevated one to yield and waits up to 3 s for it; otherwise `None`.
     fn singleton(pid: u32, elevated: bool) -> std::result::Result<Option<Handle>, String> {
@@ -277,6 +283,7 @@ impl ProcessHistory {
         }
         Ok(None)
     }
+
     fn cpu_ticks() -> u64 {
         let (mut created, mut exited, mut kernel, mut user) = (0u64, 0u64, 0u64, 0u64);
         unsafe {
@@ -291,8 +298,10 @@ impl ProcessHistory {
         kernel + user
     }
 }
+
 /// Whether this process runs elevated (`TokenElevation`).
 pub(crate) struct Elevation;
+
 impl Elevation {
     pub(crate) fn current() -> bool {
         let mut token = std::ptr::null_mut();
@@ -327,6 +336,7 @@ struct RecordedDevices {
     resolved: Vec<crate::platform::devices::DeviceId>,
     next: Option<Instant>,
 }
+
 impl RecordedDevices {
     fn update(
         &mut self,
@@ -354,6 +364,7 @@ impl RecordedDevices {
         &self.resolved
     }
 }
+
 #[link(name = "advapi32")]
 extern "system" {
     fn OpenProcessToken(process: Raw, access: u32, token: *mut Raw) -> i32;
@@ -365,6 +376,7 @@ extern "system" {
         returned: *mut u32,
     ) -> i32;
 }
+
 #[link(name = "kernel32")]
 extern "system" {
     fn GetProcessTimes(
@@ -376,6 +388,7 @@ extern "system" {
     ) -> i32;
     fn OpenMutexW(access: u32, inherit: i32, name: *const u16) -> Raw;
 }
+
 #[link(name = "shell32")]
 extern "system" {
     fn ShellExecuteW(

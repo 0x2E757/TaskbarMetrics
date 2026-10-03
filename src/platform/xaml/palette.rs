@@ -1,5 +1,6 @@
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) struct Palette(pub [u32; 14]);
+
 impl Palette {
     /// Hover and pressed backgrounds are those of the taskbar's own buttons, such as
     /// the weather: a white layer in the light theme, Fluent's fills in the dark one.
@@ -9,12 +10,14 @@ impl Palette {
             0xff007dc8, 0xff0064c8, 0x99ff0000, 0xffc87d32, 0x80ffffff, 0x4dffffff, 0xfff3f3f3,
         ])
     }
+
     pub fn dark() -> Self {
         Self([
             0x0fffffff, 0xffc8c8c8, 0xffffffff, 0xffffc8c8, 0xffff967d, 0xff3296e1, 0xffff967d,
             0xff3296e1, 0xff197de1, 0xb3ff4b4b, 0xffffb454, 0x15ffffff, 0x08ffffff, 0xff202024,
         ])
     }
+
     /// Hover and pressed colors of earlier defaults, which darkened a light tile,
     /// become the current defaults; colors chosen by hand stay.
     pub fn retire_defaults(&mut self, dark: bool) {
@@ -29,6 +32,7 @@ impl Palette {
             }
         }
     }
+
     pub fn parse(text: &str) -> Option<u32> {
         let hex = text.trim().strip_prefix('#')?;
         if !matches!(hex.len(), 6 | 8) || !hex.bytes().all(|c| c.is_ascii_hexdigit()) {
@@ -41,17 +45,21 @@ impl Palette {
             value
         })
     }
+
     pub fn hex(&self, role: usize) -> String {
         format!("#{:08X}", self.0[role])
     }
+
     pub fn apply(&self, markup: &str, fade: f64, id: &str) -> String {
         let result = self.apply_theme(markup, fade, id, "Default");
         self.apply_theme(&result, fade, id, "Light")
     }
+
     pub fn apply_defaults(markup: &str, fade: f64, id: &str) -> String {
         let result = Self::dark().apply_theme(markup, fade, id, "Default");
         Self::light().apply_theme(&result, fade, id, "Light")
     }
+
     pub(super) fn apply_theme(&self, markup: &str, fade: f64, id: &str, theme: &str) -> String {
         let temperature = matches!(id, "cpu" | "gpu");
         let mut resources = String::new();
@@ -121,6 +129,7 @@ impl Palette {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn earlier_hover_defaults_retire_and_chosen_colors_stay() {
         let mut light = Palette::light();
@@ -141,6 +150,7 @@ mod tests {
         );
         assert!(markup.contains(r#"x:Key="MetricHoverBorder""#) && markup.contains("#15000000"));
     }
+
     #[test]
     fn hex_colors_require_complete_valid_input() {
         assert_eq!(Palette::parse("#aAbBcC"), Some(0xffaabbcc));

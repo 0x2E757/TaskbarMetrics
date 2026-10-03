@@ -4,6 +4,7 @@
 //! build script writes the same names into the version blocks.
 
 pub struct Executables;
+
 impl Executables {
     /// Attaches the tiles; the program people start and the Run value starts.
     pub const LAUNCHER: &'static str = "TaskbarMetrics.exe";
@@ -33,6 +34,7 @@ impl Executables {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn the_scripts_package_the_same_names() {
         let script = include_str!("../../tools/package-names.ps1");
