@@ -51,6 +51,16 @@ in decimal MB/s. The main drive is the one holding `%SystemDrive%`. The history 
 values with the device label: `disk_read@C:`, `disk_write@C:`. The % Disk Time percentage is not
 used: it says little about the load of modern SSDs.
 
+A network drive (a letter mapped to an SMB share, `disk@Z:`) reads
+`\SMB Client Shares(*)\Read Bytes/sec` and `Write Bytes/sec` instead, of the instance
+`\server\share` that matches the drive's `\\server\share` (without case; `nas` and
+`nas.home.lan` are one server). The share comes from `WNetGetConnectionW`. The elevated recorder
+runs in a logon session of its own that does not see the user's letters, so it falls back to the
+mapping the profile remembers (`HKCU\Network\Z`, read only); a letter mapped only for the current
+sign-in is therefore not recorded in the background while UAC is on. Until Windows connects to the
+share it has no instance, which reads as zero. Only SMB is covered, not NFS or WebDAV. A share on
+the same computer counts only its metadata requests, so its traffic reads as zero.
+
 ## NET
 
 `\Network Interface(*)\Bytes Received/sec` and `Bytes Sent/sec` of the adapter's own instance,

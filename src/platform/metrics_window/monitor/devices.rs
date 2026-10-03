@@ -73,7 +73,9 @@ impl Devices {
         if let Some((luid, _)) = self.gpu {
             self.used = self.memory.used(luid);
         }
-        if let (Resource::Disk, Some(tag)) = (device.resource, &device.id.tag) {
+        if let (Resource::Disk, Some(tag), false) =
+            (device.resource, &device.id.tag, device.network_drive())
+        {
             self.buses
                 .entry(tag.clone())
                 .or_insert_with(|| DriveBus::of(tag));
@@ -143,6 +145,7 @@ impl Devices {
                     .as_ref()
                     .and_then(|tag| *self.buses.get(tag)?)
                     .map(str::to_owned),
+                device.disk.as_ref().and_then(|disk| disk.remote.clone()),
                 device
                     .disk
                     .as_ref()
@@ -183,6 +186,7 @@ mod tests {
     fn volumes_are_named_in_the_singular_or_plural() {
         let disk = |volumes: &[&str]| DiskName {
             media: Some("SSD"),
+            remote: None,
             volumes: volumes.iter().map(|v| (*v).into()).collect(),
         };
         let english = |volumes| Devices::volumes(&disk(volumes), Language::English);

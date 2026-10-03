@@ -13,6 +13,11 @@ Part of [History window](../window.md).
   `\\.\PhysicalDriveN`, no elevation). All volume letters of a drive are at the end of the
   subtitle, the way File Explorer names them: "NVMe · Drives C:, D:", and for a single one —
   "Drive C:" (the Russian UI translates these). No `\`: in Segoe UI it drops below the line.
+- Network drives (letters mapped to SMB shares) come after the local ones as "Network drive",
+  numbered like the others when there are several. The subtitle is the share and the letter:
+  "\\\\nas\\media · Drive Z:". Their table shows no processes: Windows sends their traffic
+  through the System process, and the page says so in its place. Sources:
+  [metrics.md](../metrics.md#disk).
 - The RAM subtitle lists the installed modules: "2 × 16 GB DDR5-6000" (identical ones
   are counted, different ones are joined with " + "). It is read from SMBIOS (`GetSystemFirmwareTable`,
   Memory Device structures) without elevation; the manufacturer and part number are not shown —

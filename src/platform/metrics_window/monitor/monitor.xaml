@@ -146,10 +146,11 @@
     <Border Grid.Row="3" x:Name="RestBorder" BorderBrush="$divider$" BorderThickness="0,1,0,0" Padding="8,2,8,4"><StackPanel x:Name="Rest"/></Border>
     <Border Grid.Row="1" Grid.RowSpan="3" x:Name="OffPanel" Visibility="Collapsed" BorderBrush="$divider$" BorderThickness="0,1,0,0" Padding="24">
      <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="12">
-      <Border Width="48" Height="48" CornerRadius="24" Background="$subtle$" HorizontalAlignment="Center">$icon:pause:22:1.3:text2$</Border>
-      <TextBlock Text="@Process monitoring is off@" FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Center" TextAlignment="Center"/>
-      <TextBlock Text="@Totals are still collected. Turn on background process history to see which processes used resources at any moment of the last 5 minutes.@" FontSize="13" Foreground="$text2$" MaxWidth="520" TextWrapping="Wrap" TextAlignment="Center" LineHeight="19" HorizontalAlignment="Center"/>
-      <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center" Margin="0,4,0,0">
+      <Border x:Name="OffIcon" Width="48" Height="48" CornerRadius="24" Background="$subtle$" HorizontalAlignment="Center">$icon:pause:22:1.3:text2$</Border>
+      <Border x:Name="ShareIcon" Visibility="Collapsed" Width="48" Height="48" CornerRadius="24" Background="$subtle$" HorizontalAlignment="Center">$icon:disk:22:1.3:text2$</Border>
+      <TextBlock x:Name="OffTitle" Text="@Process monitoring is off@" FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Center" TextAlignment="Center"/>
+      <TextBlock x:Name="OffText" Text="@Totals are still collected. Turn on background process history to see which processes used resources at any moment of the last 5 minutes.@" FontSize="13" Foreground="$text2$" MaxWidth="520" TextWrapping="Wrap" TextAlignment="Center" LineHeight="19" HorizontalAlignment="Center"/>
+      <StackPanel x:Name="OffActions" Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center" Margin="0,4,0,0">
        <Button x:Name="EnableMonitoring" Background="$accent$" Foreground="$onAccent$" BorderBrush="$accent$" Content="@Turn on monitoring@">
         <Button.Resources>
          <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="$accentHover$"/>

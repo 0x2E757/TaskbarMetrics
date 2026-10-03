@@ -103,6 +103,113 @@ impl DiskInstance {
     }
 }
 
+/// A drive letter mapped to an SMB share (`Z:` → `\\server\share`). Its traffic is in
+/// `\SMB Client Shares(*)`, whose instances are named `\server\share`.
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct NetworkDrive {
+    /// `Z:`.
+    pub letter: String,
+    /// `\\server\share`, perhaps with a folder of the share after it.
+    pub remote: String,
+}
+impl NetworkDrive {
+    /// What names a network drive in the menu, like «SSD» names a local one.
+    pub const MEDIA: &'static str = "Network drive";
+    /// Mapped drive letters, from A: to Z:.
+    pub fn list() -> Vec<Self> {
+        // SAFETY: plain queries without buffers.
+        let mask = unsafe { GetLogicalDrives() };
+        (0..26u8)
+            .filter(|bit| mask & (1 << bit) != 0)
+            .filter_map(|bit| Self::of(&format!("{}:", char::from(b'A' + bit))))
+            .collect()
+    }
+    /// The share mapped to `letter`, or None for a local or unused one.
+    pub fn of(letter: &str) -> Option<Self> {
+        if letter.len() != 2 || !letter.ends_with(':') {
+            return None;
+        }
+        let root: Vec<u16> = format!("{letter}\\\0").encode_utf16().collect();
+        // SAFETY: a NUL-terminated root path.
+        match unsafe { GetDriveTypeW(root.as_ptr()) } {
+            // DRIVE_REMOTE.
+            4 => {}
+            // DRIVE_NO_ROOT_DIR: the letter is unused in this logon session.
+            1 => return Self::remembered(letter),
+            _ => return None,
+        }
+        Self::connection(letter)
+            .or_else(|| Self::remembered(letter).map(|drive| drive.remote))
+            .map(|remote| Self {
+                letter: letter.to_uppercase(),
+                remote,
+            })
+    }
+    /// The share of a letter mapped in this logon session.
+    fn connection(letter: &str) -> Option<String> {
+        let name: Vec<u16> = format!("{letter}\0").encode_utf16().collect();
+        let mut buffer = [0u16; 1024];
+        let mut size = buffer.len() as u32;
+        // SAFETY: the buffer holds `size` characters.
+        let status = unsafe { WNetGetConnectionW(name.as_ptr(), buffer.as_mut_ptr(), &mut size) };
+        (status == 0)
+            .then(|| text(&buffer))
+            .filter(|r| !r.is_empty())
+    }
+    /// A mapping that reconnects at sign-in, as the user's profile remembers it. The
+    /// elevated recorder runs in a logon session of its own, which does not see the
+    /// letters mapped in the user's one, so it reads them here.
+    fn remembered(letter: &str) -> Option<Self> {
+        let key: Vec<u16> = format!("Network\\{}\0", &letter[..1])
+            .encode_utf16()
+            .collect();
+        let value: Vec<u16> = "RemotePath\0".encode_utf16().collect();
+        let mut buffer = [0u16; 1024];
+        let mut size = (buffer.len() * 2) as u32;
+        // HKEY_CURRENT_USER, RRF_RT_REG_SZ. SAFETY: the buffer holds `size` bytes.
+        let status = unsafe {
+            RegGetValueW(
+                0x8000_0001usize as *mut core::ffi::c_void,
+                key.as_ptr(),
+                value.as_ptr(),
+                0x2,
+                ptr::null_mut(),
+                buffer.as_mut_ptr().cast(),
+                &mut size,
+            )
+        };
+        let remote = (status == 0).then(|| text(&buffer))?;
+        (!remote.is_empty()).then(|| Self {
+            letter: letter.to_uppercase(),
+            remote,
+        })
+    }
+    /// Whether the `\SMB Client Shares(*)` instance `\server\share` carries this
+    /// drive: the server and share match, ignoring case and a domain after the server.
+    pub fn matches(&self, instance: &str) -> bool {
+        let parts = |path: &str| {
+            let mut parts = path.trim_start_matches('\\').split('\\');
+            Some((parts.next()?.to_lowercase(), parts.next()?.to_lowercase()))
+        };
+        let (Some((server, share)), Some((other, other_share))) =
+            (parts(&self.remote), parts(instance))
+        else {
+            return false;
+        };
+        // `nas` and `nas.home.lan` are one server; addresses compare whole.
+        let host = |name: &str| match name.parse::<IpAddr>() {
+            Ok(_) => name.to_owned(),
+            Err(_) => name.split('.').next().unwrap_or_default().to_owned(),
+        };
+        share == other_share && (server == other || host(&server) == host(&other))
+    }
+}
+
+fn text(units: &[u16]) -> String {
+    let end = units.iter().position(|u| *u == 0).unwrap_or(units.len());
+    String::from_utf16_lossy(&units[..end])
+}
+
 /// A hardware network adapter that is up.
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct NetworkAdapter {
@@ -301,6 +408,8 @@ impl IoDevices {
 pub struct DiskName {
     pub media: Option<&'static str>,
     pub volumes: Vec<String>,
+    /// `\\server\share` of a network drive.
+    pub remote: Option<String>,
 }
 impl DiskName {
     /// «C:, D:»: the disk's volumes; empty without any. No root backslash: in
@@ -380,6 +489,7 @@ impl DeviceCatalog {
                 .skip(1)
                 .map(Into::into)
                 .collect(),
+            remote: None,
         }
     }
     /// CPU, GPUs, memory, disks and network adapters, in the order of the menu.
@@ -411,6 +521,19 @@ impl DeviceCatalog {
                 .into_iter()
                 .map(|(_, tag)| DeviceId::new("disk", Some(tag))),
         );
+        // Mapped shares, as disks named by their letter: their tiles and pages are a
+        // disk's, with the traffic of the share.
+        for drive in NetworkDrive::list() {
+            self.names.insert(
+                drive.letter.clone(),
+                DiskName {
+                    media: Some(NetworkDrive::MEDIA),
+                    volumes: vec![drive.letter.clone()],
+                    remote: Some(drive.remote),
+                },
+            );
+            devices.push(DeviceId::new("disk", Some(drive.letter)));
+        }
         let adapters = NetworkAdapter::list();
         self.links = adapters.iter().map(|a| (a.tag(), a.kind)).collect();
         devices.extend(adapters.iter().map(|a| DeviceId::new("net", Some(a.tag()))));
@@ -484,6 +607,27 @@ impl<T: Clone> Binding<T> {
     }
 }
 
+#[link(name = "kernel32")]
+extern "system" {
+    fn GetLogicalDrives() -> u32;
+    fn GetDriveTypeW(root: *const u16) -> u32;
+}
+#[link(name = "mpr")]
+extern "system" {
+    fn WNetGetConnectionW(local: *const u16, remote: *mut u16, length: *mut u32) -> u32;
+}
+#[link(name = "advapi32")]
+extern "system" {
+    fn RegGetValueW(
+        key: *mut core::ffi::c_void,
+        subkey: *const u16,
+        value: *const u16,
+        flags: u32,
+        kind: *mut u32,
+        data: *mut core::ffi::c_void,
+        size: *mut u32,
+    ) -> i32;
+}
 #[link(name = "iphlpapi")]
 extern "system" {
     fn GetAdaptersAddresses(
@@ -591,6 +735,25 @@ mod tests {
         let loopback: IpAddr = "127.0.0.1".parse().unwrap();
         assert_eq!(devices.adapter(&loopback, &loopback), None);
         assert_eq!(DiskInstance::number("1 D: E:"), Some(1));
+    }
+    #[test]
+    fn network_drives_match_their_share_instance() {
+        let drive = |remote: &str| NetworkDrive {
+            letter: "Z:".into(),
+            remote: remote.into(),
+        };
+        let nas = drive(r"\\NAS\Media\Films");
+        assert!(nas.matches(r"\nas\media"));
+        assert!(nas.matches(r"\nas.home.lan\Media"));
+        assert!(!nas.matches(r"\nas\backup"));
+        assert!(!nas.matches(r"\other\media"));
+        assert!(!nas.matches("_Total"));
+        let address = drive(r"\\192.168.1.5\data");
+        assert!(address.matches(r"\192.168.1.5\data"));
+        assert!(!address.matches(r"\192.168.2.7\data"));
+        // Letters that are not drive roots are never looked up.
+        assert_eq!(NetworkDrive::of("Z"), None);
+        assert_eq!(NetworkDrive::of("ZZ:"), None);
     }
     #[test]
     fn watch_list_is_ignored_once_stale() {

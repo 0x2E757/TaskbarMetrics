@@ -28,7 +28,8 @@ gap=12
 An element of `metrics` and `history` is a type (`cpu`, `gpu`, `ram`, `disk`, `net`) or a specific
 device `type@label`:
 
-- `disk@D:` — the drive's first letter or its number;
+- `disk@D:` — the drive's first letter or its number; a network drive, its mapped letter
+  (`disk@Z:`);
 - `net@Ethernet 2` — the adapter name in Windows Settings;
 - `gpu@1` — the graphics card number.
 

@@ -1204,6 +1204,10 @@ impl Dashboard {
                 "Rows without a PID are memory outside processes. «Shared memory» is the rest: DLLs and files mapped by processes, and processes closed to inspection.",
                 "All rows add up to the line.",
             ],
+            Resource::Disk if self.device.network_drive() => vec![
+                "The totals are the SMB client's traffic to the share, from the PDH counters “SMB Client Shares”. Until Windows connects to the share they are zero.",
+                "Read is drawn above the axis, write below it, on the same scale.",
+            ],
             Resource::Disk | Resource::Net => vec![
                 "Totals come from PDH counters; per-process traffic comes from ETW. The two can differ slightly.",
                 "ETW delivers events with a delay, so live per-process values trail the total by about 2 s (hatched strip).",
@@ -1469,8 +1473,30 @@ impl Dashboard {
         Ok(())
     }
     fn render_off(&self) -> Result<bool> {
-        let off = !self.processes();
+        // A network drive's traffic belongs to System, so it has no process rows.
+        let share = self.device.network_drive();
+        let off = !self.processes() || share;
         Ui::visible(&self.root, "OffPanel", off)?;
+        for (name, shown) in [
+            ("OffIcon", !share),
+            ("ShareIcon", share),
+            ("OffActions", !share),
+        ] {
+            Ui::visible(&self.root, name, shown)?;
+        }
+        let (title, text) = if share {
+            (
+                "No per-process data for network drives",
+                "Windows sends network drive traffic through the System process, so it cannot be split by process. The chart shows the drive's total read and write.",
+            )
+        } else {
+            (
+                "Process monitoring is off",
+                "Totals are still collected. Turn on background process history to see which processes used resources at any moment of the last 5 minutes.",
+            )
+        };
+        Ui::text(&self.root, "OffTitle", self.language.text(title))?;
+        Ui::text(&self.root, "OffText", self.language.text(text))?;
         // Nothing to search without per-process history, as in the artboard.
         Ui::enable(&self.elements.search, !off)?;
         Ui::visible(&self.root, "SearchLine", !off)?;
@@ -1480,7 +1506,7 @@ impl Dashboard {
         if off {
             Ui::visible(&self.root, "RestBorder", false)?;
             let layers = self.pins.layers(self.design, self.language);
-            Ui::visible(&self.root, "OffPins", !layers.is_empty())?;
+            Ui::visible(&self.root, "OffPins", !share && !layers.is_empty())?;
             let mut chips = String::from(
                 r#"<StackPanel xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" Orientation="Horizontal" Spacing="6">"#,
             );

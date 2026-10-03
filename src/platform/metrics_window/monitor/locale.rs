@@ -342,6 +342,19 @@ const CATALOG: &[(&str, &str)] = &[
     ("Settings", "Настройки"),
     ("Menu", "Меню"),
     ("Disk", "Диск"),
+    ("Network drive", "Сетевой диск"),
+    (
+        "The totals are the SMB client's traffic to the share, from the PDH counters “SMB Client Shares”. Until Windows connects to the share they are zero.",
+        "Итоги — трафик клиента SMB к шаре, счётчики PDH «SMB Client Shares». Пока Windows не подключилась к шаре, они равны нулю.",
+    ),
+    (
+        "No per-process data for network drives",
+        "Для сетевых дисков нет данных по процессам",
+    ),
+    (
+        "Windows sends network drive traffic through the System process, so it cannot be split by process. The chart shows the drive's total read and write.",
+        "Windows передаёт трафик сетевых дисков через процесс System, поэтому его нельзя разделить по процессам. График показывает общее чтение и запись диска.",
+    ),
     ("Network", "Сеть"),
     ("Live", "В реальном времени"),
     ("Processes", "Процессы"),

@@ -1,9 +1,9 @@
 use super::{
-    devices::DeviceId,
+    devices::{DeviceId, NetworkDrive},
     gpu_temperature::GpuTemperatureProvider,
     providers::{
         CpuProvider, DiskThroughputProvider, GpuProvider, NetworkProvider, NetworkTraffic,
-        RamProvider,
+        RamProvider, ShareThroughputProvider,
     },
 };
 use crate::{
@@ -45,6 +45,10 @@ impl Composition {
                 ],
                 "ram" => vec![Box::new(RamProvider::new())],
                 // Read and write in MB/s, as the tile shows them like the network.
+                "disk" if id.tag.as_deref().and_then(NetworkDrive::of).is_some() => vec![
+                    Box::new(ShareThroughputProvider::new(id, false)),
+                    Box::new(ShareThroughputProvider::new(id, true)),
+                ],
                 "disk" => vec![
                     Box::new(DiskThroughputProvider::new(id, false)),
                     Box::new(DiskThroughputProvider::new(id, true)),

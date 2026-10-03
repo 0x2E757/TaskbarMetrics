@@ -1,5 +1,5 @@
 use super::{
-    devices::{Binding, DeviceId, DiskInstance, NetworkAdapter},
+    devices::{Binding, DeviceId, DiskInstance, NetworkAdapter, NetworkDrive},
     gpu_temperature::GpuAdapters,
     pdh::PdhCounter,
 };
@@ -41,6 +41,51 @@ impl MetricProvider for DiskThroughputProvider {
         {
             MetricValue::Available(bytes) => MetricValue::Available(bytes / 1_000_000.0),
             other => other,
+        }
+    }
+}
+
+/// Read or write throughput of a network drive, in MB/s: the SMB client's traffic to
+/// the share mapped to the drive letter.
+pub struct ShareThroughputProvider {
+    descriptor: MetricDescriptor,
+    counter: PdhCounter,
+    drive: Binding<NetworkDrive>,
+}
+impl ShareThroughputProvider {
+    pub fn new(id: &DeviceId, write: bool) -> Self {
+        Self {
+            descriptor: MetricDescriptor::new(
+                &id.reading(if write { "disk_write" } else { "disk_read" }),
+                if write { "WRITE" } else { "READ" },
+                " MB/s",
+            ),
+            counter: PdhCounter::new(if write {
+                r"\SMB Client Shares(*)\Write Bytes/sec"
+            } else {
+                r"\SMB Client Shares(*)\Read Bytes/sec"
+            }),
+            drive: Binding::new(id.clone()),
+        }
+    }
+}
+impl MetricProvider for ShareThroughputProvider {
+    fn descriptor(&self) -> &MetricDescriptor {
+        &self.descriptor
+    }
+    fn sample(&mut self) -> MetricValue {
+        let Some(drive) = self.drive.get(|id| NetworkDrive::of(id.tag.as_deref()?)) else {
+            return MetricValue::Unavailable;
+        };
+        // The share has no instance until Windows connects to it: no traffic yet.
+        match self.counter.entries() {
+            Ok(values) => MetricValue::Available(
+                values
+                    .into_iter()
+                    .find(|(name, _)| drive.matches(name))
+                    .map_or(0.0, |(_, bytes)| bytes / 1_000_000.0),
+            ),
+            Err(value) => value,
         }
     }
 }

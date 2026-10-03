@@ -131,6 +131,10 @@ impl Device {
             _ => None,
         }
     }
+    /// A drive letter mapped to a network share.
+    pub fn network_drive(&self) -> bool {
+        self.disk.as_ref().is_some_and(|disk| disk.remote.is_some())
+    }
     fn lettered(&self) -> bool {
         self.id.tag.as_deref().is_some_and(|tag| tag.ends_with(':'))
     }
@@ -144,7 +148,9 @@ impl Device {
         };
         match (self.resource, &self.disk, self.id.tag.as_deref()) {
             (Resource::Gpu, _, _) => numbered("GPU"),
-            (Resource::Disk, Some(name), _) => numbered(name.media.unwrap_or(disk)),
+            (Resource::Disk, Some(name), _) => {
+                numbered(name.media.map_or(disk, |m| language.text(m)))
+            }
             (Resource::Disk, None, Some(tag)) if self.lettered() => format!("{disk} {tag}/"),
             (Resource::Disk, None, _) => numbered(disk),
             (Resource::Net, _, Some(tag)) => tag.to_owned(),
@@ -456,6 +462,7 @@ mod tests {
                 .with_disk(Some(DiskName {
                     media,
                     volumes: vec!["D:".into(), "E:".into()],
+                    remote: None,
                 }));
             device.ordinal = ordinal;
             (device.group(), device.title(Language::English))

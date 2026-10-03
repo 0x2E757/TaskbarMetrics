@@ -4,7 +4,7 @@ CPU, GPU, RAM, DISK and NET metrics on the left side of the stock **Windows 11 x
 Rust, the standard library and system Windows DLLs. No third-party crates, services,
 Windhawk, C/C++, .NET or COM registration in the registry.
 
-- **Taskbar tiles** with numbers and charts; every drive, network adapter and
+- **Taskbar tiles** with numbers and charts; every drive (mapped SMB shares included), network adapter and
   graphics card can have its own tile. Reorder them by dragging.
 - **History window**: 5-minute charts, picking a moment on the chart and the processes that
   used resources at exactly that time; process pinning, search, light and dark themes,
