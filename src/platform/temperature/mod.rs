@@ -11,8 +11,12 @@ pub(crate) use provider::CpuTemperatureProvider;
 /// The only entry point that opens a driver. Runs elevated, outside Explorer.
 pub struct SensorCollector;
 impl SensorCollector {
+    /// The collector for this Explorer is publishing.
+    pub(crate) fn running(pid: u32) -> bool {
+        channel::TemperatureChannel::open(pid).is_ok_and(|channel| channel.fresh())
+    }
     pub(crate) fn launch(executable: &std::path::Path, pid: u32) -> Result<()> {
-        if channel::TemperatureChannel::open(pid).is_ok() {
+        if Self::running(pid) {
             return Ok(());
         }
         if !executable.is_file() {

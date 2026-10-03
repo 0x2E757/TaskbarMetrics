@@ -1,39 +1,28 @@
 //! Frees the program's files so an installer or a portable update can replace or
 //! remove them: Explorer keeps the DLL loaded until it exits, the window and the
 //! collectors hold their executables.
-use super::{abi::*, executables::Executables, launcher::Explorer, process_history::Elevation};
+use super::{
+    abi::*, executables::Executables, launcher::Explorer, process_history::Elevation,
+    shutdown::Shutdown,
+};
 use std::{
     path::Path,
-    ptr,
     time::{Duration, Instant},
 };
 
 pub(crate) struct Unload;
 impl Unload {
-    /// Closes the window, ends Explorer, which Windows starts again by itself
+    /// Closes the tray icon and the window, ends Explorer, which Windows starts again by itself
     /// (`AutoRestartShell`), and waits until the files in `directory` are free; the
     /// collectors exit with the Explorer they were started for.
     pub fn run(directory: &Path) -> Result<()> {
-        Self::close_window();
+        // The tray icon first, or it would attach to the new Explorer again.
+        Shutdown::close(super::watch::CLASS);
+        Shutdown::close(Shutdown::WINDOW);
         if let Ok(explorer) = Explorer::find() {
             Self::restart_explorer(explorer.pid)?;
         }
         Self::wait_free(directory)
-    }
-    fn close_window() {
-        unsafe {
-            let window = FindWindowW(wide("TaskbarMetrics.Monitor").as_ptr(), ptr::null());
-            if window.is_null() {
-                return;
-            }
-            let mut pid = 0;
-            GetWindowThreadProcessId(window, &mut pid);
-            // The window quits on WM_CLOSE, keeping its placement.
-            PostMessageW(window, 0x0010, 0, 0);
-            if let Ok(process) = Handle::new(OpenProcess(0x100000, 0, pid)) {
-                WaitForSingleObject(process.0, 5000);
-            }
-        }
     }
     fn restart_explorer(pid: u32) -> Result<()> {
         unsafe {
@@ -93,10 +82,6 @@ impl Unload {
     }
 }
 
-#[link(name = "user32")]
-extern "system" {
-    fn PostMessageW(window: Raw, message: u32, wparam: usize, lparam: isize) -> i32;
-}
 #[link(name = "kernel32")]
 extern "system" {
     fn TerminateProcess(process: Raw, code: u32) -> i32;

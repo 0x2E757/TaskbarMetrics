@@ -7,6 +7,9 @@ use std::{ffi::OsStr, os::windows::ffi::OsStrExt, path::Path, ptr};
 type Initialize =
     unsafe extern "system" fn(*const u16, u32, *const u16, *const u16, Guid, *const u16) -> Hr;
 
+/// The argument that runs the watcher with the tray icon.
+pub(crate) const WATCH: &str = "--watch";
+
 pub struct Launcher;
 impl Default for Launcher {
     fn default() -> Self {
@@ -40,6 +43,7 @@ impl Launcher {
                     "--register-tasks",
                     "--remove-tasks",
                     "--unload",
+                    WATCH,
                     super::autostart::Autostart::ARGUMENT,
                 ]
                 .iter()
@@ -47,21 +51,23 @@ impl Launcher {
             })
         {
             eprintln!(
-                "Usage: TaskbarMetrics.exe [--sample | --stop | --sensors | --autostart | --register-tasks | --remove-tasks | --unload | --help]"
+                "Usage: TaskbarMetrics.exe [--sample | --stop | --sensors | --autostart | --watch | --register-tasks | --remove-tasks | --unload | --help]"
             );
             return Ok(1);
         }
         if args.first().is_some_and(|v| v == "--help") {
             println!(
-                "Usage: TaskbarMetrics.exe [--sample | --stop | --sensors | --autostart | --register-tasks | --remove-tasks | --unload | --help]\n\
-                No arguments: attach to the Windows 11 taskbar.\n\
+                "Usage: TaskbarMetrics.exe [--sample | --stop | --sensors | --autostart | --watch | --register-tasks | --remove-tasks | --unload | --help]\n\
+                No arguments: attach to the Windows 11 taskbar and start the tray icon.\n\
                 --sample: print three samples without changing Explorer.\n\
-                --stop: remove metrics and stop sampling.\n\
+                --stop: close the program: the tiles, the collectors, the window and the tray icon.\n\
                 --sensors: start the optional elevated CPU temperature collector (UAC).\n\
                 --autostart: the start at sign-in: attach, retrying for a minute, then --sensors.\n\
+                --watch: the tray icon, which attaches to a new Explorer and starts collectors\n\
+                that ended again; the other starts run it.\n\
                 --register-tasks, --remove-tasks: the installer's elevated steps that let the\n\
                 collectors of a copy in Program Files start elevated without a UAC prompt.\n\
-                --unload: close the window and restart Explorer to free the files for an update.\n\
+                --unload: close the window and the tray icon, restart Explorer to free the files.\n\
                 Settings: %LOCALAPPDATA%\\Taskbar Metrics\\taskbar-metrics.conf."
             );
             return Ok(0);
@@ -79,6 +85,9 @@ impl Launcher {
         if args.first().is_some_and(|v| v == "--remove-tasks") {
             CollectorTask::remove_all()?;
             return Ok(0);
+        }
+        if args.first().is_some_and(|v| v == WATCH) {
+            return super::watch::Watcher::run(&executable);
         }
         if args.first().is_some_and(|v| v == "--unload") {
             super::unload::Unload::run(executable.parent().ok_or(E_FAIL)?)?;
@@ -141,6 +150,10 @@ impl Launcher {
                 );
             }
         }
+        // The tray icon keeps the program running from here on.
+        if code != 1 {
+            super::watch::Watcher::spawn(executable);
+        }
         Ok(code)
     }
 
@@ -167,16 +180,12 @@ impl Launcher {
         Ok(code)
     }
 
+    /// Closes the program, as the tray icon's menu does.
     fn stop(&self) -> Result<i32> {
-        let explorer = Explorer::find()?;
-        unsafe {
-            let event = Handle::new(OpenEventW(2, 0, event_name("stop", explorer.pid).as_ptr()))?;
-            if SetEvent(event.0) == 0 {
-                return Err(last_error());
-            }
-        }
+        super::shutdown::Shutdown::all();
         println!(
-            "Stop requested; UI removal is asynchronous. DLL stays loaded until Explorer exits."
+            "Closed: the tiles go asynchronously, the collectors, the window and the tray icon exit.\n\
+            The DLL stays loaded until Explorer exits."
         );
         Ok(0)
     }

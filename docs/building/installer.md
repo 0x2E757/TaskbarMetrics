@@ -39,7 +39,7 @@ Asks for administrator rights once and, in English or Russian:
   not cover bundling, so it is not carried inside;
 - starts the program with `--autostart`.
 
-An update first runs the installed `TaskbarMetrics.exe --unload`: the window closes and
+An update first runs the installed `TaskbarMetrics.exe --unload`: the tray icon and the window close and
 Explorer restarts, which frees the DLL. Uninstalling unloads the same way, removes the tasks
 and the Run value when it starts this copy, and keeps the [data folder](../files.md) and PawnIO,
 which other programs may use.

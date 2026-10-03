@@ -75,6 +75,15 @@ impl TemperatureChannel {
             view.sequence.fetch_add(1, Ordering::SeqCst);
         }
     }
+    /// The collector published within 5 s, a reading or not. Explorer keeps the
+    /// mapping open for a while after the collector ended, so its existence says less.
+    pub fn fresh(&self) -> bool {
+        unsafe {
+            let tick = (*self.view).tick.load(Ordering::SeqCst);
+            let now = GetTickCount64();
+            tick != 0 && now >= tick && now - tick <= 5000
+        }
+    }
     pub fn read(&self) -> Option<f64> {
         unsafe {
             let view = &*self.view;

@@ -19,6 +19,12 @@ Get-Process TaskbarMetrics.Window -ErrorAction SilentlyContinue | Where-Object P
     $_.CloseMainWindow() | Out-Null
     if (-not $_.WaitForExit(3000)) { throw 'Close the metrics window before updating its executable.' }
 }
+# The tray icon holds TaskbarMetrics.exe and would attach to the new Explorer by itself;
+# the launcher below starts it again.
+Get-Process TaskbarMetrics -ErrorAction SilentlyContinue | Where-Object Path -eq (Join-Path $destination 'TaskbarMetrics.exe') | ForEach-Object {
+    Stop-Process -Id $_.Id
+    $_.WaitForExit(3000) | Out-Null
+}
 # The CPU temperature collector exits with its Explorer; it is started again below.
 # It runs elevated, so its path is not readable from here: the name has to do.
 $sensorsRunning = $null -ne (Get-Process TaskbarMetrics.Sensors -ErrorAction SilentlyContinue)

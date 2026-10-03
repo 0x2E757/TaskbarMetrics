@@ -67,6 +67,10 @@ impl ProcessHistory {
             Ok(())
         }
     }
+    /// The recorder for this Explorer holds its mutex.
+    pub(crate) fn running(pid: u32) -> bool {
+        Handle::new(unsafe { OpenMutexW(0x100000, 0, event_name("history", pid).as_ptr()) }).is_ok()
+    }
     pub fn run() -> std::result::Result<(), String> {
         let args: Vec<_> = std::env::args().skip(1).collect();
         if args.len() == 3 && args[0] == "--dump" {
