@@ -28,7 +28,7 @@ Specification for updating the whole UI of the main window. Numeric values are i
 7. [Empty and special states](ui-kit/special-states.md) — empty history, monitoring off, no administrator rights.
 8. Settings
    - [Structure and preview](ui-kit/settings.md) — tabs, preview card, taskbar strip.
-   - [Groups](ui-kit/settings-groups.md) — Monitoring, Taskbar widgets, Alerts, Language, Window appearance, Startup and window.
+   - [Groups](ui-kit/settings-groups.md) — Monitoring, Tile appearance, Alerts, Language, Window appearance, Startup and window.
    - [Alert range, colors, color picker](ui-kit/settings-alerts-and-colors.md).
 9. Formatting and strings
    - [Formatting](ui-kit/formatting.md) — locales, precision, time, string length.

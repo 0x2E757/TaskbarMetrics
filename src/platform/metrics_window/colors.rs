@@ -12,15 +12,15 @@ const ROLES: [(&str, &str); 14] = [
     ("value", "Main value"),
     ("hot", "High usage value"),
     ("temperature_text", "Temperature value"),
-    ("download_text", "Download arrow"),
-    ("upload_text", "Upload arrow and value"),
+    ("download_text", "Download / read arrow"),
+    ("upload_text", "Upload / write arrow and value"),
     ("primary_line", "Primary chart line"),
     ("primary_area", "Chart area"),
     ("temperature_line", "Temperature line"),
-    ("upload_line", "Upload line"),
+    ("upload_line", "Upload / write line"),
     ("hover", "Hover background"),
     ("pressed", "Pressed background"),
-    ("background", "Background behind widgets"),
+    ("background", "Preview background"),
 ];
 
 pub(super) struct ColorEditor {

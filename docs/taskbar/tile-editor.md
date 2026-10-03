@@ -13,7 +13,7 @@ or WebView2. The markup is embedded in the EXE: `src/platform/metrics_window/set
   chart points are a fixed simulated wave; the number and the last point come from the preview
   value fields. In the window, "Live values" fills those fields from the newest recorded sample
   and locks them; "Test" makes them editable again.
-- Fields and sliders change the CPU/GPU width (the other tiles follow with their own offset),
+- Fields and sliders change the tile width ("Tile width" is that of CPU and GPU; RAM is 20 px narrower, NET and DISK 8 px wider),
   spacing, radius, three text sizes, line width, fill opacity and the X/Y
   offset of the numbers. The height stays 36 px.
 - The left part of the chart has separate settings: the geometry start from the left edge of the

@@ -14,7 +14,7 @@ struct InputDefinition {
 const INPUTS: [InputDefinition; 37] = [
     InputDefinition {
         name: "TileWidth",
-        label: "CPU / GPU width, px",
+        label: "Tile width, px",
         min: 80.0,
         max: 180.0,
         step: 1.0,
@@ -49,7 +49,7 @@ const INPUTS: [InputDefinition; 37] = [
     },
     InputDefinition {
         name: "SecondarySize",
-        label: "Temperature / upload size, px",
+        label: "Temperature, upload and write size, px",
         min: 7.0,
         max: 16.0,
         step: 1.0,
@@ -395,7 +395,7 @@ impl Playground {
             crate::platform::xaml::Palette::dark(),
         ])
     }
-    /// "CPU / GPU width, px" → ("CPU / GPU width", "px").
+    /// "Tile width, px" → ("Tile width", "px").
     fn split(label: &str) -> (&str, &str) {
         label.rsplit_once(", ").unwrap_or((label, ""))
     }

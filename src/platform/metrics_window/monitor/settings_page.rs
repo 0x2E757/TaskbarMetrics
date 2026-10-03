@@ -83,7 +83,7 @@ const GROUPS: [Group; 6] = [
     Group {
         icon: "type",
         title: "Typography",
-        description: "Header, main value, temperature / upload",
+        description: "Text sizes and value offsets",
     },
     Group {
         icon: "chart",
