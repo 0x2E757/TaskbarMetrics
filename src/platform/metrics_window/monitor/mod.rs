@@ -14,6 +14,7 @@ mod legend;
 mod locale;
 mod menu;
 mod model;
+mod monitor_options;
 mod nav;
 mod pins;
 mod plain_button;

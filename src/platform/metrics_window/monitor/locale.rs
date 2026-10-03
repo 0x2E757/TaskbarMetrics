@@ -564,6 +564,19 @@ const CATALOG: &[(&str, &str)] = &[
     ("Done", "Готово"),
     ("Cancel", "Отмена"),
     ("Startup and window", "Запуск и окно"),
+    ("Monitors", "Мониторы"),
+    ("Taskbar tiles", "Плитки на панели задач"),
+    (
+        "If none of the chosen monitors is connected, the tiles show on the main one",
+        "Если ни один из выбранных мониторов не подключён, плитки появятся на основном",
+    ),
+    (
+        "At least one monitor shows the tiles",
+        "Хотя бы один монитор должен показывать плитки",
+    ),
+    ("Built-in display", "Встроенный экран"),
+    ("Monitor", "Монитор"),
+    ("main", "основной"),
     ("Start when signing in to Windows", "Запускать при входе в Windows"),
     (
         "Taskbar tiles and the CPU temperature sensor",

@@ -16,6 +16,14 @@ may briefly change the layout. Auto-hide and scaling
 are inherited from the parent XAML panel. A separate UI target is created
 for each taskbar root found.
 
+Each taskbar is a XAML island. The visual tree reports its `DesktopWindowXamlSource` as a root
+with the island's root element as a child; the source gives its window
+(`IDesktopWindowXamlSourceNative`), and the window above it is `Shell_TrayWnd` or
+`Shell_SecondaryTrayWnd`. `MonitorFromWindow` tells the monitor, which `Displays` matches to the
+ids of `monitors` ([configuration.md](../configuration.md)). A taskbar on a monitor that is
+not chosen gets no tiles; once a second it checks the choice again and builds them or removes
+them. A taskbar whose window is not found shows the tiles.
+
 Tiles are reordered by dragging, like tray icons: press a tile and
 drag it (from 4 px), the neighboring tiles make room. Once the drag starts, the strip takes the
 pointer capture from the tile button, which also cancels its click. After release the new order

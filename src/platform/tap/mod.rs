@@ -1,4 +1,5 @@
 //! COM TAP entry points. Subscription never runs inline in SetSite or DllMain.
+mod islands;
 mod session;
 use super::{
     abi::*,
@@ -240,6 +241,7 @@ impl Tap {
             idle,
             stopping: AtomicBool::new(false),
             targets: Mutex::new(HashMap::new()),
+            islands: Mutex::default(),
             settings: Mutex::new(settings),
             config,
         });

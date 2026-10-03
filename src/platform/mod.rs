@@ -7,6 +7,7 @@ pub mod composition;
 pub mod data_directory;
 pub mod detached_console;
 pub mod devices;
+pub mod displays;
 pub mod executables;
 pub(crate) mod gpu_temperature;
 pub(crate) mod hardware;

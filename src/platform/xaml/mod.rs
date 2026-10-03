@@ -1,5 +1,5 @@
 //! Native XAML view; all element references remain on their UI thread.
-use super::{abi::*, com::*, data_directory::DataDirectory};
+use super::{abi::*, com::*, data_directory::DataDirectory, displays::Displays};
 use crate::{
     config::Settings,
     presentation::{LeftPlacement, OccupiedRange},
@@ -32,6 +32,14 @@ use button::MetricsButton;
 pub(crate) fn verify_tiles() -> Result<()> {
     MetricsButton::verify()
 }
+/// The topmost element above `element`: the root of its XAML island.
+pub fn island_root(element: &Com) -> Result<Com> {
+    visual_tree::VisualTree::new()?
+        .ancestors(element)?
+        .into_iter()
+        .next()
+        .ok_or(E_UNEXPECTED)
+}
 pub use dispatcher::Target;
 use geometry::TaskbarGeometry;
 use interop::{XamlElement, XamlVector};
@@ -58,11 +66,21 @@ struct UiTarget {
     last_visible: Option<bool>,
     /// Reader of the taskbar's occupied ranges, created on the first update.
     geometry: Option<TaskbarGeometry>,
+    /// The taskbar window, which tells the monitor; unknown shows the tiles.
+    window: Option<isize>,
+    /// Whether the chosen monitors include this taskbar's one.
+    chosen: bool,
 }
 thread_local! { static UI: RefCell<HashMap<u64, UiTarget>> = RefCell::new(HashMap::new()); }
 impl Target {
-    pub fn insert(self: &Arc<Self>, panel: Com, settings: Settings) -> Result<()> {
+    pub fn insert(
+        self: &Arc<Self>,
+        panel: Com,
+        settings: Settings,
+        window: Option<isize>,
+    ) -> Result<()> {
         let target = self;
+        let chosen = UiTarget::chosen(window, &settings);
         UI.with(|ui| {
             ui.borrow_mut().insert(
                 target.key,
@@ -78,6 +96,8 @@ impl Target {
                     last_error: Rc::new(Cell::new(None)),
                     last_visible: None,
                     geometry: None,
+                    window,
+                    chosen,
                 },
             )
         });
@@ -93,7 +113,7 @@ impl UiTarget {
             return Ok(());
         };
         let result = (|| {
-            if entry.button.is_none() {
+            if entry.button.is_none() && entry.chosen {
                 if let Err(hr) = entry.insert() {
                     if let Some(button) = entry.button.take() {
                         let _ = XamlVector(entry.panel.object(6)?).remove(&button.element()?);
@@ -165,8 +185,27 @@ impl UiTarget {
                 .filter(|s| *s != self.style);
             let settings = directory
                 .as_ref()
-                .and_then(|p| Settings::load(&p.join("taskbar-metrics.conf")).ok())
-                .filter(|s| s.metrics != self.settings.metrics);
+                .and_then(|p| Settings::load(&p.join("taskbar-metrics.conf")).ok());
+            if let Some(settings) = &settings {
+                self.settings.monitors = settings.monitors.clone();
+            }
+            self.chosen = Self::chosen(self.window, &self.settings);
+            if !self.chosen {
+                // Another monitor shows the tiles; the next choice of this one
+                // builds them again.
+                if let Some(style) = style {
+                    self.style = style;
+                }
+                if let Some(settings) = settings {
+                    self.settings = settings;
+                }
+                self.last_visible = None;
+                return match self.button.take() {
+                    Some(old) => XamlVector(self.panel.object(6)?).remove(&old.element()?),
+                    None => Ok(()),
+                };
+            }
+            let settings = settings.filter(|s| s.metrics != self.settings.metrics);
             if style.is_some() || settings.is_some() {
                 let old = self.button.take();
                 let previous = (self.style, self.settings.clone());
@@ -237,6 +276,20 @@ impl UiTarget {
             Ok(None) | Err(_) => button.visible(false)?,
         }
         Ok(())
+    }
+
+    /// Whether the taskbar in `window` is on a monitor chosen for the tiles.
+    fn chosen(window: Option<isize>, settings: &Settings) -> bool {
+        if settings.monitors.is_empty() {
+            return true;
+        }
+        let Some(window) = window else {
+            return true;
+        };
+        let displays = Displays::current();
+        displays
+            .of_window(window)
+            .is_none_or(|display| displays.shows(&settings.monitors, display))
     }
 
     /// A dragged order goes to the configuration; other taskbars and the

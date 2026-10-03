@@ -8,6 +8,7 @@ pub(super) struct Session {
     pub(super) idle: Handle,
     pub(super) stopping: AtomicBool,
     pub(super) targets: Mutex<HashMap<u64, Arc<Target>>>,
+    pub(super) islands: Mutex<super::islands::Islands>,
     pub(super) settings: Mutex<Settings>,
     pub(super) config: std::path::PathBuf,
 }
@@ -47,12 +48,27 @@ impl Session {
             Com::owned(result)
         }
     }
+    /// The taskbar window that holds `element`, by the island its root belongs to.
+    fn window(&self, element: &Com) -> Option<isize> {
+        let root = xaml::island_root(element).ok()?;
+        let diagnostics = self.diagnostics.resolve(&DIAGNOSTICS).ok()?;
+        let mut handle = 0u64;
+        unsafe {
+            let call: unsafe extern "system" fn(Raw, Raw, *mut u64) -> Hr = diagnostics.slot(7);
+            check(call(diagnostics.raw(), root.raw(), &mut handle)).ok()?;
+        }
+        self.islands.lock().ok()?.window(handle)
+    }
     pub(super) fn change(&self, relation: Relation, element: Element, mutation: i32) -> Result<()> {
         if self.stopping.load(Ordering::Acquire) {
             return Ok(());
         }
         if mutation == 1 {
             xaml::ClockCatalog::remove(element.handle);
+            self.islands
+                .lock()
+                .map_err(|_| E_FAIL)?
+                .remove(element.handle);
             let removed = self
                 .targets
                 .lock()
@@ -67,6 +83,10 @@ impl Session {
             return Ok(());
         }
         let object = self.object(element.handle)?;
+        self.islands
+            .lock()
+            .map_err(|_| E_FAIL)?
+            .add(relation, element.handle, &object)?;
         if let Ok(framework) = object.query(&xaml::FRAMEWORK) {
             if framework.string(33)? == "NotificationCenterButton" {
                 xaml::ClockCatalog::register(element.handle, &object)?;
@@ -95,7 +115,11 @@ impl Session {
             }
             targets.insert(element.handle, target.clone());
         }
-        if let Err(hr) = target.insert(panel, self.settings()?) {
+        let window = self.window(&panel);
+        if window.is_none() {
+            log("Taskbar window not found; the tiles show on every monitor");
+        }
+        if let Err(hr) = target.insert(panel, self.settings()?, window) {
             self.targets
                 .lock()
                 .map_err(|_| E_FAIL)?

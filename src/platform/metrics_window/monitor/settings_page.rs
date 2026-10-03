@@ -4,6 +4,7 @@ use super::{
     chart_line::{ChartLine, ChartLineSlider},
     design::Design,
     locale::Language,
+    monitor_options::MonitorOptions,
     plain_button::PlainButton,
     scroll_indicator::ScrollIndicator,
     startup_options::StartupOptions,
@@ -12,6 +13,7 @@ use super::{
 };
 use crate::platform::{
     devices::{DeviceCatalog, DeviceId},
+    displays::Displays,
     process_history::store::Frame,
     xaml::{appearance::Appearance, events::Subscription, TileStyle},
 };
@@ -114,6 +116,8 @@ pub struct SettingsPage {
     chart_line: ChartLineSlider,
     /// "Startup and window".
     startup: StartupOptions,
+    /// "Monitors".
+    monitors: MonitorOptions,
     design: Design,
     language: Language,
     theme: ThemeChoice,
@@ -150,7 +154,7 @@ impl SettingsPage {
             .map(|index| AlertRange::row(index, &RULES[index], index > first))
             .collect()
     }
-    fn markup(design: Design, language: Language) -> String {
+    fn markup(design: Design, language: Language, displays: &Displays) -> String {
         let bodies = [
             Playground::rows(&[0, 1, 2]),
             Playground::rows(&[3, 4, 5, 8, 9]),
@@ -176,7 +180,8 @@ impl SettingsPage {
         ];
         let mut markup = include_str!("settings.xaml")
             .replace("@DEMO@", &Playground::preview_values())
-            .replace("@CHARTLINE@", &ChartLine::markup());
+            .replace("@CHARTLINE@", &ChartLine::markup())
+            .replace("@MONITORS@", &MonitorOptions::markup(displays, language));
         for (index, body) in bodies.iter().enumerate() {
             markup = markup.replace(
                 &format!("@EXPANDER{index}@"),
@@ -195,11 +200,13 @@ impl SettingsPage {
         let saved = appearance
             .and_then(|path| Appearance::read(&path).ok())
             .unwrap_or_default();
-        let root = Ui::load(&Self::markup(design, language))?;
+        let displays = Displays::current();
+        let root = Ui::load(&Self::markup(design, language, &displays))?;
         let mut page = Self {
             playground: Playground::new(&root)?,
             chart_line: ChartLineSlider::new(&root)?,
             startup: StartupOptions::new(&root, language)?,
+            monitors: MonitorOptions::new(&root, displays, language)?,
             root,
             design,
             language,
@@ -571,6 +578,7 @@ impl SettingsPage {
         }
         self.playground.refresh()?;
         self.startup.refresh()?;
+        self.monitors.refresh()?;
         if let Some(width) = self.chart_line.refresh()? {
             outcome = Some(SettingsOutcome::ChartLine(width));
         }
@@ -632,7 +640,8 @@ mod tests {
     #[test]
     fn every_text_of_the_page_is_in_the_catalog() {
         for language in [Language::English, Language::Russian] {
-            let markup = SettingsPage::markup(Design { dark: false }, language);
+            let markup =
+                SettingsPage::markup(Design { dark: false }, language, &Displays::current());
             assert!(
                 !markup.contains('@'),
                 "untranslated marker in the settings page"

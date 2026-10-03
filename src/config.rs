@@ -11,6 +11,8 @@ pub struct Settings {
     pub metrics: Vec<String>,
     /// Devices whose history is recorded in the background without a tile.
     pub history: Vec<String>,
+    /// Monitors whose taskbars show the tiles (`Display::id`); empty means all.
+    pub monitors: Vec<String>,
     pub interval: Duration,
     pub process_monitoring: bool,
     pub width: f64,
@@ -24,6 +26,7 @@ impl Default for Settings {
                 .map(String::from)
                 .to_vec(),
             history: Vec::new(),
+            monitors: Vec::new(),
             interval: Duration::from_millis(500),
             process_monitoring: true,
             width: 260.0,
@@ -63,6 +66,10 @@ impl Settings {
                     result.history = Self::devices(value, true)
                         .ok_or("history must contain unique device identifiers")?;
                 }
+                "monitors" => {
+                    result.monitors = Self::monitors(value)
+                        .ok_or("monitors must contain unique monitor identifiers")?;
+                }
                 "interval_ms" => {
                     let ms: u64 = value.parse().map_err(|_| "Invalid interval_ms")?;
                     if !(250..=60_000).contains(&ms) {
@@ -101,6 +108,18 @@ impl Settings {
         let mut unique = HashSet::new();
         ids.iter()
             .all(|id| DeviceId::parse(id).is_some() && unique.insert(id.clone()))
+            .then_some(ids)
+    }
+
+    /// Comma-separated unique monitor ids; empty for every monitor.
+    fn monitors(value: &str) -> Option<Vec<String>> {
+        if value.is_empty() {
+            return Some(Vec::new());
+        }
+        let ids: Vec<String> = value.split(',').map(|v| v.trim().to_string()).collect();
+        let mut unique = HashSet::new();
+        ids.iter()
+            .all(|id| !id.is_empty() && unique.insert(id.clone()))
             .then_some(ids)
     }
 
@@ -195,6 +214,8 @@ mod tests {
             "metrics=fan",
             "metrics=disk@",
             "history=net@Wi-Fi,net@Wi-Fi",
+            "monitors=A/1,A/1",
+            "monitors=A/1,",
             "interval=1000",
             "width=200\nwidth=300",
             "malformed",
@@ -209,6 +230,14 @@ mod tests {
         assert_eq!(devices.metrics, ["cpu", "disk", "disk@D:"]);
         assert_eq!(devices.history, ["net@Ethernet 2"]);
         assert!(Settings::parse("history=").unwrap().history.is_empty());
+        assert!(Settings::default().monitors.is_empty());
+        assert!(Settings::parse("monitors=").unwrap().monitors.is_empty());
+        assert_eq!(
+            Settings::parse("monitors=DEL41A8/5&2f2c&0&UID4353, GSM5B7F/4&1&0&UID256")
+                .unwrap()
+                .monitors,
+            ["DEL41A8/5&2f2c&0&UID4353", "GSM5B7F/4&1&0&UID256"]
+        );
         assert_eq!(settings.interval.as_millis(), 500);
         assert_eq!(settings.width, 220.0);
     }

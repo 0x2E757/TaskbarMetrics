@@ -57,7 +57,7 @@ struct MinMaxInfo {
     min_track: [i32; 2],
     max_track: [i32; 2],
 }
-/// MONITORINFO.
+/// MONITORINFOEXW, as `displays.rs` declares the same function.
 #[repr(C)]
 #[derive(Default)]
 struct MonitorInfo {
@@ -65,6 +65,7 @@ struct MonitorInfo {
     monitor: Rect,
     work: Rect,
     flags: u32,
+    device: [u16; 32],
 }
 /// WINDOWPLACEMENT; the normal frame is in workspace coordinates both ways.
 #[repr(C)]
