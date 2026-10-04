@@ -1998,9 +1998,7 @@ impl Dashboard {
 
 pub(super) fn run() -> Result<()> {
     let requested = std::env::args().find_map(|arg| DeviceId::parse(&arg));
-    let handoff = requested
-        .as_ref()
-        .map_or_else(|| "cpu".to_owned(), DeviceId::to_string);
+    let handoff = requested.as_ref().map(DeviceId::to_string);
     let _instance = if !persistent() {
         None
     } else {
@@ -2013,14 +2011,14 @@ pub(super) fn run() -> Result<()> {
         })?;
         if unsafe { GetLastError() } == 183 {
             for _ in 0..40 {
-                if activate_existing(&handoff) {
+                if activate_existing(handoff.as_deref()) {
                     return Ok(());
                 }
                 std::thread::sleep(std::time::Duration::from_millis(50));
             }
             return Ok(());
         }
-        if activate_existing(&handoff) {
+        if activate_existing(handoff.as_deref()) {
             return Ok(());
         }
         Some(handle)
@@ -2076,8 +2074,9 @@ pub(super) fn run() -> Result<()> {
     result
 }
 
-/// Shows `device` in the running window (`WM_COPYDATA` with the device id).
-fn activate_existing(device: &str) -> bool {
+/// Brings the running window to the front and shows `device` in it (`WM_COPYDATA`
+/// with the device id); without a device it keeps its section.
+fn activate_existing(device: Option<&str>) -> bool {
     #[repr(C)]
     struct CopyData {
         kind: usize,
@@ -2097,12 +2096,14 @@ fn activate_existing(device: &str) -> bool {
         if window.is_null() {
             return false;
         }
-        let data = CopyData {
-            kind: window::DEVICE_REQUEST,
-            size: device.len() as u32,
-            data: device.as_ptr(),
-        };
-        SendMessageW(window, 0x004A, 0, &data as *const CopyData as isize);
+        if let Some(device) = device {
+            let data = CopyData {
+                kind: window::DEVICE_REQUEST,
+                size: device.len() as u32,
+                data: device.as_ptr(),
+            };
+            SendMessageW(window, 0x004A, 0, &data as *const CopyData as isize);
+        }
         ShowWindow(window, 9);
         SetForegroundWindow(window);
         true
