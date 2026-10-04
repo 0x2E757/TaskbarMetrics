@@ -2,6 +2,7 @@
 
 mod collector;
 mod debug_privilege;
+mod export;
 mod ipc;
 pub(crate) mod memory;
 mod shared_pages;
@@ -9,7 +10,8 @@ mod snapshot;
 pub(crate) mod store;
 mod trace;
 pub(crate) mod wire;
-use super::abi::*;
+use super::{abi::*, help::SubprogramHelp};
+pub use export::{DumpQuery, HistoryDump};
 use std::{
     collections::BTreeMap,
     sync::{Arc, Mutex},
@@ -77,21 +79,26 @@ impl ProcessHistory {
     }
 
     pub fn run() -> std::result::Result<(), String> {
-        let args: Vec<_> = std::env::args().skip(1).collect();
-        if args.len() == 3 && args[0] == "--dump" {
-            return ipc::HistoryServer::dump(
-                args[1].parse().map_err(|_| "Invalid PID")?,
-                std::path::Path::new(&args[2]),
-            )
-            .map_err(|e| e.to_string());
+        if SubprogramHelp::requested() {
+            SubprogramHelp {
+                about: "TaskbarMetrics.History.exe records the last 5 minutes of the load of the computer\n\
+                    and of its processes for the window; TaskbarMetrics.exe starts it.\n\
+                    --probe <seconds>: measure the recorder's own cost into TaskbarMetrics.History.probe.txt.",
+            }
+            .print();
+            return Ok(());
         }
+        let args: Vec<_> = std::env::args().skip(1).collect();
         let probe = args.len() == 2 && args[0] == "--probe";
         let pid: u32 = if args.len() == 2 && args[0] == "--serve" {
             args[1].parse().map_err(|_| "Invalid PID")?
         } else if probe {
             unsafe { GetCurrentProcessId() }
         } else {
-            return Err("Usage: TaskbarMetrics.History.exe --serve <Explorer PID> | --probe <seconds> | --dump <Explorer PID> <file.csv>".into());
+            return Err(
+                "Usage: TaskbarMetrics.History.exe --serve <Explorer PID> | --probe <seconds>"
+                    .into(),
+            );
         };
         let limit = if probe {
             Some(Duration::from_secs(

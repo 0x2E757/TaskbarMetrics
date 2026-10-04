@@ -4,7 +4,7 @@ use super::{
 };
 
 use std::{
-    io::{BufWriter, Read, Write},
+    io::BufWriter,
     sync::{Arc, Mutex, Weak},
 };
 
@@ -193,94 +193,16 @@ impl HistoryServer {
                 {
                     return;
                 }
-                let (frames, enabled, status) = {
+                let packet = {
                     let history = history.lock().unwrap_or_else(|e| e.into_inner());
-                    (
-                        history.frames.clone(),
-                        history.enabled,
-                        history.status.clone(),
-                    )
-                };
-                let _ = (|| -> std::io::Result<()> {
-                    let mut out = BufWriter::new(&mut file);
-                    writeln!(out,"# history_v3 enabled={enabled} frames={} interval_ms=500 retention_ms={} status={status}",frames.len(),super::store::RETENTION * 500)?;
-                    writeln!(out,"timestamp_ms,elapsed_ms,pid,created_filetime,name,cpu_percent,gpu_percent,private_working_set_bytes,working_set_bytes,private_bytes,shared_share_bytes,disk_read_bytes,disk_write_bytes,net_receive_bytes,net_send_bytes,etw_active,events_lost,undecoded_events,sample_ms")?;
-                    for f in frames {
-                        for (device, engine) in &f.gpu_engines {
-                            writeln!(
-                                out,
-                                "# gpu_engine,{},{device},{},{},{},{}",
-                                f.bucket * 500,
-                                engine.name,
-                                engine.label,
-                                engine.total,
-                                engine.raw_total
-                            )?;
-                            for (pid, value) in &engine.processes {
-                                writeln!(
-                                    out,
-                                    "# gpu_share,{},{device},{},{}",
-                                    f.bucket * 500,
-                                    pid,
-                                    value
-                                )?;
-                            }
-                        }
-                        for (id, value) in &f.totals {
-                            writeln!(
-                                out,
-                                "# total,{},{},{}",
-                                f.bucket * 500,
-                                id,
-                                value.map(|v| v.to_string()).unwrap_or_default()
-                            )?;
-                        }
-                        for p in &f.processes {
-                            let name = p
-                                .identity
-                                .name
-                                .replace('"', "\"\"")
-                                .replace(['\r', '\n'], " ");
-                            let cpu = p.cpu().map(|n| format!("{n:.4}")).unwrap_or_default();
-                            let gpu = p.gpu().map(|n| format!("{n:.4}")).unwrap_or_default();
-                            writeln!(
-                                out,
-                                "{},{:.3},{},{},\"{}\",{},{},{},{},{},{},{},{},{},{},{},{},{},{:.3}",
-                                f.bucket * 500,
-                                f.elapsed_ms,
-                                p.identity.pid,
-                                p.identity.created,
-                                name,
-                                cpu,
-                                gpu,
-                                p.private_working_set()
-                                    .map(|n| n.to_string())
-                                    .unwrap_or_default(),
-                                p.working_set().map(|n| n.to_string()).unwrap_or_default(),
-                                p.private_bytes().map(|n| n.to_string()).unwrap_or_default(),
-                                p.shared().map(|n| n.to_string()).unwrap_or_default(),
-                                p.io()[0],
-                                p.io()[1],
-                                p.io()[2],
-                                p.io()[3],
-                                f.etw_active,
-                                f.lost_events,
-                                f.undecoded,
-                                f.sample_ms
-                            )?;
-                            // The row's I/O split by disk and adapter.
-                            for (device, [first, second]) in p.device_io() {
-                                writeln!(
-                                    out,
-                                    "# device_io,{},{},{device},{first},{second}",
-                                    f.bucket * 500,
-                                    p.identity.pid
-                                )?;
-                            }
-                        }
+                    super::wire::Packet {
+                        enabled: history.enabled,
+                        status: history.status.clone(),
+                        frames: history.frames.iter().cloned().collect(),
+                        io_totals: Vec::new(),
                     }
-                    out.flush()
-                })();
+                };
+                let _ = packet.write(&mut BufWriter::with_capacity(65536, &mut file));
                 // Only the export worker waits for the reader; sampling never does.
                 unsafe {
                     FlushFileBuffers(raw);
@@ -292,19 +214,22 @@ impl HistoryServer {
         });
     }
 
-    pub fn dump(pid: u32, path: &std::path::Path) -> std::io::Result<()> {
-        let mut input = std::fs::File::open(Self::path(pid))?;
-        let mut output = std::fs::File::create(path)?;
-        let mut buffer = [0u8; 65536];
-        loop {
-            match input.read(&mut buffer) {
-                Ok(0) => break,
-                Ok(count) => output.write_all(&buffer[..count])?,
-                Err(error) if matches!(error.raw_os_error(), Some(109 | 233)) => break,
-                Err(error) => return Err(error),
+    /// The whole history of the recorder for the Explorer `pid`, as `spawn` serves
+    /// it. The pipe serves one reader at a time, so a busy one is waited for.
+    pub fn read(pid: u32) -> std::io::Result<super::wire::Packet> {
+        let path = Self::path(pid);
+        let mut attempts = 0;
+        let pipe = loop {
+            match std::fs::File::open(&path) {
+                // ERROR_PIPE_BUSY: another reader is being served.
+                Err(error) if error.raw_os_error() == Some(231) && attempts < 50 => {
+                    attempts += 1;
+                    std::thread::sleep(std::time::Duration::from_millis(100));
+                }
+                result => break result?,
             }
-        }
-        Ok(())
+        };
+        super::wire::Packet::read(&mut std::io::BufReader::with_capacity(65536, pipe))
     }
 }
 

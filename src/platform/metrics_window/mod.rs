@@ -1,7 +1,7 @@
 //! The metrics window, plus the standalone tile editor behind `--editor`.
 //! No code runs in Explorer.
 
-use super::{abi::*, com::*};
+use super::{abi::*, com::*, help::SubprogramHelp};
 use std::ptr;
 
 mod color_picker;
@@ -21,6 +21,14 @@ pub struct MetricsWindow;
 
 impl MetricsWindow {
     pub fn run() -> Result<()> {
+        if SubprogramHelp::requested() {
+            SubprogramHelp {
+                about: "TaskbarMetrics.Window.exe is the history window: charts and processes of the last\n\
+                    5 minutes, and the settings. A tile or the tray icon opens it.",
+            }
+            .print();
+            return Ok(());
+        }
         if !opens_editor() {
             return monitor::run();
         }

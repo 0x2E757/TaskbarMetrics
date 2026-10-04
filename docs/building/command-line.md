@@ -49,6 +49,7 @@ It is started without inherited handles, so a script or the portable copy readin
 launcher's output does not wait for it.
 
 - `--sample` prints three measurements without attaching to Explorer.
+- `--dump [options]` prints the recorded history for scripts and agents ([export.md](../history/export.md)).
 - `--stop` closes the program: it queues the removal of the elements on the UI queue, the
   history and CPU temperature collectors exit with them, and the metrics window and the
   watcher close. Running the launcher again resumes work and rereads the configuration.
@@ -60,7 +61,8 @@ launcher's output does not wait for it.
   Program Files elevated without a UAC prompt. Other copies are refused.
 - `--unload` closes the watcher, which would attach to the new Explorer, and the window, then ends Explorer, which Windows restarts by itself, so the
   DLL and executables can be replaced or removed.
-- `--help` prints the usage. Any other argument, or more than one, prints it with code `1`.
+- `--help` (`-h`, `/?`) prints the usage; the other programs answer it with a pointer to
+  this one. Any other argument, or more than one besides `--dump`, prints it with code `1`.
 
 Run it as a normal user in the same session and at the same integrity level as
 Explorer. Administrator rights are not required.

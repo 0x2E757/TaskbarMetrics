@@ -23,6 +23,7 @@ you need Rust with the `x86_64-pc-windows-msvc` target, the MSVC linker and the 
 powershell -NoProfile -ExecutionPolicy Bypass -File tools\build.ps1
 .\target\package\TaskbarMetrics.exe            # attach the tiles to Explorer
 .\target\package\TaskbarMetrics.Window.exe     # open the history window
+.\target\package\TaskbarMetrics.exe --dump     # the recorded history for scripts and agents
 .\target\package\TaskbarMetrics.exe --stop     # close the program, as the tray icon does
 ```
 

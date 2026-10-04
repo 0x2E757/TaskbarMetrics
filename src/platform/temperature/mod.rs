@@ -5,7 +5,7 @@ mod pawnio;
 mod provider;
 mod sensor;
 mod zhaoxin;
-use crate::platform::abi::*;
+use crate::platform::{abi::*, help::SubprogramHelp};
 pub(crate) use provider::CpuTemperatureProvider;
 
 /// The only entry point that opens a driver. Runs elevated, outside Explorer.
@@ -61,6 +61,15 @@ impl SensorCollector {
     }
 
     pub fn run() -> std::result::Result<(), String> {
+        if SubprogramHelp::requested() {
+            SubprogramHelp {
+                about: "TaskbarMetrics.Sensors.exe reads the CPU temperature through the PawnIO driver for\n\
+                    the tiles and the history; TaskbarMetrics.exe --sensors starts it.\n\
+                    --sample: print three readings (administrator rights).",
+            }
+            .print();
+            return Ok(());
+        }
         let executable = std::env::current_exe().map_err(|e| e.to_string())?;
         let args: Vec<_> = std::env::args().skip(1).collect();
         let sample = args == ["--sample"];

@@ -1,5 +1,10 @@
 use super::{
-    abi::*, composition::Composition, executables::Executables, scheduled_task::CollectorTask,
+    abi::*,
+    composition::Composition,
+    executables::Executables,
+    help,
+    process_history::{DumpQuery, HistoryDump},
+    scheduled_task::CollectorTask,
 };
 
 use crate::config::Settings;
@@ -15,6 +20,7 @@ type Initialize =
 
 /// The argument that runs the watcher with the tray icon.
 pub(crate) const WATCH: &str = "--watch";
+const USAGE: &str = "Usage: TaskbarMetrics.exe [--sample | --dump [options] | --stop | --sensors | --autostart | --watch | --register-tasks | --remove-tasks | --unload | --help]";
 
 pub struct Launcher;
 
@@ -41,12 +47,14 @@ impl Launcher {
 
     fn run(&self) -> Result<i32> {
         let args: Vec<_> = std::env::args_os().skip(1).collect();
+        if args.first().is_some_and(|a| a == "--dump") {
+            return Ok(Self::dump(&args[1..]));
+        }
         if args.len() > 1
             || args.first().is_some_and(|a| {
                 ![
                     "--sample",
                     "--stop",
-                    "--help",
                     "--sensors",
                     "--register-tasks",
                     "--remove-tasks",
@@ -55,19 +63,38 @@ impl Launcher {
                     super::autostart::Autostart::ARGUMENT,
                 ]
                 .iter()
+                .chain(&help::FLAGS)
                 .any(|v| a == v)
             })
         {
-            eprintln!(
-                "Usage: TaskbarMetrics.exe [--sample | --stop | --sensors | --autostart | --watch | --register-tasks | --remove-tasks | --unload | --help]"
-            );
+            eprintln!("{USAGE}");
             return Ok(1);
         }
-        if args.first().is_some_and(|v| v == "--help") {
+        if args
+            .first()
+            .is_some_and(|v| help::FLAGS.iter().any(|flag| v == flag))
+        {
             println!(
-                "Usage: TaskbarMetrics.exe [--sample | --stop | --sensors | --autostart | --watch | --register-tasks | --remove-tasks | --unload | --help]\n\
+                "{USAGE}\n\
                 No arguments: attach to the Windows 11 taskbar and start the tray icon.\n\
                 --sample: print three samples without changing Explorer.\n\
+                --dump: print the history the running program recorded, so scripts and agents\n\
+                need not measure again. It keeps the last 5 minutes in 500 ms frames: CPU, GPU and\n\
+                RAM load (percent), RAM used (bytes), disk and network throughput (MB/s), CPU and\n\
+                GPU temperature (celsius) of the devices with tiles or listed in history=, and the\n\
+                CPU, GPU, memory, disk and network use of each process. By default it prints CSV,\n\
+                one row a metric with its average, maximum and last value over the last 60 s;\n\
+                lines starting with # describe the data or say why a part is missing.\n\
+                \x20 --last <seconds>: the window, 1-300 (default 60).\n\
+                \x20 --metrics <list>: comma-separated kinds, words or ids: cpu, gpu, ram, disk, net,\n\
+                \x20   temperature, disk@C:, net_down@Wi-Fi (default: all).\n\
+                \x20 --series: every 500 ms frame instead of the summary.\n\
+                \x20 --processes <N>: also the top N processes over the window\n\
+                \x20   (needs process_monitoring=true, the default).\n\
+                \x20 --by cpu|gpu|ram|disk|net: what --processes ranks by (default cpu).\n\
+                \x20 --raw: every frame with every process (history_v3 CSV); takes only --output.\n\
+                \x20 --output <file>: write to a file instead of the console.\n\
+                \x20 Example: TaskbarMetrics.exe --dump --last 30 --metrics cpu,ram --processes 5\n\
                 --stop: close the program: the tiles, the collectors, the window and the tray icon.\n\
                 --sensors: start the optional elevated CPU temperature collector (UAC).\n\
                 --autostart: the start at sign-in: attach, retrying for a minute, then --sensors.\n\
@@ -212,6 +239,26 @@ impl Launcher {
     }
 
     /// Closes the program, as the tray icon's menu does.
+    /// `--dump`: the history the recorder keeps for the current taskbar.
+    fn dump(args: &[OsString]) -> i32 {
+        let args: Vec<_> = args
+            .iter()
+            .map(|arg| arg.to_string_lossy().into_owned())
+            .collect();
+        let dumped = DumpQuery::parse(&args).and_then(|query| {
+            let explorer = Explorer::find()
+                .map_err(|_| "The Windows 11 taskbar is not running.".to_owned())?;
+            HistoryDump::new(query).run(explorer.pid)
+        });
+        match dumped {
+            Ok(()) => 0,
+            Err(error) => {
+                eprintln!("{error}");
+                1
+            }
+        }
+    }
+
     fn stop(&self) -> Result<i32> {
         super::shutdown::Shutdown::all();
         println!(

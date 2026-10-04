@@ -13,6 +13,7 @@ pub mod executables;
 pub(crate) mod gpu_temperature;
 pub(crate) mod handover;
 pub(crate) mod hardware;
+pub(crate) mod help;
 pub mod launcher;
 mod logging;
 pub(crate) mod memory_modules;

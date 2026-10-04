@@ -111,7 +111,7 @@ impl Packet {
         Ok(IoBytes { total, devices })
     }
 
-    #[cfg(test)]
+    /// Reads a packet with identities of its own, as a one-off reader does.
     pub fn read(input: &mut impl Read) -> io::Result<Self> {
         Self::read_shared(input, &mut Identities::default())
     }

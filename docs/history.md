@@ -25,7 +25,8 @@ The "Background process history" switch in the window settings changes
 `process_monitoring`. Turning it off stops the process queries and ETW; the saved process
 history stays until its 5 minutes run out, and the device totals keep being recorded.
 
-`--dump` exports the history to CSV and `--probe` measures the collector's own cost:
+`TaskbarMetrics.exe --dump` prints the history for scripts and agents, and
+`TaskbarMetrics.History.exe --probe` measures the collector's own cost:
 [export.md](history/export.md).
 
 ## Limitations
