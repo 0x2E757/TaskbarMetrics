@@ -2036,7 +2036,8 @@ pub(super) fn run() -> Result<()> {
     let window = NativeWindow::named(
         dark_theme()?,
         "TaskbarMetrics.Monitor",
-        "Taskbar Metrics",
+        // The version tells a build from the installed copy at a glance.
+        concat!("Taskbar Metrics v", env!("CARGO_PKG_VERSION")),
         1280,
         1024,
     )?;

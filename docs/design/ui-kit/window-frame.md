@@ -15,7 +15,7 @@
 └──────────┴──────────────────────────────────────────────────┘
 ```
 
-- **Title bar:** the standard Windows one, tinted through DWM: caption color `bg`, text color `text`, dark mode in the dark theme. The window icon is the app logo, drawn for the window's DPI.
+- **Title bar:** the standard Windows one, titled "Taskbar Metrics vX.Y.Z" (the version from `Cargo.toml`), tinted through DWM: caption color `bg`, text color `text`, dark mode in the dark theme. The window icon is the app logo, drawn for the window's DPI.
 - Under the navigation lies `bg`. The content layer is `layer`; cards are `card` with a `border` outline, radius 8 and the paddings from [ChartCard](chart-card.md) and [TableCard](table-card.md).
 - Order of the vertical stack: Header → Device options → Stats → ChartCard → TableCard.
 - **Device options** of the shown device, 20 apart: CheckBox "Show on taskbar", CheckBox "Always monitor" (ToolTip "Keep the history of this device while the window is closed"; checked and disabled while the device has a taskbar tile), then the "How it’s measured" button ([ChartCard](chart-card.md)). Changes are written to the configuration at once. The row sits 4 closer to the header; the stats have 16 below them instead of 14.
