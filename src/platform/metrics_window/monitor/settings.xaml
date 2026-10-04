@@ -13,14 +13,15 @@
       <VisualState x:Name="On"><VisualState.Setters><Setter Target="Track.Background" Value="$accent$"/><Setter Target="Track.BorderBrush" Value="$accent$"/><Setter Target="OffKnob.Visibility" Value="Collapsed"/><Setter Target="OnKnob.Visibility" Value="Visible"/></VisualState.Setters></VisualState>
      </VisualStateGroup>
      <VisualStateGroup x:Name="ContentStates"><VisualState x:Name="OffContent"/>
-      <VisualState x:Name="OnContent"><VisualState.Setters><Setter Target="OffLabel.Visibility" Value="Collapsed"/><Setter Target="OnLabel.Visibility" Value="Visible"/></VisualState.Setters></VisualState>
+      <VisualState x:Name="OnContent"><VisualState.Setters><Setter Target="OffLabel.Opacity" Value="0"/><Setter Target="OnLabel.Opacity" Value="1"/></VisualState.Setters></VisualState>
      </VisualStateGroup>
     </VisualStateManager.VisualStateGroups>
     <Border x:Name="Track" Width="40" Height="20" CornerRadius="10" BorderThickness="1" BorderBrush="$text2$" Background="Transparent" VerticalAlignment="Center" Control.IsTemplateFocusTarget="True">
      <Grid><Ellipse x:Name="OffKnob" Width="10" Height="10" Margin="4,0,0,0" HorizontalAlignment="Left" Fill="$text2$"/><Ellipse x:Name="OnKnob" Width="12" Height="12" Margin="23,0,0,0" HorizontalAlignment="Left" Fill="$onAccent$" Visibility="Collapsed"/></Grid>
     </Border>
+    <!-- Both labels keep their room, hidden by opacity: «Off» and «On» differ in width, and a cell sized to the shown one moved the track. -->
     <ContentPresenter x:Name="OffLabel" Grid.Column="1" Content="{TemplateBinding OffContent}" Foreground="$text$" FontSize="13" VerticalAlignment="Center"/>
-    <ContentPresenter x:Name="OnLabel" Grid.Column="1" Content="{TemplateBinding OnContent}" Foreground="$text$" FontSize="13" VerticalAlignment="Center" Visibility="Collapsed"/>
+    <ContentPresenter x:Name="OnLabel" Grid.Column="1" Content="{TemplateBinding OnContent}" Foreground="$text$" FontSize="13" VerticalAlignment="Center" Opacity="0"/>
     <!-- The switch toggles when this part ends a drag that did not move: without it a click does nothing. -->
     <Thumb x:Name="SwitchThumb" Grid.ColumnSpan="2" IsTabStop="False"><Thumb.Template><ControlTemplate TargetType="Thumb"><Rectangle Fill="Transparent"/></ControlTemplate></Thumb.Template></Thumb>
    </Grid>
