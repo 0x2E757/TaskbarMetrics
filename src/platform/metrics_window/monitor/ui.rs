@@ -144,6 +144,28 @@ impl Ui {
         }
     }
 
+    const TOGGLE_SWITCH: Guid = Guid::from_u128(0x331d8f00_c5f9_46a5_b6c8_ede539304567);
+
+    /// `ToggleSwitch.IsOn`.
+    pub fn switch(element: &Com, on: bool) -> Result<()> {
+        let toggle = element.query(&Self::TOGGLE_SWITCH)?;
+        unsafe {
+            let set: unsafe extern "system" fn(Raw, u8) -> Hr = toggle.slot(7);
+            check(set(toggle.raw(), u8::from(on)))
+        }
+    }
+
+    /// `ToggleSwitch.IsOn`.
+    pub fn is_on(element: &Com) -> Result<bool> {
+        let toggle = element.query(&Self::TOGGLE_SWITCH)?;
+        let mut on = 0u8;
+        unsafe {
+            let get: unsafe extern "system" fn(Raw, *mut u8) -> Hr = toggle.slot(6);
+            check(get(toggle.raw(), &mut on))?;
+        }
+        Ok(on != 0)
+    }
+
     /// `Control.IsEnabled`.
     pub fn enable(element: &Com, enabled: bool) -> Result<()> {
         let control = element.query(&Guid::from_u128(0xa8912263_2951_4f58_a9c5_5a134eaa7f07))?;
