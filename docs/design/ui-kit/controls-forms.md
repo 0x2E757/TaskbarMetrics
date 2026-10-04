@@ -4,7 +4,7 @@
 
 | Control | Base look | States |
 |---|---|---|
-| **ToggleSwitch** | Track 40×20, radius 10, label 13 on the right, 10 apart | on: track `accent`, thumb 12 `onAccent`; off: border `text2`, thumb 10 `text2`; disabled: border and thumb `disabled` |
+| **ToggleSwitch** | Track 40×20, radius 10, label 13 on the left, right-aligned, 12 apart (as in Windows Settings) | on: track `accent`, thumb 12 `onAccent`; off: border `text2`, thumb 10 `text2`; disabled: border and thumb `disabled` |
 | **Slider** | Track 4, color `sliderTrack`, fill `accent`. Thumb 20: background `card`, border `ctrlBorder`, an `accent` dot 12 inside | hover: dot 14; pressed: dot 10; disabled: dot `disabled`; focus and keys of the system Slider |
 | **NumberBox** (a `TextBox` bound to its slider) | 30×64, radius 4, padding 5 8 0, background `ctrl`, border `ctrlBorder`, text right-aligned, unit 12 `text3` on the right | hover: background `ctrlHover`; focus: background `card`, border `accent`; disabled: background `subtle` |
 | **ModePill / BackToLive / Kbd** | see [Header](header.md) | — |

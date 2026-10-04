@@ -1,10 +1,10 @@
 <Grid xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" RequestedTheme="Default">
  <Grid.Resources>
   <!--PLAIN-BUTTON-->
-  <!-- Switch of the artboards: 40×20 track, 10 px knob off, 12 px knob on, text 10 px after it.
+  <!-- Switch of the artboards: 40×20 track, 10 px knob off, 12 px knob on, text 12 px before it as in Windows Settings.
        The system template is wider and reserves 154 px, so the switch never reached the card edge. -->
   <Style TargetType="ToggleSwitch"><Setter Property="UseSystemFocusVisuals" Value="True"/><Setter Property="Template"><Setter.Value><ControlTemplate TargetType="ToggleSwitch">
-   <Grid Background="Transparent" ColumnSpacing="10"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
+   <Grid Background="Transparent"><Grid.ColumnDefinitions><ColumnDefinition/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
     <VisualStateManager.VisualStateGroups>
      <VisualStateGroup x:Name="CommonStates"><VisualState x:Name="Normal"/><VisualState x:Name="PointerOver"/><VisualState x:Name="Pressed"/>
       <VisualState x:Name="Disabled"><VisualState.Setters><Setter Target="Track.BorderBrush" Value="$disabled$"/><Setter Target="OffKnob.Fill" Value="$disabled$"/><Setter Target="OffLabel.Foreground" Value="$disabled$"/><Setter Target="OnLabel.Foreground" Value="$disabled$"/></VisualState.Setters></VisualState>
@@ -16,12 +16,13 @@
       <VisualState x:Name="OnContent"><VisualState.Setters><Setter Target="OffLabel.Opacity" Value="0"/><Setter Target="OnLabel.Opacity" Value="1"/></VisualState.Setters></VisualState>
      </VisualStateGroup>
     </VisualStateManager.VisualStateGroups>
-    <Border x:Name="Track" Width="40" Height="20" CornerRadius="10" BorderThickness="1" BorderBrush="$text2$" Background="Transparent" VerticalAlignment="Center" Control.IsTemplateFocusTarget="True">
+    <Border x:Name="Track" Grid.Column="1" Width="40" Height="20" CornerRadius="10" BorderThickness="1" BorderBrush="$text2$" Background="Transparent" VerticalAlignment="Center" Control.IsTemplateFocusTarget="True">
      <Grid><Ellipse x:Name="OffKnob" Width="10" Height="10" Margin="4,0,0,0" HorizontalAlignment="Left" Fill="$text2$"/><Ellipse x:Name="OnKnob" Width="12" Height="12" Margin="23,0,0,0" HorizontalAlignment="Left" Fill="$onAccent$" Visibility="Collapsed"/></Grid>
     </Border>
-    <!-- Both labels keep their room, hidden by opacity: «Off» and «On» differ in width, and a cell sized to the shown one moved the track. -->
-    <ContentPresenter x:Name="OffLabel" Grid.Column="1" Content="{TemplateBinding OffContent}" Foreground="$text$" FontSize="13" VerticalAlignment="Center"/>
-    <ContentPresenter x:Name="OnLabel" Grid.Column="1" Content="{TemplateBinding OnContent}" Foreground="$text$" FontSize="13" VerticalAlignment="Center" Opacity="0"/>
+    <!-- Both labels keep their room, hidden by opacity: «Off» and «On» differ in width, and a cell sized to the shown one moved the track.
+         Their column takes what is left, so a switch narrowed to its track (the alert rules) keeps the whole track. -->
+    <ContentPresenter x:Name="OffLabel" Content="{TemplateBinding OffContent}" Foreground="$text$" FontSize="13" Margin="0,0,12,0" HorizontalAlignment="Right" VerticalAlignment="Center"/>
+    <ContentPresenter x:Name="OnLabel" Content="{TemplateBinding OnContent}" Foreground="$text$" FontSize="13" Margin="0,0,12,0" HorizontalAlignment="Right" VerticalAlignment="Center" Opacity="0"/>
     <!-- The switch toggles when this part ends a drag that did not move: without it a click does nothing. -->
     <Thumb x:Name="SwitchThumb" Grid.ColumnSpan="2" IsTabStop="False"><Thumb.Template><ControlTemplate TargetType="Thumb"><Rectangle Fill="Transparent"/></ControlTemplate></Thumb.Template></Thumb>
    </Grid>
