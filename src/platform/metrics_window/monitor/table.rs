@@ -46,10 +46,9 @@ impl TableLayout {
             Resource::Cpu => &[110],
             Resource::Gpu => &[110],
             Resource::Ram => &[104, 104, 104],
-            Resource::Disk if self.compact => &[96, 96, 96],
-            Resource::Disk => &[96, 96, 96, 196],
-            Resource::Net if self.compact => &[104, 104, 104],
-            Resource::Net => &[104, 104, 104, 196],
+            // One grid for both: switching between them moves no column.
+            Resource::Disk | Resource::Net if self.compact => &[104, 104, 104],
+            Resource::Disk | Resource::Net => &[104, 104, 104, 196],
         }
     }
 
@@ -489,6 +488,13 @@ mod tests {
         assert!(table(Resource::Ram, false)
             .columns()
             .contains(r#"Width="72""#));
+        // Disk and network share the grid: switching pages moves no column.
+        for compact in [false, true] {
+            assert_eq!(
+                table(Resource::Disk, compact).columns(),
+                table(Resource::Net, compact).columns()
+            );
+        }
         let zero = row(Some([0, 0]));
         assert!(zero.contains(r#"Text="0" Foreground"#) && !zero.contains("+"));
         assert!(net

@@ -18,7 +18,7 @@ Toolbar captions: live — "now · updates 1×/s"; history — "as of 14:00:50.5
 | CPU | CPU 110 (90 below 1100) |
 | GPU | GPU 110 |
 | Memory | Private, MB 104 · Shared, MB 104 · Both, MB 104 |
-| Disk | Read, MB/s 96 · Write, MB/s 96 · Both, MB/s 96 · All time, MB 196 |
+| Disk | Read, MB/s 104 · Write, MB/s 104 · Both, MB/s 104 · All time, MB 196 |
 | Network | Receive, MB/s 104 · Send, MB/s 104 · Both, MB/s 104 · All time, MB 196 |
 
 - **All time** (≥ 1100 only; the PID column gives up 20 to its indent): bytes since the recorder started, left-aligned, in MB to hundredths: `1820.00 (1500.00 + 320.00)`, or `0.00` without I/O. It sorts like the other columns.
