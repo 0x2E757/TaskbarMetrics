@@ -21,6 +21,8 @@
     </Border>
     <ContentPresenter x:Name="OffLabel" Grid.Column="1" Content="{TemplateBinding OffContent}" Foreground="$text$" FontSize="13" VerticalAlignment="Center"/>
     <ContentPresenter x:Name="OnLabel" Grid.Column="1" Content="{TemplateBinding OnContent}" Foreground="$text$" FontSize="13" VerticalAlignment="Center" Visibility="Collapsed"/>
+    <!-- The switch toggles when this part ends a drag that did not move: without it a click does nothing. -->
+    <Thumb x:Name="SwitchThumb" Grid.ColumnSpan="2" IsTabStop="False"><Thumb.Template><ControlTemplate TargetType="Thumb"><Rectangle Fill="Transparent"/></ControlTemplate></Thumb.Template></Thumb>
    </Grid>
   </ControlTemplate></Setter.Value></Setter></Style>
   <!-- Segoe UI Variable sets capitals about 0.05 em above the centre of the line box; 1 px puts them on the centre of icons and controls at 11–15 px. -->
