@@ -1,6 +1,7 @@
 mod alert_range;
 mod chart;
 mod chart_line;
+mod check_box;
 mod client;
 mod clock;
 mod demo;
@@ -40,6 +41,7 @@ use crate::platform::{
 
 use chart::{ChartLayout, ChartRenderer, Highlight, WINDOW};
 use chart_line::ChartLine;
+use check_box::CheckBoxStyle;
 use client::HistoryClient;
 use design::Design;
 use device_options::DeviceOptions;
@@ -359,7 +361,7 @@ impl Dashboard {
                 "<!--OVERLAY-->",
                 &Navigation::buttons("Overlay", &titles, false),
             );
-        let markup = PlainButton::markup(&ScrollIndicator::markup(&markup));
+        let markup = CheckBoxStyle::markup(&PlainButton::markup(&ScrollIndicator::markup(&markup)));
         SystemTheme { dark: design.dark }.markup(&design.markup(&language.markup(&markup)))
     }
 

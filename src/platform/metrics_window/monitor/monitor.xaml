@@ -6,24 +6,7 @@
   <Style TargetType="Button"><Setter Property="Template" Value="{StaticResource PlainButton}"/><Setter Property="CornerRadius" Value="4"/><Setter Property="MinHeight" Value="32"/><Setter Property="Padding" Value="12,0"/><Setter Property="FontSize" Value="13"/><Setter Property="Background" Value="$ctrl$"/><Setter Property="Foreground" Value="$text$"/><Setter Property="BorderBrush" Value="$ctrlBorder$"/><Setter Property="BorderThickness" Value="1"/><Setter Property="VerticalAlignment" Value="Center"/></Style>
   <Style x:Key="NavigationButton" TargetType="Button"><Setter Property="Template" Value="{StaticResource PlainButton}"/><Setter Property="HorizontalAlignment" Value="Stretch"/><Setter Property="Background" Value="Transparent"/><Setter Property="BorderThickness" Value="0"/><Setter Property="HorizontalContentAlignment" Value="Stretch"/><Setter Property="VerticalContentAlignment" Value="Stretch"/><Setter Property="Padding" Value="0"/><Setter Property="Height" Value="36"/><Setter Property="MinHeight" Value="36"/><Setter Property="CornerRadius" Value="4"/></Style>
   <Style x:Key="SubtleButton" TargetType="Button"><Setter Property="Template" Value="{StaticResource PlainButton}"/><Setter Property="Background" Value="Transparent"/><Setter Property="BorderBrush" Value="Transparent"/><Setter Property="Padding" Value="0"/><Setter Property="MinHeight" Value="0"/><Setter Property="CornerRadius" Value="4"/></Style>
-  <!-- Fluent check box in the tokens of the toggle switch: 18 px box, accent when checked. -->
-  <Style TargetType="CheckBox"><Setter Property="UseSystemFocusVisuals" Value="True"/><Setter Property="MinWidth" Value="0"/><Setter Property="Template"><Setter.Value><ControlTemplate TargetType="CheckBox">
-   <Grid Background="Transparent" ColumnSpacing="8"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-    <VisualStateManager.VisualStateGroups><VisualStateGroup x:Name="CombinedStates">
-     <VisualState x:Name="UncheckedNormal"/>
-     <VisualState x:Name="UncheckedPointerOver"><VisualState.Setters><Setter Target="Box.Background" Value="$ctrlHover$"/></VisualState.Setters></VisualState>
-     <VisualState x:Name="UncheckedPressed"><VisualState.Setters><Setter Target="Box.Background" Value="$ctrlPress$"/></VisualState.Setters></VisualState>
-     <VisualState x:Name="UncheckedDisabled"><VisualState.Setters><Setter Target="Box.BorderBrush" Value="$disabled$"/><Setter Target="Label.Opacity" Value="0.55"/></VisualState.Setters></VisualState>
-     <VisualState x:Name="CheckedNormal"><VisualState.Setters><Setter Target="Box.Background" Value="$accent$"/><Setter Target="Box.BorderBrush" Value="$accent$"/><Setter Target="Mark.Visibility" Value="Visible"/></VisualState.Setters></VisualState>
-     <VisualState x:Name="CheckedPointerOver"><VisualState.Setters><Setter Target="Box.Background" Value="$accentHover$"/><Setter Target="Box.BorderBrush" Value="$accentHover$"/><Setter Target="Mark.Visibility" Value="Visible"/></VisualState.Setters></VisualState>
-     <VisualState x:Name="CheckedPressed"><VisualState.Setters><Setter Target="Box.Background" Value="$accentPress$"/><Setter Target="Box.BorderBrush" Value="$accentPress$"/><Setter Target="Mark.Visibility" Value="Visible"/></VisualState.Setters></VisualState>
-     <VisualState x:Name="CheckedDisabled"><VisualState.Setters><Setter Target="Box.Background" Value="$disabled$"/><Setter Target="Box.BorderBrush" Value="$disabled$"/><Setter Target="Mark.Visibility" Value="Visible"/><Setter Target="Label.Opacity" Value="0.55"/></VisualState.Setters></VisualState>
-    </VisualStateGroup></VisualStateManager.VisualStateGroups>
-    <Border x:Name="Box" Width="18" Height="18" CornerRadius="4" BorderThickness="1" BorderBrush="$text2$" Background="Transparent" VerticalAlignment="Center" Control.IsTemplateFocusTarget="True">
-     <Path x:Name="Mark" Data="M 3.5,8.5 L 6.5,11.5 L 12.5,5" Stroke="$onAccent$" StrokeThickness="1.6" StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round" Visibility="Collapsed"/>
-    </Border>
-    <ContentPresenter x:Name="Label" Grid.Column="1" Content="{TemplateBinding Content}" VerticalAlignment="Center"/>
-   </Grid></ControlTemplate></Setter.Value></Setter></Style>
+  <!--CHECK-BOX-->
   <SolidColorBrush x:Key="ButtonBackgroundPointerOver" Color="$ctrlHover$"/>
   <SolidColorBrush x:Key="ButtonBackgroundPressed" Color="$ctrlPress$"/>
   <SolidColorBrush x:Key="ButtonBackgroundDisabled" Color="$subtle$"/>
@@ -127,7 +110,7 @@
   <Border x:Name="TableCard" Grid.Row="4" Background="$card$" BorderBrush="$border$" BorderThickness="1" CornerRadius="8" MinHeight="130">
    <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
     <Grid Padding="16,0,12,0" Height="40" ColumnSpacing="12"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-     <StackPanel Orientation="Horizontal" Spacing="20" VerticalAlignment="Center"><TextBlock Text="@Processes@" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center"/><CheckBox x:Name="Group" IsChecked="True" AutomationProperties.Name="@Group by name@" ToolTipService.ToolTip="@Add up the processes of one program, such as a browser@"><TextBlock Text="@Group by name@"/></CheckBox></StackPanel>
+     <StackPanel Orientation="Horizontal" Spacing="20" VerticalAlignment="Center"><StackPanel.Resources><!--CHECK-BOX-16--></StackPanel.Resources><TextBlock Text="@Processes@" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center"/><CheckBox x:Name="Group" IsChecked="True" AutomationProperties.Name="@Group by name@" ToolTipService.ToolTip="@Add up the processes of one program, such as a browser@"><TextBlock Text="@Group by name@"/></CheckBox></StackPanel>
      <Grid x:Name="SearchBox" Grid.Column="2" Width="%SearchWidth%" Height="32">
       <Border Background="$ctrl$" BorderBrush="$ctrlBorder$" BorderThickness="1" CornerRadius="4"/>
       <Border x:Name="SearchLine" Height="1" VerticalAlignment="Bottom" Margin="3,0" Background="$textBoxBottom$"/>

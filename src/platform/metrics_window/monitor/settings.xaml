@@ -200,14 +200,14 @@
       $icon:power:16:1.3:text2$
       <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center">
        <CheckBox x:Name="Autostart" AutomationProperties.Name="@Start when signing in to Windows@"><TextBlock Text="@Start when signing in to Windows@"/></CheckBox>
-       <TextBlock x:Name="AutostartStatus" Text="@Taskbar tiles and the CPU temperature sensor@" FontSize="12" Foreground="$text2$" Margin="26,0,0,0" TextWrapping="Wrap"/>
+       <TextBlock x:Name="AutostartStatus" Text="@Taskbar tiles and the CPU temperature sensor@" FontSize="12" Foreground="$text2$" Margin="28,0,0,0" TextWrapping="Wrap"/>
       </StackPanel>
      </Grid>
      <Grid MinHeight="64" Padding="16,10" ColumnSpacing="16" BorderBrush="$divider$" BorderThickness="0,1,0,0"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition/></Grid.ColumnDefinitions>
       $icon:layout:16:1.3:text2$
       <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center">
        <CheckBox x:Name="ResetWindow" AutomationProperties.Name="@Reset the window size and position when it closes@"><TextBlock Text="@Reset the window size and position when it closes@"/></CheckBox>
-       <TextBlock x:Name="ResetWindowStatus" FontSize="12" Foreground="$text2$" Margin="26,0,0,0" TextWrapping="Wrap"/>
+       <TextBlock x:Name="ResetWindowStatus" FontSize="12" Foreground="$text2$" Margin="28,0,0,0" TextWrapping="Wrap"/>
       </StackPanel>
      </Grid>
     </StackPanel>

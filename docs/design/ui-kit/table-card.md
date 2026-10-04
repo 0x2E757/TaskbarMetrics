@@ -3,7 +3,7 @@
 [UI kit](../UI-KIT.md)
 
 **Toolbar** (height 40, padding 0 12 0 16, gap 12):
-`"Processes" 15/600` → gap 20 → `CheckBox "Group by name"` → ⟶ → `SearchBox 240` → `Segmented [Top 10 | All · 243]`
+`"Processes" 15/600` → gap 20 → `CheckBox 16 "Group by name"` → ⟶ → `SearchBox 240` → `Segmented [Top 10 | All · 243]`
 
 The check box is checked at start and disabled while monitoring is off. Grouped, "All · n" and the search count names, and the PID column widens by 24 for `27564 (+12)`.
 
