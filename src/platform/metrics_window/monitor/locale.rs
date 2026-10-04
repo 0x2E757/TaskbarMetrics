@@ -612,6 +612,7 @@ const CATALOG: &[(&str, &str)] = &[
     ("Cancel", "Отмена"),
     ("Startup and window", "Запуск и окно"),
     ("Monitors", "Мониторы"),
+    ("Open Taskbar Metrics", "Открыть Taskbar Metrics"),
     ("Restart all services", "Перезапустить все службы"),
     ("Close Taskbar Metrics", "Закрыть Taskbar Metrics"),
     (

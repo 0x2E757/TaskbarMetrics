@@ -1,5 +1,5 @@
 //! The watcher's notification icon: a hidden window that owns it, a timer, and a
-//! menu with two items.
+//! menu with three items.
 
 use crate::platform::abi::*;
 use std::{cell::RefCell, ptr};
@@ -8,6 +8,8 @@ use std::{cell::RefCell, ptr};
 pub trait TrayEvents {
     /// The timer fired or the taskbar came back.
     fn tick(&mut self);
+    /// "Open Taskbar Metrics" was chosen.
+    fn open(&mut self);
     /// "Restart all services" was chosen.
     fn restart(&mut self);
     /// "Close Taskbar Metrics" was chosen; the icon goes away after it.
@@ -16,6 +18,7 @@ pub trait TrayEvents {
 
 /// The texts of the menu's items, in the window's language.
 pub struct MenuLabels {
+    pub open: String,
     pub restart: String,
     pub close: String,
 }
@@ -26,6 +29,7 @@ const CALLBACK: u32 = 0x8001; // WM_APP + 1
 const TIMER: usize = 1;
 const CLOSE: usize = 1;
 const RESTART: usize = 2;
+const OPEN: usize = 3;
 
 struct State {
     events: Box<dyn TrayEvents>,
@@ -92,7 +96,11 @@ impl TrayIcon {
                 *state.borrow_mut() = Some(State {
                     events,
                     icon,
-                    menu: vec![(RESTART, wide(&menu.restart)), (CLOSE, wide(&menu.close))],
+                    menu: vec![
+                        (OPEN, wide(&menu.open)),
+                        (RESTART, wide(&menu.restart)),
+                        (CLOSE, wide(&menu.close)),
+                    ],
                     taskbar_created: RegisterWindowMessageW(wide("TaskbarCreated").as_ptr()),
                 })
             });
@@ -172,6 +180,7 @@ unsafe extern "system" fn procedure(
         }
         CALLBACK if matches!(lparam, WM_LBUTTONUP | WM_RBUTTONUP) => {
             match TrayIcon::menu(window, &state.menu) {
+                OPEN => state.events.open(),
                 RESTART => state.events.restart(),
                 CLOSE => {
                     state.events.close_all();

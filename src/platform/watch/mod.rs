@@ -1,6 +1,6 @@
 //! `TaskbarMetrics.exe --watch`: stays in the tray and keeps the program running.
 //! A new Explorer gets the tiles again, a collector that ended is started again,
-//! and the icon's menu closes everything.
+//! and the icon's menu opens the window or closes everything.
 
 mod restart;
 mod supervision;
@@ -104,6 +104,7 @@ impl Watcher {
             Box::new(watcher),
             "Taskbar Metrics",
             tray::MenuLabels {
+                open: language.text("Open Taskbar Metrics").into(),
                 restart: language.text("Restart all services").into(),
                 close: language.text("Close Taskbar Metrics").into(),
             },
@@ -175,6 +176,19 @@ impl tray::TrayEvents for Watcher {
         let seen = self.observe();
         for action in self.supervision.next(seen, Instant::now()) {
             self.act(action);
+        }
+    }
+
+    /// Without a device, so a running window keeps its section.
+    fn open(&mut self) {
+        let window = self.executable.with_file_name(Executables::WINDOW);
+        if let Err(error) = Command::new(window)
+            .stdin(Stdio::null())
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .spawn()
+        {
+            log(&format!("Watcher: window not opened: {error}"));
         }
     }
 

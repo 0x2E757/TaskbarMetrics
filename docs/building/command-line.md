@@ -19,8 +19,10 @@ would wake the other copy's DLL, whose tiles open that copy's window, with its o
 "Start when signing in to Windows" switch.
 
 The watcher stays in the background with a tray icon (on Windows 11 a new icon starts among
-the hidden ones) whose menu has two items:
+the hidden ones) whose menu has three items:
 
+- "Open Taskbar Metrics" opens the metrics window, or brings the running one to the front
+  in the section it shows, so the window stays reachable with every tile turned off.
 - "Restart all services" starts the history recorder and the CPU temperature collector again.
   It sets the `restart` event of the current Explorer, which both check like `stop`, waits for
   the recorder to exit (up to 5 s) and, when the collector ran, for Explorer to let go of its
