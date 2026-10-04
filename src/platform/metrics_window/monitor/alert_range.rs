@@ -1,4 +1,5 @@
 use super::{design::Design, locale::Language, ui::Ui};
+use crate::platform::xaml::AlertSettings;
 
 /// One alert rule of the settings artboard: a start threshold where the tile
 /// begins to redden and a pulse threshold, edited on one shared track.
@@ -9,13 +10,19 @@ pub struct AlertRule {
     pub unit: &'static str,
     pub minimum: f64,
     pub maximum: f64,
-    /// Thresholds restored when the rule is switched back on.
-    pub defaults: (f64, f64),
+    /// The rule's start and pulse thresholds among the alert settings.
+    pub thresholds: fn(&AlertSettings) -> (f64, f64),
     /// Above the upper threshold the tile pulses (hatched zone) rather than stays red.
     pub pulses: bool,
 }
 
 impl AlertRule {
+    /// Thresholds restored when the rule is switched back on: the defaults of this
+    /// computer, a desktop or a laptop.
+    pub fn defaults(&self) -> (f64, f64) {
+        (self.thresholds)(&AlertSettings::default())
+    }
+
     /// A rule is off when both thresholds sit at the top of the track.
     pub fn off(&self) -> (f64, f64) {
         (self.maximum - 1.0, self.maximum)
@@ -36,7 +43,7 @@ pub const RULES: [AlertRule; 6] = [
         unit: "°C",
         minimum: 30.0,
         maximum: 120.0,
-        defaults: (65.0, 80.0),
+        thresholds: |a| (a.cpu_x, a.cpu_y),
         pulses: true,
     },
     AlertRule {
@@ -45,7 +52,7 @@ pub const RULES: [AlertRule; 6] = [
         unit: "°C",
         minimum: 30.0,
         maximum: 120.0,
-        defaults: (70.0, 80.0),
+        thresholds: |a| (a.gpu_x, a.gpu_y),
         pulses: true,
     },
     AlertRule {
@@ -54,7 +61,7 @@ pub const RULES: [AlertRule; 6] = [
         unit: "%",
         minimum: 0.0,
         maximum: 100.0,
-        defaults: (85.0, 95.0),
+        thresholds: |a| (a.ram_x, a.ram_y),
         pulses: true,
     },
     AlertRule {
@@ -63,7 +70,7 @@ pub const RULES: [AlertRule; 6] = [
         unit: "%",
         minimum: 50.0,
         maximum: 101.0,
-        defaults: (80.0, 85.0),
+        thresholds: |a| (a.cpu_hot_x, a.cpu_hot_y),
         pulses: false,
     },
     AlertRule {
@@ -72,7 +79,7 @@ pub const RULES: [AlertRule; 6] = [
         unit: "%",
         minimum: 50.0,
         maximum: 101.0,
-        defaults: (80.0, 85.0),
+        thresholds: |a| (a.gpu_hot_x, a.gpu_hot_y),
         pulses: false,
     },
     AlertRule {
@@ -81,7 +88,7 @@ pub const RULES: [AlertRule; 6] = [
         unit: "%",
         minimum: 50.0,
         maximum: 101.0,
-        defaults: (80.0, 85.0),
+        thresholds: |a| (a.ram_hot_x, a.ram_hot_y),
         pulses: false,
     },
 ];
@@ -168,6 +175,40 @@ impl AlertRange {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn each_rule_reads_its_own_thresholds() {
+        let alerts = AlertSettings {
+            cpu_x: 1.0,
+            cpu_y: 2.0,
+            gpu_x: 3.0,
+            gpu_y: 4.0,
+            ram_x: 5.0,
+            ram_y: 6.0,
+            cpu_hot_x: 7.0,
+            cpu_hot_y: 8.0,
+            gpu_hot_x: 9.0,
+            gpu_hot_y: 10.0,
+            ram_hot_x: 11.0,
+            ram_hot_y: 12.0,
+            ..AlertSettings::default()
+        };
+        let read: Vec<_> = RULES
+            .iter()
+            .map(|rule| (rule.name, (rule.thresholds)(&alerts)))
+            .collect();
+        assert_eq!(
+            read,
+            [
+                ("Cpu", (1.0, 2.0)),
+                ("Gpu", (3.0, 4.0)),
+                ("Ram", (5.0, 6.0)),
+                ("CpuHot", (7.0, 8.0)),
+                ("GpuHot", (9.0, 10.0)),
+                ("RamHot", (11.0, 12.0)),
+            ]
+        );
+    }
 
     #[test]
     fn rules_switch_off_at_the_top_and_tracks_follow_thresholds() {

@@ -23,5 +23,8 @@ The temperature number is not rounded to the chart scale; it is shown in whole d
 The tile background turns red by CPU/GPU temperature and RAM usage: between the thresholds X and
 Y its opacity grows from 0 to the pulse intensity, and from Y up it pulses between the intensity and
 a quarter of it. Defaults: CPU 65/80 °C, GPU 70/80 °C, RAM 85/95 %, intensity 20 %, period 2 s.
+A laptop runs hotter, so there the defaults are CPU 85/95 °C and GPU 75/85 °C. It counts as a
+laptop when Windows reports a lid, or a battery that is not a UPS. Saved settings keep their
+thresholds; the defaults apply without them and when a rule is turned back on.
 Y is kept at least 1 above X. Missing data clears the alert. The thresholds, intensity and
 period are set in the settings, group "Temperature and memory".

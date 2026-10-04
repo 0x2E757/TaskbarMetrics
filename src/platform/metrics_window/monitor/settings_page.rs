@@ -462,15 +462,7 @@ impl SettingsPage {
         let Some(style) = self.playground.style() else {
             return Ok(());
         };
-        let a = style.alerts;
-        let thresholds = [
-            (a.cpu_x, a.cpu_y),
-            (a.gpu_x, a.gpu_y),
-            (a.ram_x, a.ram_y),
-            (a.cpu_hot_x, a.cpu_hot_y),
-            (a.gpu_hot_x, a.gpu_hot_y),
-            (a.ram_hot_x, a.ram_hot_y),
-        ];
+        let thresholds = RULES.map(|rule| (rule.thresholds)(&style.alerts));
         for (index, (rule, (x, _))) in RULES.iter().zip(thresholds).enumerate() {
             let (switch, shown) = &mut self.switches[index];
             let mut on = 0u8;
@@ -482,7 +474,7 @@ impl SettingsPage {
             if on != *shown {
                 // The user flipped the switch.
                 *shown = on;
-                let (x, y) = if on { rule.defaults } else { rule.off() };
+                let (x, y) = if on { rule.defaults() } else { rule.off() };
                 self.playground.set_alert(rule.name, x, y)?;
             } else if on != rule.enabled(x) {
                 *shown = rule.enabled(x);

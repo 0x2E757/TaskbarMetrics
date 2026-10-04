@@ -1,4 +1,5 @@
 use super::*;
+use crate::platform::form_factor::FormFactor;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) struct AlertSettings {
@@ -19,9 +20,17 @@ pub(crate) struct AlertSettings {
     pub ram_hot_y: f64,
 }
 
+/// The defaults of the computer this runs on.
 impl Default for AlertSettings {
     fn default() -> Self {
-        Self {
+        Self::defaults(FormFactor::current())
+    }
+}
+
+impl AlertSettings {
+    /// A laptop runs hotter: its temperature alerts start later.
+    pub fn defaults(form_factor: FormFactor) -> Self {
+        let desktop = Self {
             cpu_x: 65.0,
             cpu_y: 80.0,
             gpu_x: 70.0,
@@ -36,11 +45,19 @@ impl Default for AlertSettings {
             gpu_hot_y: 85.0,
             ram_hot_x: 80.0,
             ram_hot_y: 85.0,
+        };
+        match form_factor {
+            FormFactor::Desktop => desktop,
+            FormFactor::Portable => Self {
+                cpu_x: 85.0,
+                cpu_y: 95.0,
+                gpu_x: 75.0,
+                gpu_y: 85.0,
+                ..desktop
+            },
         }
     }
-}
 
-impl AlertSettings {
     /// How red the number of a `kind` tile showing `value` % is, from 0 to 1.
     pub fn hot(&self, kind: &str, value: f64) -> f64 {
         let (x, y) = match kind {
@@ -122,7 +139,7 @@ mod tests {
 
     #[test]
     fn thresholds_ramp_pulse_and_clear_on_missing_data() {
-        let s = AlertSettings::default();
+        let s = AlertSettings::defaults(FormFactor::Desktop);
         assert_eq!(s.level("cpu", &Available(65.0)), (0.0, false));
         assert_eq!(s.level("cpu", &Available(72.5)), (0.1, false));
         assert_eq!(s.level("cpu", &Available(105.0)), (0.2, true));
@@ -133,7 +150,7 @@ mod tests {
 
     #[test]
     fn numbers_redden_gradually_over_five_points_before_the_threshold() {
-        let mut s = AlertSettings::default();
+        let mut s = AlertSettings::defaults(FormFactor::Desktop);
         assert_eq!(s.hot("cpu", 80.0), 0.0);
         assert_eq!(s.hot("cpu", 82.5), 0.5);
         assert_eq!(s.hot("gpu", 85.0), 1.0);
@@ -143,5 +160,24 @@ mod tests {
         // Both thresholds at the top of the track switch reddening off.
         (s.ram_hot_x, s.ram_hot_y) = (100.0, 101.0);
         assert_eq!(s.hot("ram", 100.0), 0.0);
+    }
+
+    #[test]
+    fn laptops_alert_on_hotter_cpus_and_gpus_only() {
+        let desktop = AlertSettings::defaults(FormFactor::Desktop);
+        let laptop = AlertSettings::defaults(FormFactor::Portable);
+        assert_eq!((laptop.cpu_x, laptop.cpu_y), (85.0, 95.0));
+        assert_eq!((laptop.gpu_x, laptop.gpu_y), (75.0, 85.0));
+        assert_eq!(laptop.level("cpu", &Available(80.0)), (0.0, false));
+        assert_eq!(
+            AlertSettings {
+                cpu_x: desktop.cpu_x,
+                cpu_y: desktop.cpu_y,
+                gpu_x: desktop.gpu_x,
+                gpu_y: desktop.gpu_y,
+                ..laptop
+            },
+            desktop
+        );
     }
 }

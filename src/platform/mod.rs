@@ -10,6 +10,7 @@ pub mod detached_console;
 pub mod devices;
 pub mod displays;
 pub mod executables;
+pub(crate) mod form_factor;
 pub(crate) mod gpu_temperature;
 pub(crate) mod handover;
 pub(crate) mod hardware;
