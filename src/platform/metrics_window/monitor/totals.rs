@@ -40,6 +40,13 @@ impl IoTotals {
     pub fn of(&self, key: ProcessKey) -> Option<[u64; 2]> {
         self.0.get(&key).copied()
     }
+
+    /// Bytes of several processes added up, as a grouped row or the footer shows them.
+    pub fn sum(&self, keys: impl IntoIterator<Item = ProcessKey>) -> [u64; 2] {
+        keys.into_iter()
+            .filter_map(|key| self.of(key))
+            .fold([0; 2], |sum, bytes| [sum[0] + bytes[0], sum[1] + bytes[1]])
+    }
 }
 
 #[cfg(test)]

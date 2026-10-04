@@ -389,9 +389,11 @@ const CATALOG: &[(&str, &str)] = &[
     ("Live", "В реальном времени"),
     ("Processes", "Процессы"),
     ("Process", "Процесс"),
-    ("now · updates 1×/s", "сейчас · обновление 1 раз/с"),
-    ("as of {t}", "на {t}"),
-    ("as of {t} · 2 s behind live", "на {t} · 2 с от реального времени"),
+    ("Group by name", "Группировать по имени"),
+    (
+        "Add up the processes of one program, such as a browser",
+        "Складывать процессы одной программы, например браузера",
+    ),
     ("Search by name or PID", "Поиск по имени или PID"),
     ("{a} of {b}", "{a} из {b}"),
     (

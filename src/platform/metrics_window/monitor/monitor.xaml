@@ -127,7 +127,7 @@
   <Border x:Name="TableCard" Grid.Row="4" Background="$card$" BorderBrush="$border$" BorderThickness="1" CornerRadius="8" MinHeight="130">
    <Grid><Grid.RowDefinitions><RowDefinition Height="Auto"/><RowDefinition Height="Auto"/><RowDefinition Height="*"/><RowDefinition Height="Auto"/></Grid.RowDefinitions>
     <Grid Padding="16,0,12,0" Height="40" ColumnSpacing="12"><Grid.ColumnDefinitions><ColumnDefinition Width="Auto"/><ColumnDefinition Width="*"/><ColumnDefinition Width="Auto"/><ColumnDefinition Width="Auto"/></Grid.ColumnDefinitions>
-     <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center"><TextBlock Text="@Processes@" FontSize="15" FontWeight="SemiBold"/><TextBlock x:Name="Moment" FontSize="12" VerticalAlignment="Center" Foreground="$text2$" Typography.NumeralAlignment="Tabular"/></StackPanel>
+     <StackPanel Orientation="Horizontal" Spacing="20" VerticalAlignment="Center"><TextBlock Text="@Processes@" FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center"/><CheckBox x:Name="Group" IsChecked="True" AutomationProperties.Name="@Group by name@" ToolTipService.ToolTip="@Add up the processes of one program, such as a browser@"><TextBlock Text="@Group by name@"/></CheckBox></StackPanel>
      <Grid x:Name="SearchBox" Grid.Column="2" Width="%SearchWidth%" Height="32">
       <Border Background="$ctrl$" BorderBrush="$ctrlBorder$" BorderThickness="1" CornerRadius="4"/>
       <Border x:Name="SearchLine" Height="1" VerticalAlignment="Bottom" Margin="3,0" Background="$textBoxBottom$"/>

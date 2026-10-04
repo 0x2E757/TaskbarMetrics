@@ -15,6 +15,8 @@ pub struct RowContent<'a> {
     pub index: usize,
     pub name: &'a str,
     pub pid: u32,
+    /// Other processes of the same name added up in the row.
+    pub more: usize,
     pub kind: RowKind,
     /// Pin palette color of pinned rows.
     pub color: Option<&'a str>,
@@ -33,6 +35,8 @@ pub struct TableLayout {
     pub sort: usize,
     pub resource: Resource,
     pub compact: bool,
+    /// Rows stand for every process of a name: the PID column fits «27564 (+12)».
+    pub grouped: bool,
     pub design: Design,
     pub language: Language,
     /// Width of the table card, used to trim long process names.
@@ -62,12 +66,23 @@ impl TableLayout {
     /// chevron (12 px and 4 px apart) appears in it without moving the title.
     const INDENT: u32 = 20;
     const CHEVRON: u32 = 16;
+    /// Room of « (+12)» after a grouped row's PID.
+    const MORE: u32 = 24;
 
     fn pid_width(&self) -> u32 {
+        let width = if self.grouped { 72 + Self::MORE } else { 72 };
         if self.totals() {
-            72 - Self::INDENT
+            width - Self::INDENT
         } else {
-            72
+            width
+        }
+    }
+
+    /// The busiest process's PID, and how many more of its name the row adds up.
+    fn pid(row: &RowContent) -> String {
+        match row.more {
+            0 => row.pid.to_string(),
+            more => format!("{} (+{more})", row.pid),
         }
     }
 
@@ -342,7 +357,7 @@ impl TableLayout {
         } else {
             format!(
                 r#"<TextBlock Grid.Column="2" Text="{}" FontSize="12" Foreground="{}" VerticalAlignment="Center" Typography.NumeralAlignment="Tabular"/>"#,
-                row.pid,
+                Self::pid(row),
                 d.color("text3")
             )
         };
@@ -395,6 +410,7 @@ mod tests {
         TableLayout {
             resource,
             compact,
+            grouped: false,
             design: Design { dark: false },
             language: Language::English,
             width: 980.0,
@@ -409,6 +425,7 @@ mod tests {
             index: 3,
             name: "Code & co.exe",
             pid: 27564,
+            more: 0,
             kind: RowKind::PinnedMissing,
             color: Some("#C25400"),
             values: None,
@@ -447,6 +464,7 @@ mod tests {
                 index: 0,
                 name: "p.exe",
                 pid: 7,
+                more: 0,
                 kind: RowKind::Regular,
                 color: None,
                 values: Some([Some(0.5), Some(0.1)]),
@@ -503,6 +521,32 @@ mod tests {
         // A narrow window has no room for it.
         assert!(!table(Resource::Net, true).header().contains("All time"));
         assert!(!table(Resource::Cpu, false).totals());
+    }
+
+    #[test]
+    fn grouped_rows_show_the_busiest_pid_and_how_many_more() {
+        let grouped = TableLayout {
+            grouped: true,
+            ..table(Resource::Net, false)
+        };
+        let row = grouped.row(&RowContent {
+            index: 0,
+            name: "chrome.exe",
+            pid: 27564,
+            more: 12,
+            kind: RowKind::Regular,
+            color: None,
+            values: Some([Some(0.5), Some(0.1)]),
+            total: None,
+            locked: false,
+            hovered: false,
+        });
+        assert!(row.contains(r#"Text="27564 (+12)""#));
+        // The PID column widens by the room of « (+12)», less the total's indent.
+        assert!(grouped.columns().contains(r#"Width="76""#));
+        assert!(table(Resource::Cpu, false)
+            .columns()
+            .contains(r#"Width="72""#));
     }
 
     #[test]

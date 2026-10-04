@@ -1,5 +1,6 @@
 use super::{
     design::Design,
+    groups::NameGroups,
     legend::Hatch,
     locale::Language,
     model::{Device, ProcessKey, Resource, Timeline},
@@ -18,6 +19,42 @@ use std::sync::Arc;
 pub const WINDOW: u64 = RETENTION;
 /// Live DISK/NET process values wait this many samples for ETW delivery.
 pub const ETW_DELAY: u64 = 4;
+
+/// The series a hovered table row stands out with.
+#[derive(Clone, Copy)]
+pub enum Highlight<'a> {
+    Process(ProcessKey),
+    /// A grouped row: every process of the name at each moment, but the pinned
+    /// ones, which have rows and series of their own.
+    Name(&'a str),
+}
+
+impl Highlight<'_> {
+    pub fn series(
+        self,
+        frames: &[Arc<Frame>],
+        device: &Device,
+        pinned: &[PinnedLayer],
+    ) -> Vec<[Option<f64>; 2]> {
+        match self {
+            Self::Process(key) => ChartRenderer::series_of(frames, device, key),
+            Self::Name(name) => frames
+                .iter()
+                .map(|f| {
+                    Device::sum(
+                        f.processes
+                            .iter()
+                            .filter(|p| {
+                                NameGroups::same(&p.identity.name, name)
+                                    && !pinned.iter().any(|layer| layer.key == Timeline::key(p))
+                            })
+                            .map(|p| device.plotted(f, p)),
+                    )
+                })
+                .collect(),
+        }
+    }
+}
 
 /// Chart canvas size and paddings from `tokens.json → chart.pad`.
 #[derive(Clone, Copy, PartialEq, Debug)]
@@ -1065,7 +1102,7 @@ impl ChartRenderer {
         frames: &[Arc<Frame>],
         device: &Device,
         selected: Option<u64>,
-        hover: Option<ProcessKey>,
+        hover: Option<Highlight>,
         pinned: &[PinnedLayer],
         layout: ChartLayout,
     ) -> String {
@@ -1080,7 +1117,7 @@ impl ChartRenderer {
             .map(|p| (p, Self::series_of(frames, device, p.key)))
             .collect();
         let plot = Self::plot(frames, device, &values, &layers, layout);
-        let process = hover.map(|key| Self::series_of(frames, device, key));
+        let process = hover.map(|hover| hover.series(frames, device, pinned));
         if let Some(points) = &process {
             let hover = Style {
                 color: d.color("ink"),

@@ -22,7 +22,7 @@ The Russian translations live in the `CATALOG` of [`src/platform/metrics_window/
 | options.taskbar / always / alwaysHint | Show on taskbar / Always monitor / Keep the history of this device while the window is closed |
 | table.title / process | Processes / Process |
 | table.columns | Private / Shared / Both / Read / Write / Receive / Send / All time |
-| table.sub.live / at / etw | now · updates 1×/s / as of {t} / as of {t} · 2 s behind live |
+| table.group / groupHint | Group by name / Add up the processes of one program, such as a browser |
 | table.top / all | Top 10 / All · {n} |
 | table.others | Other processes ({n}) |
 | table.nodata | No data at this moment |

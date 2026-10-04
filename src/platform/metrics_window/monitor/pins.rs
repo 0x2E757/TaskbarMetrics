@@ -1,3 +1,4 @@
+use super::groups::NameGroups;
 #[cfg(test)]
 use super::model::Resource;
 use super::model::{Device, ProcessKey, Timeline};
@@ -19,7 +20,20 @@ pub struct PinnedProcesses {
 pub struct ProcessRow {
     pub identity: Arc<Identity>,
     pub sample: Option<usize>,
+    /// Processes of the same name merged into the row after `sample`, its busiest.
+    pub others: Vec<usize>,
     pub pinned: bool,
+}
+
+/// Which processes the table lists and how.
+pub struct RowQuery<'a> {
+    pub search: &'a str,
+    /// Every row instead of the top 10.
+    pub all: bool,
+    /// Value column the rows are sorted by.
+    pub column: usize,
+    /// Processes of one name share a row; pinned ones keep theirs.
+    pub grouped: bool,
 }
 
 pub struct PinnedLayer {
@@ -82,21 +96,23 @@ impl PinnedProcesses {
         self.identities.push(Pin { identity, color });
     }
 
+    /// Pinned rows, then the listed ones; the rest are the groups (single processes
+    /// unless grouped) the footer adds up.
     pub fn rows(
         &self,
         frame: Option<&Frame>,
         device: &Device,
-        search: &str,
-        all: bool,
-        column: usize,
+        query: &RowQuery,
         totals: Option<&IoTotals>,
-    ) -> (Vec<ProcessRow>, Vec<usize>) {
+    ) -> (Vec<ProcessRow>, Vec<Vec<usize>>) {
+        let column = query.column;
         let mut rows: Vec<_> = self
             .identities
             .iter()
             .map(|pin| ProcessRow {
                 identity: pin.identity.clone(),
                 pinned: true,
+                others: Vec::new(),
                 sample: frame.and_then(|f| {
                     f.processes
                         .iter()
@@ -119,21 +135,33 @@ impl PinnedProcesses {
                 .then_with(|| a.identity.pid.cmp(&b.identity.pid))
         });
         let ranked: Vec<_> = device
-            .ranked(frame, search, column, totals)
+            .ranked(frame, query.search, column, totals)
             .into_iter()
             .filter(|i| !self.contains(Timeline::key(&frame.processes[*i])))
             .collect();
-        let limit = if all || !search.is_empty() {
-            ranked.len()
+        let groups = if query.grouped {
+            NameGroups::merge(frame, &ranked, |i| {
+                device.weight(frame, &frame.processes[i], column, totals)
+            })
         } else {
-            10.min(ranked.len())
+            ranked.into_iter().map(|i| vec![i]).collect()
         };
-        rows.extend(ranked[..limit].iter().map(|i| ProcessRow {
-            identity: frame.processes[*i].identity.clone(),
-            sample: Some(*i),
-            pinned: false,
+        let limit = if query.all || !query.search.is_empty() {
+            groups.len()
+        } else {
+            10.min(groups.len())
+        };
+        let mut groups = groups.into_iter();
+        rows.extend(groups.by_ref().take(limit).map(|mut group| {
+            let lead = group.remove(0);
+            ProcessRow {
+                identity: frame.processes[lead].identity.clone(),
+                sample: Some(lead),
+                others: group,
+                pinned: false,
+            }
         }));
-        (rows, ranked[limit..].to_vec())
+        (rows, groups.collect())
     }
 
     pub fn load(path: &Path) -> Self {
@@ -220,9 +248,10 @@ mod tests {
             let (rows, _) = pins.rows(
                 Some(&frame),
                 &Device::of(resource),
-                "unmatched",
-                false,
-                0,
+                &RowQuery {
+                    search: "unmatched",
+                    ..query()
+                },
                 None,
             );
             assert_eq!(rows.len(), 1);
@@ -230,7 +259,7 @@ mod tests {
             assert_eq!(rows[0].sample, None);
             assert_eq!(rows[0].identity.created, 10);
         }
-        let (rows, rest) = pins.rows(Some(&frame), &Device::of(Resource::Cpu), "", false, 0, None);
+        let (rows, rest) = pins.rows(Some(&frame), &Device::of(Resource::Cpu), &query(), None);
         assert_eq!(rows.len(), 2);
         assert!(rest.is_empty());
         pins.toggle(identity);
@@ -262,9 +291,68 @@ mod tests {
             undecoded: 0,
             sample_ms: 0.0,
         };
-        let (rows, _) = pins.rows(Some(&frame), &Device::of(Resource::Cpu), "", false, 0, None);
+        let (rows, _) = pins.rows(Some(&frame), &Device::of(Resource::Cpu), &query(), None);
         let order: Vec<_> = rows.iter().map(|r| r.identity.pid).collect();
         assert_eq!(order, [2, 1, 3]);
+    }
+
+    #[test]
+    fn grouped_rows_merge_a_name_but_leave_pinned_processes_alone() {
+        let sample = |pid, name: &str, cpu| {
+            Sample::new(
+                Arc::new(Identity {
+                    pid,
+                    created: 1,
+                    name: name.into(),
+                }),
+                Some(cpu),
+                None,
+                [None; 3],
+                None,
+            )
+        };
+        let frame = Frame {
+            gpu_engines: Vec::new(),
+            bucket: 1,
+            elapsed_ms: 500.0,
+            processes: vec![
+                sample(1, "chrome.exe", 10.0),
+                sample(2, "chrome.exe", 30.0),
+                sample(3, "code.exe", 35.0),
+                sample(4, "chrome.exe", 5.0),
+            ],
+            totals: vec![],
+            etw_active: false,
+            lost_events: 0,
+            undecoded: 0,
+            sample_ms: 0.0,
+        };
+        let mut pins = PinnedProcesses::default();
+        pins.toggle(frame.processes[3].identity.clone());
+        let grouped = RowQuery {
+            grouped: true,
+            ..query()
+        };
+        let (rows, rest) = pins.rows(Some(&frame), &Device::of(Resource::Cpu), &grouped, None);
+        let shown: Vec<_> = rows
+            .iter()
+            .map(|r| (r.identity.pid, r.others.clone(), r.pinned))
+            .collect();
+        // Chrome's 40 % outweigh Code's 35 %, led by its busiest process.
+        assert_eq!(
+            shown,
+            [(4, vec![], true), (2, vec![0], false), (3, vec![], false)]
+        );
+        assert!(rest.is_empty());
+    }
+
+    fn query() -> RowQuery<'static> {
+        RowQuery {
+            search: "",
+            all: false,
+            column: 0,
+            grouped: false,
+        }
     }
 
     #[test]

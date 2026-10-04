@@ -317,6 +317,17 @@ impl Device {
         }
     }
 
+    /// Values of several processes added up: each side of a pair over the
+    /// processes that have it, none where no process has it.
+    pub fn sum(values: impl IntoIterator<Item = [Option<f64>; 2]>) -> [Option<f64>; 2] {
+        values.into_iter().fold([None, None], |sum, values| {
+            [0, 1].map(|side| match (sum[side], values[side]) {
+                (Some(a), Some(b)) => Some(a + b),
+                (a, b) => a.or(b),
+            })
+        })
+    }
+
     /// Memory rows stand for no process and are listed on the RAM page only.
     pub fn lists(&self, process: &Sample) -> bool {
         self.resource == Resource::Ram || process.identity.pid != MemoryRows::PID

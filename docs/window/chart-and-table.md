@@ -8,6 +8,11 @@ Part of [History window](../window.md).
 - The table refers to the selected time, not to the current processes. By default it shows the
   top 10 and the rest; all processes and search by name/PID are available. PID + creation
   time tell an exited process apart from a new process that got the same PID.
+- "Group by name" (on at start, not saved) adds up the processes of one name, regardless of case, in one
+  row, so a browser reads as one program. The PID column shows the busiest process in the
+  sort column and how many more the row adds: `27564 (+12)`. Groups rank by their sum; pinned
+  processes keep rows of their own, and the pin button of a group pins its busiest process.
+  Hovering a group highlights the sum of its name's unpinned processes.
 - RAM, DISK and NET sort by a click on a value column header: either value of the pair, their
   sum ("Both", the default) or "All time". CPU and GPU sort by their only value.
 - The pin button pins a process above the top 10 on all tabs, including search; pinned rows

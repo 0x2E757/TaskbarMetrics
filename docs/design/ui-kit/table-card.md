@@ -3,9 +3,9 @@
 [UI kit](../UI-KIT.md)
 
 **Toolbar** (height 40, padding 0 12 0 16, gap 12):
-`"Processes" 15/600` → `caption 12 text2` → ⟶ → `SearchBox 240` → `Segmented [Top 10 | All · 243]`
+`"Processes" 15/600` → gap 20 → `CheckBox "Group by name"` → ⟶ → `SearchBox 240` → `Segmented [Top 10 | All · 243]`
 
-Toolbar captions: live — "now · updates 1×/s"; history — "as of 14:00:50.5" (below a width of 1100 only the time); NET/DISK live — "as of … · 2 s behind live" (because of the ETW delay); monitoring off — "no data".
+The check box is checked at start and disabled while monitoring is off. Grouped, "All · n" and the search count names, and the PID column widens by 24 for `27564 (+12)`.
 
 **Table header** (height 30, padding 0 12 0 4, gap 12, 12 `text3`, bottom border `divider`):
 `[28 space for the pin] "Process" | PID 72 | value columns (right-aligned)`

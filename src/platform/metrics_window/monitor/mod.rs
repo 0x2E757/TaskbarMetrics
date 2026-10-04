@@ -8,6 +8,7 @@ mod design;
 mod device_options;
 mod devices;
 mod elements;
+mod groups;
 mod header;
 mod layout;
 mod legend;
@@ -37,13 +38,14 @@ use crate::platform::{
     xaml::{appearance::Appearance, events::Subscription, AlertSettings},
 };
 
-use chart::{ChartLayout, ChartRenderer, WINDOW};
+use chart::{ChartLayout, ChartRenderer, Highlight, WINDOW};
 use chart_line::ChartLine;
 use client::HistoryClient;
 use design::Design;
 use device_options::DeviceOptions;
 use devices::Devices;
 use elements::Elements;
+use groups::NameGroups;
 use header::{HeaderMarkup, Mode};
 use layout::WindowLayout;
 use legend::{ChartLegend, LegendEntry, LegendFlow, LegendMark, LegendWidths};
@@ -51,7 +53,7 @@ pub(crate) use locale::Language;
 use menu::DeviceMenu;
 use model::{Device, ProcessKey, Resource, Timeline};
 use nav::Navigation;
-use pins::PinnedLayer;
+use pins::{PinnedLayer, RowQuery};
 use plain_button::PlainButton;
 use row_window::RowWindow;
 use scroll_indicator::ScrollIndicator;
@@ -141,6 +143,8 @@ enum Action {
     Always,
     /// A value column header of the table: sort by that column.
     Sort(usize),
+    /// «Group by name» was clicked.
+    Group,
 }
 
 struct Dashboard {
@@ -193,6 +197,8 @@ struct Dashboard {
     all: bool,
     /// Value column of the process table the rows are sorted by.
     sort: usize,
+    /// Processes of one name share a table row.
+    grouped: bool,
     search: String,
     revision: u64,
     /// Everything on the chart card must be rebuilt.
@@ -303,6 +309,8 @@ impl Dashboard {
             all: false,
             // Disk and network rows start by read plus write.
             sort: 2,
+            // A browser's many processes read as one program from the start.
+            grouped: true,
             search: String::new(),
             revision: u64::MAX,
             dirty: true,
@@ -395,6 +403,7 @@ impl Dashboard {
         self.click("Live", || Action::Live)?;
         self.click("All", || Action::All)?;
         self.click("Top", || Action::Top)?;
+        self.click("Group", || Action::Group)?;
         self.click("Settings", || Action::Settings)?;
         self.click("OverlaySettings", || Action::Settings)?;
         self.click("OpenSettings", || Action::Settings)?;
@@ -742,6 +751,14 @@ impl Dashboard {
             }
             Action::Sort(column) => {
                 self.sort = column;
+                self.table_dirty = true;
+                return Ok(());
+            }
+            Action::Group => {
+                self.grouped = !self.grouped;
+                Ui::checked(&self.find("Group")?, self.grouped)?;
+                self.hover = None;
+                self.hover_dirty = true;
                 self.table_dirty = true;
                 return Ok(());
             }
@@ -1351,6 +1368,18 @@ impl Dashboard {
         self.render_overlay()
     }
 
+    /// Series of the hovered row: grouped, every unpinned process of its name.
+    fn highlight(&self) -> Option<Highlight<'_>> {
+        let key = self.hover?;
+        let name = self
+            .table_frame
+            .as_deref()
+            .filter(|_| self.grouped && !self.pins.contains(key))
+            .and_then(|f| f.processes.iter().find(|p| Timeline::key(p) == key))
+            .map(|p| &*p.identity.name);
+        Some(name.map_or(Highlight::Process(key), Highlight::Name))
+    }
+
     /// Parts of the chart card that follow the moment and the highlighted process.
     fn render_overlay(&self) -> Result<()> {
         self.render_header()?;
@@ -1377,7 +1406,7 @@ impl Dashboard {
                 self.timeline(),
                 &self.device,
                 self.selected,
-                self.hover,
+                self.highlight(),
                 &self.layers(),
                 self.chart_layout,
             ),
@@ -1451,23 +1480,14 @@ impl Dashboard {
     }
 
     fn render_toolbar(&self, frame: Option<&Frame>, found: Option<usize>) -> Result<()> {
-        let moment = match (frame, self.selected) {
-            _ if !self.processes() => self.language.text("no data").to_owned(),
-            (None, _) => String::new(),
-            (Some(f), Some(_)) if self.compact => self.language.time(f.bucket),
-            (Some(f), Some(_)) => self
-                .language
-                .text("as of {t}")
-                .replace("{t}", &self.language.time(f.bucket)),
-            (Some(f), None) if self.resource.dual() => self
-                .language
-                .text("as of {t} · 2 s behind live")
-                .replace("{t}", &self.language.time(f.bucket)),
-            (Some(_), None) => self.language.text("now · updates 1×/s").to_owned(),
-        };
-        Ui::text(&self.root, "Moment", &moment)?;
+        // Grouped, the rows count names rather than processes.
         let total = match frame.map_or(0, |f| {
-            f.processes.iter().filter(|p| self.device.lists(p)).count()
+            let listed = f.processes.iter().filter(|p| self.device.lists(p));
+            if self.grouped {
+                NameGroups::count(listed.map(|p| &*p.identity.name))
+            } else {
+                listed.count()
+            }
         }) {
             // Without process history the tab still counts what is running now.
             0 if !self.processes() => SystemActivity::read().map_or(0, |a| a.processes as usize),
@@ -1549,6 +1569,7 @@ impl Dashboard {
         Ui::text(&self.root, "OffText", self.language.text(text))?;
         // Nothing to search without per-process history, as in the artboard.
         Ui::enable(&self.elements.search, !off)?;
+        Ui::enable(&self.find("Group")?, !off)?;
         Ui::visible(&self.root, "SearchLine", !off)?;
         for name in ["TableHeader", "RowsScroll"] {
             Ui::visible(&self.root, name, !off)?;
@@ -1580,6 +1601,7 @@ impl Dashboard {
             sort: self.sort,
             resource: self.resource,
             compact: self.compact,
+            grouped: self.grouped,
             design: self.design,
             language: self.language,
             width: self.table_width,
@@ -1599,13 +1621,25 @@ impl Dashboard {
             .as_deref()
             .filter(|_| table.totals())
             .map(|f| IoTotals::at(&self.device, &self.io_totals, &self.frames, f.bucket));
-        let total_of = |key: ProcessKey| totals.as_ref().map(|t| t.of(key).unwrap_or([0; 2]));
-        let (display, rest_indices) = self.pins.rows(
+        // Values and bytes of several processes, as one row or the footer adds them up.
+        let sum = |f: &Frame, samples: &mut dyn Iterator<Item = usize>| {
+            let samples: Vec<_> = samples.map(|index| &f.processes[index]).collect();
+            (
+                Device::sum(samples.iter().map(|p| self.device.process(f, p))),
+                totals
+                    .as_ref()
+                    .map(|t| t.sum(samples.iter().map(|p| Timeline::key(p)))),
+            )
+        };
+        let (display, rest) = self.pins.rows(
             frame.as_deref(),
             &self.device,
-            &self.search,
-            self.all,
-            table.sort,
+            &RowQuery {
+                search: &self.search,
+                all: self.all,
+                column: table.sort,
+                grouped: self.grouped,
+            },
             totals.as_ref(),
         );
         let pinned = display.iter().filter(|p| p.pinned).count();
@@ -1670,21 +1704,28 @@ impl Dashboard {
             let color = self
                 .pins
                 .process_color((item.identity.pid, item.identity.created), d);
-            let values = match (&frame, item.sample) {
-                (Some(f), Some(index)) => Some(self.device.process(f, &f.processes[index])),
-                _ => None,
+            let (values, total) = match (&frame, item.sample) {
+                (Some(f), Some(index)) => {
+                    let (values, total) = sum(
+                        f,
+                        &mut std::iter::once(index).chain(item.others.iter().copied()),
+                    );
+                    (Some(values), total)
+                }
+                _ => (None, None),
             };
             markup.push_str(&table.row(&RowContent {
                 index: row,
                 name: self.language.process(&item.identity),
                 pid: item.identity.pid,
+                more: item.others.len(),
                 kind: match (item.pinned, values.is_some()) {
                     (false, _) => RowKind::Regular,
                     (true, true) => RowKind::Pinned,
                     (true, false) => RowKind::PinnedMissing,
                 },
                 color: color.as_deref(),
-                total: values.and(total_of((item.identity.pid, item.identity.created))),
+                total,
                 values,
                 locked: !item.pinned && self.pins.full(),
                 hovered: self.hover == Some((item.identity.pid, item.identity.created)),
@@ -1700,31 +1741,12 @@ impl Dashboard {
             );
         }
         markup.push_str("</StackPanel>");
-        let show_rest = !rest_indices.is_empty() && !self.all && !searching;
+        let show_rest = !rest.is_empty() && !self.all && !searching;
         Ui::visible(&self.root, "RestBorder", show_rest)?;
         if let (Some(f), true) = (&frame, show_rest) {
-            let mut rest = [None, None];
-            let mut rest_total = totals.as_ref().map(|_| [0u64; 2]);
-            for index in &rest_indices {
-                let process = &f.processes[*index];
-                for (total, value) in rest.iter_mut().zip(self.device.process(f, process)) {
-                    if let Some(value) = value {
-                        *total = Some(total.unwrap_or(0.0) + value);
-                    }
-                }
-                if let (Some(sum), Some(bytes)) =
-                    (&mut rest_total, total_of(Timeline::key(process)))
-                {
-                    for (sum, bytes) in sum.iter_mut().zip(bytes) {
-                        *sum += bytes;
-                    }
-                }
-            }
-            self.shown.children(
-                &self.root,
-                "Rest",
-                &table.footer(rest_indices.len(), rest, rest_total),
-            )?;
+            let (values, total) = sum(f, &mut rest.iter().flatten().copied());
+            self.shown
+                .children(&self.root, "Rest", &table.footer(rest.len(), values, total))?;
         }
         // Values of idle processes often stay the same from one update to the next.
         let row_keys: Vec<_> = keys
@@ -1896,9 +1918,12 @@ impl Dashboard {
                 let (rows, _) = self.pins.rows(
                     self.selected_frame().as_deref(),
                     &self.device,
-                    "",
-                    false,
-                    0,
+                    &RowQuery {
+                        search: "",
+                        all: false,
+                        column: 0,
+                        grouped: false,
+                    },
                     None,
                 );
                 if rows
@@ -1909,7 +1934,10 @@ impl Dashboard {
                 }
                 for compact in [false, true] {
                     self.compact = compact;
-                    self.render_rows()?;
+                    for grouped in [true, false] {
+                        self.grouped = grouped;
+                        self.render_rows()?;
+                    }
                     for width in [300.0, 500.0, 1300.0] {
                         self.chart_layout = ChartLayout::new(width, 250.0)
                             .for_resource(resource)
