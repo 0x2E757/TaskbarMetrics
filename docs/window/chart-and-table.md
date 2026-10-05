@@ -12,7 +12,8 @@ Part of [History window](../window.md).
   row, so a browser reads as one program. The PID column shows the busiest process in the
   sort column and how many more the row adds: `27564 (+12)`. Groups rank by their sum; pinned
   processes keep rows of their own, and the pin button of a group pins its busiest process.
-  Hovering a group highlights the sum of its name's unpinned processes.
+  Hovering a group highlights the sum of its name's unpinned processes. The chart tooltip's
+  top 3 follows the box too: grouped, it shows the three busiest names with their sums.
 - RAM, DISK and NET sort by a click on a value column header: either value of the pair, their
   sum ("Both", the default) or "All time". CPU and GPU sort by their only value.
 - The pin button pins a process above the top 10 on all tabs, including search; pinned rows

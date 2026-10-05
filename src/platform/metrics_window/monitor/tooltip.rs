@@ -1,6 +1,7 @@
 use super::{
     chart::{ChartLayout, ChartRenderer},
     design::Design,
+    groups::NameGroups,
     locale::Language,
     model::{Device, Resource},
     pins::PinnedLayer,
@@ -15,6 +16,8 @@ use std::sync::Arc;
 pub struct ChartTooltip {
     pub design: Design,
     pub language: Language,
+    /// The busiest processes are added up by name, as the table rows are.
+    pub grouped: bool,
 }
 
 impl ChartTooltip {
@@ -60,7 +63,8 @@ impl ChartTooltip {
         )
     }
 
-    /// Rows of the three busiest processes at `frame`, shown while nothing is pinned.
+    /// Rows of the three busiest processes at `frame`, shown while nothing is pinned;
+    /// grouped as the table is, the three busiest names with their sums.
     /// Idle processes are left out and their places hold a dash, so the card keeps
     /// its height as the pointer moves. The grey rows of memory outside processes
     /// are left out too: the kernel and the file cache would nearly always win.
@@ -72,18 +76,24 @@ impl ChartTooltip {
             r#"<Ellipse Width="6" Height="6" Fill="{}" HorizontalAlignment="Center" VerticalAlignment="Center"/>"#,
             self.design.color("text3")
         );
-        let mut rows: Vec<_> = device
+        let ranked = device
             .ranked(frame, "", SUM, None)
             .into_iter()
-            .map(|index| &frame.processes[index])
-            .filter(|process| process.identity.pid != MemoryRows::PID)
-            .take_while(|process| device.weight(frame, process, SUM, None) > 0.0)
+            .filter(|&index| frame.processes[index].identity.pid != MemoryRows::PID)
+            .collect();
+        let weight = |index: usize| device.weight(frame, &frame.processes[index], SUM, None);
+        let mut rows: Vec<_> = NameGroups::rows(frame, ranked, self.grouped, weight)
+            .into_iter()
+            .take_while(|group| group.iter().map(|&index| weight(index)).sum::<f64>() > 0.0)
             .take(COUNT)
-            .map(|process| {
+            .map(|group| {
+                let values = group
+                    .iter()
+                    .map(|&index| device.plotted(frame, &frame.processes[index]));
                 self.row(
                     mark.clone(),
-                    self.language.process(&process.identity),
-                    self.value(device.resource, device.plotted(frame, process)),
+                    self.language.process(&frame.processes[group[0]].identity),
+                    self.value(device.resource, Device::sum(values)),
                 )
             })
             .collect();
@@ -225,6 +235,7 @@ mod tests {
         let tooltip = ChartTooltip {
             design: Design { dark: false },
             language: Language::English,
+            grouped: false,
         };
         let layout = ChartLayout::new(900.0, 250.0);
         let pinned = [PinnedLayer {
@@ -314,6 +325,7 @@ mod tests {
         let tooltip = ChartTooltip {
             design: Design { dark: false },
             language: Language::English,
+            grouped: false,
         };
         let layout = ChartLayout::new(900.0, 250.0);
         let device = Device::of(Resource::Cpu);
@@ -341,6 +353,60 @@ mod tests {
         }];
         let markup = tooltip.markup((layout.x1(), 60.0), layout, &[frame], &device, &pinned);
         assert!(markup.contains("p5.exe") && !markup.contains("p2.exe"));
+    }
+
+    #[test]
+    fn grouped_the_three_busiest_names_show_their_sums() {
+        use crate::platform::process_history::store::{Identity, Sample};
+        let sample = |pid, name: &str, cpu| {
+            Sample::new(
+                Arc::new(Identity {
+                    pid,
+                    created: 1,
+                    name: name.into(),
+                }),
+                Some(cpu),
+                None,
+                [None; 3],
+                None,
+            )
+        };
+        let frame = Arc::new(Frame {
+            bucket: 5000,
+            elapsed_ms: 500.0,
+            processes: vec![
+                sample(1, "code.exe", 30.0),
+                sample(2, "chrome.exe", 20.0),
+                sample(3, "Chrome.exe", 15.0),
+                sample(4, "chrome.exe", 5.0),
+                sample(5, "steam.exe", 4.0),
+                sample(6, "idle.exe", 0.0),
+            ],
+            gpu_engines: Vec::new(),
+            totals: vec![("cpu".into(), Some(80.0))],
+            etw_active: true,
+            lost_events: 0,
+            undecoded: 0,
+            sample_ms: 0.0,
+        });
+        let tooltip = ChartTooltip {
+            design: Design { dark: false },
+            language: Language::English,
+            grouped: true,
+        };
+        let layout = ChartLayout::new(900.0, 250.0);
+        let markup = tooltip.markup(
+            (layout.x1(), 60.0),
+            layout,
+            &[frame],
+            &Device::of(Resource::Cpu),
+            &[],
+        );
+        let at = |text: &str| markup.find(text);
+        // Chrome's 40 % outweigh Code's 30 %, under the name of its busiest process.
+        assert!(at("chrome.exe") < at("code.exe") && at("code.exe") < at("steam.exe"));
+        assert!(markup.contains("40.0\u{A0}%") && !markup.contains("20.0\u{A0}%"));
+        assert!(at("Chrome.exe").is_none() && at("idle.exe").is_none());
     }
 
     #[test]
@@ -387,6 +453,7 @@ mod tests {
         let tooltip = ChartTooltip {
             design: Design { dark: false },
             language: Language::English,
+            grouped: false,
         };
         let layout = ChartLayout::new(900.0, 250.0);
         let markup = tooltip.markup(

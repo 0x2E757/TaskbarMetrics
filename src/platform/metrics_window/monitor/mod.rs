@@ -1326,6 +1326,7 @@ impl Dashboard {
             Some(point) => ChartTooltip {
                 design: self.design,
                 language: self.language,
+                grouped: self.grouped,
             }
             .markup(
                 point,

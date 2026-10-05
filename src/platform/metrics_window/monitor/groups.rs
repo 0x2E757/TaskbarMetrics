@@ -11,6 +11,21 @@ impl NameGroups {
         a.to_lowercase() == b.to_lowercase()
     }
 
+    /// `ranked` processes of `frame` as rows: merged by name when `grouped`, one
+    /// process per row otherwise.
+    pub fn rows(
+        frame: &Frame,
+        ranked: Vec<usize>,
+        grouped: bool,
+        weight: impl Fn(usize) -> f64,
+    ) -> Vec<Vec<usize>> {
+        if grouped {
+            Self::merge(frame, &ranked, weight)
+        } else {
+            ranked.into_iter().map(|index| vec![index]).collect()
+        }
+    }
+
     /// `ranked` processes of `frame`, busiest first, merged by name: each group
     /// leads with its busiest process, and the groups rank by the sum of `weight`.
     pub fn merge(

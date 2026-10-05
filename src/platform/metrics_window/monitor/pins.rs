@@ -139,13 +139,9 @@ impl PinnedProcesses {
             .into_iter()
             .filter(|i| !self.contains(Timeline::key(&frame.processes[*i])))
             .collect();
-        let groups = if query.grouped {
-            NameGroups::merge(frame, &ranked, |i| {
-                device.weight(frame, &frame.processes[i], column, totals)
-            })
-        } else {
-            ranked.into_iter().map(|i| vec![i]).collect()
-        };
+        let groups = NameGroups::rows(frame, ranked, query.grouped, |i| {
+            device.weight(frame, &frame.processes[i], column, totals)
+        });
         let limit = if query.all || !query.search.is_empty() {
             groups.len()
         } else {
