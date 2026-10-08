@@ -349,6 +349,10 @@ const CATALOG: &[(&str, &str)] = &[
     ("Total (PDH)", "Всего по сети (PDH)"),
     ("Moment", "Момент"),
     ("No samples", "Нет измерений"),
+    (
+        "Some samples are missing here",
+        "Здесь частично пропущены замеры",
+    ),
     ("Awaiting ETW attribution", "Ожидание атрибуции ETW"),
     ("Collecting history", "История накапливается"),
     (

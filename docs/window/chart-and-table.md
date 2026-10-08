@@ -4,7 +4,8 @@ Part of [History window](../window.md).
 
 - The chart shows the accumulated history of up to 5 minutes in 500 ms steps. A click pins the
   time range and selects the nearest real snapshot. "Live"
-  returns to the moving history. Gaps in the data are not joined by lines.
+  returns to the moving history. A single missing snapshot is bridged by a half-transparent line;
+  longer gaps in the data are hatched and not joined.
 - The table refers to the selected time, not to the current processes. By default it shows the
   top 10 and the rest; all processes and search by name/PID are available. PID + creation
   time tell an exited process apart from a new process that got the same PID.
@@ -25,7 +26,8 @@ Part of [History window](../window.md).
   areas; the color matches the pin in the list. The areas overlap from the zero
   line and are not stacked. DISK/NET charts are mirrored: read/receive above the axis,
   write/send below it, on the same scale; both are solid lines of the same color, the lower
-  fill is slightly fainter (×0.85). Data gaps break both the line and the fill.
+  fill is slightly fainter (×0.85). Gaps of 2 or more snapshots break both the line and
+  the fill.
 - The temperature dash pattern on the window chart is not built with `StrokeDashArray` but
   from separate dashes (4 px, 3 px gap) tied to time: a dash covers
   the same span of buckets on every redraw. `StrokeDashArray` counts from

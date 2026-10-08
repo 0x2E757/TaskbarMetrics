@@ -177,14 +177,24 @@ impl ChartScale {
     }
 }
 
-/// Each continuous run closes to the baseline independently; missing samples
-/// and gaps in the timeline must never become interpolated activity.
+/// Each continuous run closes to the baseline independently. A single frame the
+/// recorder missed is bridged, as the hatching marks only longer interruptions: the
+/// two samples are joined by a segment of `bridge_line` with a strip of `bridge_area`
+/// under it, both drawn half as opaque as the measured line and fill. A `None` value
+/// and longer gaps break the run and never become interpolated activity.
 struct SeriesGeometry {
     line: String,
     area: String,
+    bridge_line: String,
+    bridge_area: String,
 }
 
 impl SeriesGeometry {
+    /// Buckets between two samples that a bridge joins: one missing frame.
+    const BRIDGED: u64 = 2;
+    /// Opacity of a bridge relative to the measured line and fill.
+    const BRIDGE_OPACITY: f64 = 0.5;
+
     /// A line command takes any number of points, so `L` is written once per run:
     /// the chart markup is parsed on every update and shorter data parses faster.
     fn new(samples: impl IntoIterator<Item = (u64, f64, Option<f64>)>, baseline: f64) -> Self {
@@ -192,37 +202,73 @@ impl SeriesGeometry {
         let mut result = Self {
             line: String::new(),
             area: String::new(),
+            bridge_line: String::new(),
+            bridge_area: String::new(),
         };
-        // Bucket and x of the previous point of the current run, and whether the
-        // line already continues with `L`.
-        let mut previous: Option<(u64, f64, bool)> = None;
+        // The previous point of the current run: bucket, x, y, and whether the solid
+        // line already reaches it.
+        let mut previous: Option<(u64, f64, f64, bool)> = None;
+        let close = |area: &mut String, previous: &mut Option<(u64, f64, f64, bool)>| {
+            if let Some((_, x, _, _)) = previous.take() {
+                let _ = write!(area, "{x:.2},{baseline:.2} Z ");
+            }
+        };
         for (bucket, x, y) in samples {
-            if y.is_none() || previous.is_some_and(|(b, _, _)| bucket != b + 1) {
-                if let Some((_, last_x, _)) = previous.take() {
-                    let _ = write!(result.area, "{last_x:.2},{baseline:.2} Z ");
+            let Some(y) = y else {
+                close(&mut result.area, &mut previous);
+                continue;
+            };
+            if let Some((b, x0, y0, drawn)) = previous.filter(|p| bucket == p.0 + 1) {
+                if !drawn {
+                    let _ = write!(result.line, "M {x0:.2},{y0:.2} L ");
                 }
+                let _ = write!(result.line, "{x:.2},{y:.2} ");
+                let _ = write!(result.area, "{x:.2},{y:.2} ");
+                previous = Some((b + 1, x, y, true));
+                continue;
             }
-            if let Some(y) = y {
-                match previous {
-                    None => {
-                        let _ = write!(result.line, "M {x:.2},{y:.2} ");
-                        let _ = write!(result.area, "M {x:.2},{baseline:.2} L {x:.2},{y:.2} ");
-                    }
-                    Some((_, _, continued)) => {
-                        if !continued {
-                            result.line.push_str("L ");
-                        }
-                        let _ = write!(result.line, "{x:.2},{y:.2} ");
-                        let _ = write!(result.area, "{x:.2},{y:.2} ");
-                    }
-                }
-                previous = Some((bucket, x, previous.is_some()));
+            if let Some((_, x0, y0, _)) = previous.filter(|p| bucket == p.0 + Self::BRIDGED) {
+                let _ = write!(result.bridge_line, "M {x0:.2},{y0:.2} L {x:.2},{y:.2} ");
+                let _ = write!(
+                    result.bridge_area,
+                    "M {x0:.2},{baseline:.2} L {x0:.2},{y0:.2} {x:.2},{y:.2} {x:.2},{baseline:.2} Z "
+                );
             }
+            close(&mut result.area, &mut previous);
+            let _ = write!(result.area, "M {x:.2},{baseline:.2} L {x:.2},{y:.2} ");
+            previous = Some((bucket, x, y, false));
         }
-        if let Some((_, x, _)) = previous {
-            let _ = write!(result.area, "{x:.2},{baseline:.2} Z ");
-        }
+        close(&mut result.area, &mut previous);
         result
+    }
+}
+
+/// Where the chart shows that the recorder missed samples: a moment without a
+/// frame, and the whole half-opaque bridge over a single missing frame, so a note
+/// about them does not flicker as the pointer crosses the samples of the bridge.
+pub struct MissedSamples<'a>(pub &'a [Arc<Frame>]);
+
+impl MissedSamples<'_> {
+    /// Whether `bucket` (fractional, as under the pointer) falls on missed samples.
+    pub fn under(&self, bucket: f64) -> bool {
+        let Some(end) = self.0.last().map(|f| f.bucket) else {
+            return false;
+        };
+        let has = |b: u64| self.0.binary_search_by_key(&b, |f| f.bucket).is_ok();
+        // The right edge of the plot rounds past the last frame.
+        if !has((bucket.max(0.0).round() as u64).min(end)) {
+            return true;
+        }
+        // A bridge from `start` spans the buckets up to `start + BRIDGED`; a sample
+        // between two bridges belongs to the first.
+        let below = bucket.max(0.0).floor() as u64;
+        (below.saturating_sub(SeriesGeometry::BRIDGED)..=below).any(|start| {
+            (start as f64) < bucket
+                && bucket <= (start + SeriesGeometry::BRIDGED) as f64
+                && has(start)
+                && has(start + SeriesGeometry::BRIDGED)
+                && !(start + 1..start + SeriesGeometry::BRIDGED).any(has)
+        })
     }
 }
 
@@ -238,13 +284,19 @@ impl DashedLine {
     const PERIOD: f64 = 7.0;
 
     /// Path data for `samples` (bucket, x, y); `pixels` is the width of a bucket.
-    /// Missing samples and gaps in the buckets break the line.
-    fn path(samples: impl IntoIterator<Item = (u64, f64, Option<f64>)>, pixels: f64) -> String {
+    /// Missing samples and gaps in the buckets break the line. A single missing
+    /// frame is bridged, as in `SeriesGeometry`: the dashes go on across it, but in
+    /// the second path, which is drawn half as opaque.
+    fn path(
+        samples: impl IntoIterator<Item = (u64, f64, Option<f64>)>,
+        pixels: f64,
+    ) -> [String; 2] {
         use std::fmt::Write;
-        let mut path = String::new();
-        // Where a dash is open: the points it has so far.
+        let mut paths = [String::new(), String::new()];
+        // Where a dash is open: the points it has so far, and the path it goes to.
         let mut dash: Vec<(f64, f64)> = Vec::new();
-        let mut close = |dash: &mut Vec<(f64, f64)>| {
+        let mut target = 0;
+        let mut close = |dash: &mut Vec<(f64, f64)>, target: usize| {
             if dash.len() > 1 {
                 for (index, (x, y)) in dash.iter().enumerate() {
                     let command = match index {
@@ -252,7 +304,7 @@ impl DashedLine {
                         1 => "L ",
                         _ => "",
                     };
-                    let _ = write!(path, "{command}{x:.2},{y:.2} ");
+                    let _ = write!(paths[target], "{command}{x:.2},{y:.2} ");
                 }
             }
             dash.clear();
@@ -261,14 +313,24 @@ impl DashedLine {
         let mut previous: Option<(u64, f64, f64, f64)> = None;
         for (bucket, x, y) in samples {
             let Some(y) = y else {
-                close(&mut dash);
+                close(&mut dash, target);
                 previous = None;
                 continue;
             };
             // The position along time that the pattern is anchored to.
             let at = bucket as f64 * pixels;
             match previous {
-                Some((last, from, x0, y0)) if last + 1 == bucket => {
+                Some((last, from, x0, y0)) if bucket <= last + SeriesGeometry::BRIDGED => {
+                    // A dash open across a measured and a bridged step is split at
+                    // the sample between them.
+                    let step = usize::from(bucket > last + 1);
+                    if step != target {
+                        if !dash.is_empty() {
+                            close(&mut dash, target);
+                            dash.push((x0, y0));
+                        }
+                        target = step;
+                    }
                     // Every dash edge between the two samples splits the segment.
                     let mut edge = (from / Self::PERIOD).floor() * Self::PERIOD;
                     loop {
@@ -278,7 +340,7 @@ impl DashedLine {
                                 // A dash opens in a gap and closes in a dash.
                                 dash.push((x0 + (x - x0) * t, y0 + (y - y0) * t));
                                 if dash.len() > 1 {
-                                    close(&mut dash);
+                                    close(&mut dash, target);
                                 }
                             }
                         }
@@ -292,11 +354,11 @@ impl DashedLine {
                     } else if !dash.is_empty() {
                         // A dash that ends right on this sample.
                         dash.push((x, y));
-                        close(&mut dash);
+                        close(&mut dash, target);
                     }
                 }
                 _ => {
-                    close(&mut dash);
+                    close(&mut dash, target);
                     if Self::on(at) {
                         dash.push((x, y));
                     }
@@ -304,8 +366,8 @@ impl DashedLine {
             }
             previous = Some((bucket, at, x, y));
         }
-        close(&mut dash);
-        path
+        close(&mut dash, target);
+        paths
     }
 
     /// Whether the position falls into a dash.
@@ -334,7 +396,9 @@ impl Smoothing {
 
     fn apply(samples: &[(u64, Option<f64>)]) -> Vec<Option<f64>> {
         let joined = |a: usize, b: usize| {
-            samples[a].1.is_some() && samples[b].1.is_some() && samples[a].0 + 1 == samples[b].0
+            samples[a].1.is_some()
+                && samples[b].1.is_some()
+                && samples[b].0 <= samples[a].0 + SeriesGeometry::BRIDGED
         };
         (0..samples.len())
             .map(|i| {
@@ -612,19 +676,32 @@ impl ChartRenderer {
                 }),
                 plot.baseline(),
             );
-            if fill && !geometry.area.is_empty() {
-                out.push_str(&format!(
-                    r#"<Path Data="{}" Fill="{}" Opacity="{:.3}"/>"#,
-                    geometry.area,
-                    style.color,
-                    style.fill * if direction == 1 { 0.85 } else { 1.0 }
-                ));
-            }
-            if !fill && !geometry.line.is_empty() {
-                out.push_str(&format!(
-                    r#"<Path Data="{}" Stroke="{}" StrokeThickness="{}" StrokeLineJoin="Round" Opacity="{}"/>"#,
-                    geometry.line, style.color, style.width, style.opacity
-                ));
+            let area = style.fill * if direction == 1 { 0.85 } else { 1.0 };
+            let bridge = SeriesGeometry::BRIDGE_OPACITY;
+            if fill {
+                for (data, opacity) in [
+                    (&geometry.area, area),
+                    (&geometry.bridge_area, area * bridge),
+                ] {
+                    if !data.is_empty() {
+                        out.push_str(&format!(
+                            r#"<Path Data="{data}" Fill="{}" Opacity="{opacity:.3}"/>"#,
+                            style.color
+                        ));
+                    }
+                }
+            } else {
+                for (data, opacity) in [
+                    (&geometry.line, style.opacity),
+                    (&geometry.bridge_line, style.opacity * bridge),
+                ] {
+                    if !data.is_empty() {
+                        out.push_str(&format!(
+                            r#"<Path Data="{data}" Stroke="{}" StrokeThickness="{}" StrokeLineJoin="Round" Opacity="{opacity}"/>"#,
+                            style.color, style.width
+                        ));
+                    }
+                }
             }
         }
     }
@@ -632,7 +709,7 @@ impl ChartRenderer {
     fn temperature(&self, out: &mut String, plot: &Plot, frames: &[Arc<Frame>], device: &Device) {
         let d = self.design;
         let color = d.color("temp");
-        let line = DashedLine::path(
+        let [measured, bridged] = DashedLine::path(
             frames
                 .iter()
                 .zip(Smoothing::temperatures(frames, device))
@@ -640,10 +717,12 @@ impl ChartRenderer {
             plot.layout.plot_width() / WINDOW as f64,
         );
         // A lone sample draws no dash, but its ceiling band below still shows.
-        if !line.is_empty() {
-            out.push_str(&format!(
-                r#"<Path Data="{line}" Stroke="{color}" StrokeThickness="1.25" StrokeLineJoin="Round"/>"#
-            ));
+        for (line, opacity) in [(measured, 1.0), (bridged, SeriesGeometry::BRIDGE_OPACITY)] {
+            if !line.is_empty() {
+                out.push_str(&format!(
+                    r#"<Path Data="{line}" Stroke="{color}" StrokeThickness="1.25" StrokeLineJoin="Round" Opacity="{opacity}"/>"#
+                ));
+            }
         }
         // Runs above the 100 °C ceiling: a 3 px band on the top edge and one peak label.
         let mut runs: Vec<(u64, u64, f64)> = Vec::new();
@@ -1176,13 +1255,14 @@ mod tests {
     fn dashes_keep_their_moments_when_the_window_scrolls() {
         // 1.4 px a bucket, a line that wanders, x counted from the window start.
         let line = |first: u64, start: u64| {
-            DashedLine::path(
+            let [measured, _] = DashedLine::path(
                 (first..140).map(|b| {
                     let x = (b as f64 - start as f64) * 1.4;
                     (b, x, Some(50.0 + (b % 7) as f64 * 3.0))
                 }),
                 1.4,
-            )
+            );
+            measured
         };
         // Five buckets later the oldest left: the dashes after the first one, which
         // the left edge may cut, are the same as before at the same places.
@@ -1191,16 +1271,33 @@ mod tests {
         let rest = &scrolled[scrolled[1..].find('M').unwrap() + 1..];
         assert!(full.ends_with(rest), "{full}\n{scrolled}");
         // On a level line each dash is 4 px long and the next starts 7 px later.
-        let level = DashedLine::path((0..20).map(|b| (b, b as f64 * 1.4, Some(10.0))), 1.4);
+        let [level, _] = DashedLine::path((0..20).map(|b| (b, b as f64 * 1.4, Some(10.0))), 1.4);
         assert!(level.starts_with(
             "M 0.00,10.00 L 1.40,10.00 2.80,10.00 4.00,10.00 M 7.00,10.00 L 8.40,10.00 9.80,10.00 11.00,10.00 "
         ));
-        // Missing samples break the line.
+        // Missing samples and longer gaps break the line.
         let gap = DashedLine::path(
             [(0, 0.0, Some(10.0)), (1, 1.4, None), (2, 2.8, Some(10.0))],
             1.4,
         );
-        assert!(!gap.contains('L'));
+        let broken = DashedLine::path([(0, 0.0, Some(10.0)), (3, 4.2, Some(10.0))], 1.4);
+        assert!(gap.iter().chain(&broken).all(|path| !path.contains('L')));
+        // Over a single missing frame a dash goes on in the half-opaque path.
+        let bridged = DashedLine::path(
+            [
+                (0, 0.0, Some(10.0)),
+                (1, 1.4, Some(10.0)),
+                (3, 4.2, Some(10.0)),
+            ],
+            1.4,
+        );
+        assert_eq!(
+            bridged,
+            [
+                "M 0.00,10.00 L 1.40,10.00 ".to_owned(),
+                "M 1.40,10.00 L 4.00,10.00 ".to_owned()
+            ]
+        );
     }
 
     fn frame(bucket: u64, totals: Vec<(&str, Option<f64>)>) -> Arc<Frame> {
@@ -1215,6 +1312,26 @@ mod tests {
             undecoded: 0,
             sample_ms: 0.0,
         })
+    }
+
+    #[test]
+    fn missed_samples_cover_the_whole_bridged_zone_without_flicker() {
+        let frames: Vec<_> = [1, 2, 4, 6, 7, 10]
+            .into_iter()
+            .map(|b| frame(b, vec![]))
+            .collect();
+        let missed = MissedSamples(&frames);
+        // Bridges 2–4 and 4–6, the samples inside them included.
+        for bucket in [2.2, 3.0, 3.6, 4.0, 4.4, 5.0, 6.0] {
+            assert!(missed.under(bucket), "{bucket}");
+        }
+        // Measured runs 1–2 and 6–7.
+        for bucket in [1.0, 1.5, 2.0, 6.5, 7.4] {
+            assert!(!missed.under(bucket), "{bucket}");
+        }
+        // The hatched gap 8–9 is missed, and the right edge rounds to the last frame.
+        assert!(missed.under(8.6));
+        assert!(!missed.under(10.5));
     }
 
     #[test]
@@ -1463,19 +1580,22 @@ mod tests {
             (6, None),
             (7, Some(60.0)),
             (9, Some(70.0)),
+            (12, Some(90.0)),
         ];
         let smoothed = Smoothing::apply(&samples);
         // A whole-degree flip settles between the two readings.
         assert_eq!(smoothed[2], Some(40.4));
         assert_eq!(smoothed[0], Some(121.0 / 3.0));
-        // Gaps and missing samples are never averaged across.
+        // Missing values and longer gaps are never averaged across; a single
+        // missing frame is bridged.
         assert_eq!(smoothed[5], None);
-        assert_eq!(smoothed[6], Some(60.0));
-        assert_eq!(smoothed[7], Some(70.0));
+        assert_eq!(smoothed[6], Some(65.0));
+        assert_eq!(smoothed[7], Some(65.0));
+        assert_eq!(smoothed[8], Some(90.0));
     }
 
     #[test]
-    fn filled_areas_close_each_run_without_bridging_missing_samples() {
+    fn filled_areas_bridge_one_missing_frame_and_break_at_longer_gaps() {
         let shape = SeriesGeometry::new(
             [
                 (1, 8.0, Some(100.0)),
@@ -1483,10 +1603,32 @@ mod tests {
                 (3, 10.0, None),
                 (4, 11.0, Some(120.0)),
                 (6, 13.0, Some(90.0)),
+                (9, 16.0, Some(70.0)),
             ],
             236.0,
         );
-        assert_eq!(shape.area,"M 8.00,236.00 L 8.00,100.00 9.00,80.00 9.00,236.00 Z M 11.00,236.00 L 11.00,120.00 11.00,236.00 Z M 13.00,236.00 L 13.00,90.00 13.00,236.00 Z ");
-        assert_eq!(shape.line.matches('M').count(), 3);
+        assert_eq!(shape.area,"M 8.00,236.00 L 8.00,100.00 9.00,80.00 9.00,236.00 Z M 11.00,236.00 L 11.00,120.00 11.00,236.00 Z M 13.00,236.00 L 13.00,90.00 13.00,236.00 Z M 16.00,236.00 L 16.00,70.00 16.00,236.00 Z ");
+        // Lone samples draw no solid line; the missing frame 5 is a bridge.
+        assert_eq!(shape.line, "M 8.00,100.00 L 9.00,80.00 ");
+        assert_eq!(shape.bridge_line, "M 11.00,120.00 L 13.00,90.00 ");
+        assert_eq!(
+            shape.bridge_area,
+            "M 11.00,236.00 L 11.00,120.00 13.00,90.00 13.00,236.00 Z "
+        );
+    }
+
+    #[test]
+    fn every_other_frame_missing_is_bridged_all_the_way() {
+        let shape = SeriesGeometry::new(
+            [
+                (1, 1.0, Some(10.0)),
+                (3, 3.0, Some(20.0)),
+                (5, 5.0, Some(30.0)),
+            ],
+            50.0,
+        );
+        assert!(shape.line.is_empty());
+        assert_eq!(shape.bridge_line.matches('M').count(), 2);
+        assert_eq!(shape.bridge_area.matches('Z').count(), 2);
     }
 }

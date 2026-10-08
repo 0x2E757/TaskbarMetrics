@@ -15,6 +15,7 @@ The Russian translations live in the `CATALOG` of [`src/platform/metrics_window/
 | mode.totalsOnly | totals only |
 | legend.total.cpu / gpu / mem / disk / net / short | Total load / Busiest engine / RAM in use / Disk total (PDH) / Total (PDH) / Total |
 | legend.temp / temp.short / moment / nodata / etw | Temperature / Temp. / Moment / No samples / Awaiting ETW attribution |
+| tooltip.missed | Some samples are missing here |
 | legend.unshared | Window closed: no shared memory |
 | chart.now / aboveScale / collecting | now / above scale, peak {v} / Collecting history |
 | chart.dir.disk / net | Read, Write / Receive, Send (one label above and one below the axis) |

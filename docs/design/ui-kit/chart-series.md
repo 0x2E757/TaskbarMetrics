@@ -22,7 +22,7 @@ Order (bottom to top):
 
 - *w* is the "Chart line width" setting: 1–4 in steps of 0.25, default 1.
 - **Dimming on hover:** while a process is hovered, layers 2–6 together are drawn at opacity 0.6.
-- **Gaps:** the line and the fill break at every `None`; neighboring points are not joined across a gap. A process that started later begins at its first sample; one that exited ends at its last.
+- **Gaps:** a single missing frame (unhatched) is bridged: the two samples are joined by a line in the series style and the fill goes on under it, both at 50 % of their opacity; the temperature dashes run on across it at 50 % too. The line and the fill break at every `None` and at 2 or more missing frames; neighboring points are not joined across them. A process that started later begins at its first sample; one that exited ends at its last.
 - **Zero:** when a process exists and consumes 0, a line is drawn along the axis.
 - **Mirrored mode (DISK/NET):**
   - The middle of the plot is zero (a line in `border`).

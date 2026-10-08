@@ -21,7 +21,8 @@ pub enum Scenario {
     History,
     /// Live, no pins.
     Live,
-    /// Live GPU: a 21 s interruption and temperature above 100 °C.
+    /// Live GPU: a 21 s interruption, 10 s with every other frame missed and
+    /// temperature above 100 °C.
     Gpu,
     /// First 42 seconds after start.
     Empty,
@@ -299,7 +300,10 @@ impl DemoHistory {
             }))
             .collect();
         (0..count)
-            .filter(|i| !(scenario == Scenario::Gpu && (480..522).contains(i)))
+            .filter(|i| {
+                scenario != Scenario::Gpu
+                    || !((480..522).contains(i) || ((400..420).contains(i) && i % 2 == 1))
+            })
             .map(|i| {
                 let bucket = end - (count - 1 - i);
                 let t = i as f64 / WINDOW as f64;
@@ -446,8 +450,9 @@ mod tests {
     #[test]
     fn scenarios_cover_gaps_short_history_and_disabled_monitoring() {
         let gpu = DemoHistory::frames(Scenario::Gpu, 10_000);
-        assert_eq!(gpu.len(), 558);
+        assert_eq!(gpu.len(), 548);
         assert!(gpu.windows(2).any(|p| p[1].bucket - p[0].bucket == 43));
+        assert!(gpu.windows(2).any(|p| p[1].bucket - p[0].bucket == 2));
         assert_eq!(DemoHistory::frames(Scenario::Empty, 10_000).len(), 84);
         assert!(DemoHistory::frames(Scenario::Off, 10_000)[0]
             .processes

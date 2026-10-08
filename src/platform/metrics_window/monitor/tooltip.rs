@@ -1,5 +1,5 @@
 use super::{
-    chart::{ChartLayout, ChartRenderer},
+    chart::{ChartLayout, ChartRenderer, MissedSamples},
     design::Design,
     groups::NameGroups,
     locale::Language,
@@ -149,6 +149,13 @@ impl ChartTooltip {
                     r#"<TextBlock Text="{}" FontSize="12" FontWeight="SemiBold" Typography.NumeralAlignment="Tabular"/>"#,
                     self.language.time(frame.bucket)
                 ));
+                if MissedSamples(frames).under(bucket) {
+                    rows.push(format!(
+                        r#"<TextBlock Text="{}" FontSize="11" FontStyle="Italic" Foreground="{}"/>"#,
+                        Ui::xml(self.language.text("Some samples are missing here")),
+                        d.color("text2")
+                    ));
+                }
                 rows.push(self.row(
                     format!(
                         r#"<Border Height="2" VerticalAlignment="Center" Background="{}"/>"#,
@@ -287,6 +294,37 @@ mod tests {
             &[],
         );
         assert!(split.contains("↓ 1.50  ↑ 0.25") && !split.contains("Temperature"));
+    }
+
+    #[test]
+    fn a_missed_moment_shows_the_nearest_sample_with_a_note() {
+        let frame = |bucket| {
+            Arc::new(Frame {
+                bucket,
+                elapsed_ms: 500.0,
+                processes: vec![],
+                gpu_engines: Vec::new(),
+                totals: vec![("cpu".into(), Some(43.1))],
+                etw_active: true,
+                lost_events: 0,
+                undecoded: 0,
+                sample_ms: 0.0,
+            })
+        };
+        let tooltip = ChartTooltip {
+            design: Design { dark: false },
+            language: Language::English,
+            grouped: false,
+        };
+        let layout = ChartLayout::new(900.0, 250.0);
+        let frames = [frame(5000), frame(5002)];
+        // The middle of the column of bucket 5001, the second to last of the window.
+        let missed = layout.x0() + (layout.x1() - layout.x0()) * 598.5 / 600.0;
+        let note = "Some samples are missing here";
+        let markup =
+            |x| tooltip.markup((x, 60.0), layout, &frames, &Device::of(Resource::Cpu), &[]);
+        assert!(markup(missed).contains(note));
+        assert!(!markup(layout.x1()).contains(note));
     }
 
     #[test]
