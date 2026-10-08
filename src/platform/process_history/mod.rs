@@ -5,6 +5,7 @@ mod debug_privilege;
 mod export;
 mod ipc;
 pub(crate) mod memory;
+mod schedule;
 mod shared_pages;
 mod snapshot;
 pub(crate) mod store;
@@ -12,10 +13,11 @@ mod trace;
 pub(crate) mod wire;
 use super::{abi::*, help::SubprogramHelp};
 pub use export::{DumpQuery, HistoryDump};
+use schedule::SampleSchedule;
 use std::{
     collections::BTreeMap,
     sync::{Arc, Mutex},
-    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
+    time::{Duration, Instant},
 };
 
 pub struct ProcessHistory;
@@ -143,7 +145,6 @@ impl ProcessHistory {
         ipc::HistoryServer::stream(pid, history.clone());
         let start = Instant::now();
         let cpu_start = Self::cpu_ticks();
-        let mut next = start;
         let mut collector: Option<collector::Collector> = None;
         let mut devices = RecordedDevices::default();
         let mut pending = BTreeMap::new();
@@ -175,11 +176,7 @@ impl ProcessHistory {
                         format!("Configuration: {error}; keeping previous settings")
                 }
             }
-            let bucket = SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .map_err(|e| e.to_string())?
-                .as_millis() as u64
-                / 500;
+            let bucket = SampleSchedule::bucket()?;
             {
                 let mut h = history.lock().unwrap_or_else(|e| e.into_inner());
                 h.prune(bucket);
@@ -231,12 +228,7 @@ impl ProcessHistory {
                     }
                 }
             }
-            next += Duration::from_millis(500);
-            let now = Instant::now();
-            if next <= now {
-                next = now + Duration::from_millis(500);
-            }
-            std::thread::sleep(next.saturating_duration_since(now));
+            std::thread::sleep(SampleSchedule::delay(bucket)?);
         }
         if probe {
             durations.sort_by(f64::total_cmp);
