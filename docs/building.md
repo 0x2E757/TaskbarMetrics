@@ -1,6 +1,8 @@
 # Building and running
 
 You need Rust with the `x86_64-pc-windows-msvc` target, the MSVC linker and the Windows SDK.
+`.cargo/config.toml` links the C runtime statically, so the package does not need the Visual C++
+Redistributable (`VCRUNTIME140.dll`).
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File tools\build.ps1
