@@ -54,6 +54,10 @@ Source: "{#Source}\pawnio\README.md"; DestDir: "{app}\pawnio"; Flags: ignorevers
 ; LGPL: the modules travel with their corresponding source.
 Source: "{#Source}\pawnio\source\PawnIO.Modules-0.2.11.zip"; DestDir: "{app}\pawnio\source"; Flags: ignoreversion
 
+[Icons]
+; Start menu search finds the program by this shortcut.
+Name: "{autoprograms}\Taskbar Metrics"; Filename: "{app}\TaskbarMetrics.exe"
+
 [Registry]
 ; The same command the window's "Start with Windows" switch writes.
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueType: string; ValueName: "Taskbar Metrics"; ValueData: """{app}\TaskbarMetrics.exe"" --autostart"; Tasks: autostart

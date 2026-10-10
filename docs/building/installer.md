@@ -26,7 +26,8 @@ check, Clippy and the tests on every push to `main` and every pull request.
 
 Asks for administrator rights once and, in English or Russian:
 
-- installs into `Program Files\Taskbar Metrics` (no folder choice);
+- installs into `Program Files\Taskbar Metrics` (no folder choice) with a Start menu shortcut to
+  `TaskbarMetrics.exe`;
 - registers the Task Scheduler tasks `\Taskbar Metrics\History` and `\Taskbar Metrics\Sensors`
   (`TaskbarMetrics.exe --register-tasks`). Each starts its collector as `--serve <Explorer PID>`
   with the highest rights of the user who runs it, in that user's session. Users may read and
